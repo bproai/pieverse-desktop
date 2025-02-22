@@ -1,0 +1,11 @@
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-Wl,-rpath,@executable_path/../Frameworks",
+  "-C", "link-arg=-Wl,-rpath,/usr/lib"
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-Wl,-rpath,@executable_path/../Frameworks",
+  "-C", "link-arg=-Wl,-rpath,/usr/lib"
+]

@@ -4,7 +4,11 @@
   "description": "This template should help get you started developing with Tauri, React and Typescript in Vite.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri dev": "tauri dev"
   },
   "keywords": [],
   "author": "",
