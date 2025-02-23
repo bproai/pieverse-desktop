@@ -1,17 +1,21 @@
 // src/components/MongoDB/MongoDBPanel.tsx
 import React, { useState } from 'react';
-import { Card, Button, Text, Group, Stack, Badge } from '@mantine/core';
-import { Database, Power, PowerOff } from 'lucide-react';
+import { Card, Button, Text, Group, Stack, Badge, TextInput, Switch } from '@mantine/core';
+import { Database, Power, PowerOff, Link } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 
 const MongoDBPanel = () => {
   const [status, setStatus] = useState('stopped');
   const [port, setPort] = useState(27017);
-  const [url, setUrl] = useState('mongodb://localhost:27017');
+  const defaultUrl = `mongodb://localhost:${port}`;
+  const [useCustomUrl, setUseCustomUrl] = useState(false);
+  const [customUrl, setCustomUrl] = useState('');
+
+  const currentUrl = useCustomUrl ? customUrl : defaultUrl;
 
   const handleStartService = async () => {
     try {
-      await core.invoke('start_mongodb');
+      await core.invoke('start_mongodb', { url: currentUrl });
       setStatus('running');
     } catch (error) {
       console.error('Failed to start MongoDB:', error);
@@ -40,12 +44,32 @@ const MongoDBPanel = () => {
           </Badge>
         </Group>
 
-        <Text size="sm" color="gray">
-          Connection URL: {url}
-        </Text>
-        <Text size="sm" color="gray">
-          Port: {port}
-        </Text>
+        <Stack spacing="xs">
+          <Group>
+            <Switch
+              label="Use custom URI"
+              checked={useCustomUrl}
+              onChange={(event) => setUseCustomUrl(event.currentTarget.checked)}
+            />
+          </Group>
+
+          {useCustomUrl ? (
+            <TextInput
+              icon={<Link size={16} />}
+              placeholder="Enter custom MongoDB URI"
+              value={customUrl}
+              onChange={(event) => setCustomUrl(event.currentTarget.value)}
+            />
+          ) : (
+            <Text size="sm" color="gray">
+              Connection URL: {defaultUrl}
+            </Text>
+          )}
+
+          <Text size="sm" color="gray">
+            Port: {port}
+          </Text>
+        </Stack>
 
         <Group>
           <Button
