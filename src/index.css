@@ -1,3 +1,127 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode variables */
+:root {
+  --mantine-color-dark: #1a1b1e;
+  --hover-bg-light: #f8f9fa;
+  --hover-bg-dark: #2C2E33;
+  --button-bg-dark: #25262b;
+  --button-hover-dark: #2C2E33;
+  --button-active-dark: #1a1b1e;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+  background-color: var(--mantine-color-dark);
+  color: #ffffff;
+}
+
+/* Card styles */
+.dark-mode .mantine-Card-root {
+  background-color: #25262b;
+  border-color: #373A40;
+}
+
+.dark-mode .mantine-Card-root:hover {
+  background-color: var(--hover-bg-dark);
+}
+
+/* Input field styles */
+.dark-mode .mantine-TextInput-input,
+.dark-mode .mantine-Textarea-input,
+.dark-mode .mantine-NumberInput-input,
+.dark-mode .mantine-Select-input {
+  background-color: #25262b;
+  border-color: #373A40;
+  color: #C1C2C5;
+}
+
+/* Button styles */
+.dark-mode .mantine-Button-root {
+  background-color: var(--button-bg-dark);
+  border-color: #373A40;
+  color: #C1C2C5;
+}
+
+.dark-mode .mantine-Button-root:hover {
+  background-color: var(--button-hover-dark);
+}
+
+.dark-mode .mantine-Button-root:active {
+  background-color: var(--button-active-dark);
+}
+
+/* Primary button specific styles */
+.dark-mode .mantine-Button-filled[data-variant="filled"] {
+  background-color: #1c7ed6;
+  color: white;
+}
+
+.dark-mode .mantine-Button-filled[data-variant="filled"]:hover {
+  background-color: #1971c2;
+}
+
+.dark-mode .mantine-Button-filled[data-variant="filled"]:active {
+  background-color: #1864ab;
+}
+
+/* Subtle button specific styles */
+.dark-mode .mantine-Button-subtle {
+  background-color: transparent;
+}
+
+.dark-mode .mantine-Button-subtle:hover {
+  background-color: rgba(44, 46, 51, 0.5);
+}
+
+/* Red button specific styles */
+.dark-mode .mantine-Button-root[data-variant="subtle"][data-color="red"] {
+  color: #ff6b6b;
+}
+
+.dark-mode .mantine-Button-root[data-variant="subtle"][data-color="red"]:hover {
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+/* Tab styles */
+.dark-mode .mantine-Tabs-tab {
+  color: #C1C2C5;
+}
+
+.dark-mode .mantine-Tabs-tab[data-active] {
+  color: #fff;
+}
+
+.dark-mode .mantine-Tabs-tab:hover {
+  background-color: var(--hover-bg-dark);
+}
+
+/* Text styles */
+.dark-mode .mantine-Text-root {
+  color: #C1C2C5;
+}
+
+/* Loading overlay */
+.dark-mode .mantine-LoadingOverlay-root {
+  background-color: rgba(26, 27, 30, 0.75);
+}
+
+/* Transitions */
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Hover highlight effects */
+.dark-mode .hover\:bg-gray-50:hover {
+  background-color: var(--hover-bg-dark) !important;
+}

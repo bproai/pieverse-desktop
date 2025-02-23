@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
-import { Tabs } from '@mantine/core';
-import { Database, Terminal, Book } from 'lucide-react';
+import { Tabs, ActionIcon, useMantineTheme } from '@mantine/core';
+import { Database, Terminal, Book, Sun, Moon } from 'lucide-react';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
 import { PythonPanel } from './components/Python/PythonPanel';
@@ -9,11 +9,32 @@ import { PromptsManager } from './components/Prompts';
 import BrandLogo from './components/BrandLogo';
 
 function App() {
+  const [isDark, setIsDark] = React.useState(false);
+  const theme = useMantineTheme();
+
+  const toggleColorScheme = () => {
+    setIsDark(!isDark);
+    // Also update body class for global dark mode
+    document.body.classList.toggle('dark-mode');
+  };
+
   return (
-    <div className="h-screen bg-gray-50">
-      <header className="bg-white shadow-sm p-4 flex items-center space-x-4">
-        <BrandLogo />
-        <h1 className="text-2xl font-bold text-gray-800">PiEVerse Desktop</h1>
+    <div className={`h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm p-4 flex items-center justify-between transition-colors duration-200`}>
+        <div className="flex items-center space-x-4">
+          <BrandLogo isDark={isDark} />
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+            PiEVerse Desktop
+          </h1>
+        </div>
+        <ActionIcon
+          variant="outline"
+          className={isDark ? 'border-gray-600' : 'border-gray-300'}
+          onClick={toggleColorScheme}
+          title="Toggle color scheme"
+        >
+          {isDark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} />}
+        </ActionIcon>
       </header>
       
       <main className="p-6">
