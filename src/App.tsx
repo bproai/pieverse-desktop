@@ -4,6 +4,7 @@ import { Tabs } from '@mantine/core';
 import { Database, Terminal } from 'lucide-react';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
+import { PythonPanel } from './components/Python/PythonPanel'; // Updated import
 import logo from './assets/logo.svg';
 
 function App() {
@@ -37,7 +38,7 @@ function App() {
           </Tabs.Panel>
 
           <Tabs.Panel value="python" className="p-4">
-            <div>Python Panel Coming Soon</div>
+            <PythonPanel /> {/* Use the actual PythonPanel component */}
           </Tabs.Panel>
         </Tabs>
       </main>
