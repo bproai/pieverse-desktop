@@ -4,11 +4,13 @@ import { Tabs } from '@mantine/core';
 import { Database, Terminal } from 'lucide-react';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
+import logo from './assets/logo.svg';
 
 function App() {
   return (
     <div className="h-screen bg-gray-50">
-      <header className="bg-white shadow-sm p-4">
+      <header className="bg-white shadow-sm p-4 flex items-center space-x-4">
+        <img src={logo} alt="PiEVerse Logo" className="h-10" />
         <h1 className="text-2xl font-bold text-gray-800">PiEVerse Desktop</h1>
       </header>
       
