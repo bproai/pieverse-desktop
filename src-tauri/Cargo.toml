@@ -23,6 +23,8 @@ pyo3 = { version = "0.23.4", features = ["auto-initialize"] }
 futures = "0.3"
 thiserror = "1.0"
 anyhow = "1.0"
-# Added MySQL support
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql"] }
+# MySQL support with all needed features
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "json", "chrono", "time"] }
 async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+time = { version = "0.3", features = ["serde"] }

@@ -1,5 +1,5 @@
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
-use sqlx::{Row, Column};
+use sqlx::{Row, Column, TypeInfo};  // Added TypeInfo here
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -76,8 +76,44 @@ impl MySqlService {
                 let mut map = serde_json::Map::new();
                 
                 for (i, column) in columns.iter().enumerate() {
-                    let value: String = row.try_get(i).unwrap_or_default();
-                    map.insert(column.name().to_string(), serde_json::Value::String(value));
+                    let type_info = column.type_info();
+                    
+                    let value = match type_info.name() {
+                        // Integer types
+                        "BIGINT" | "INT" | "MEDIUMINT" | "SMALLINT" | "TINYINT" => {
+                            match row.try_get::<i64, _>(i) {
+                                Ok(v) => serde_json::Value::Number(v.into()),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        }
+                        // Floating point types
+                        "FLOAT" | "DOUBLE" | "DECIMAL" => {
+                            match row.try_get::<f64, _>(i) {
+                                Ok(v) if v.is_finite() => {
+                                    serde_json::Number::from_f64(v)
+                                        .map(serde_json::Value::Number)
+                                        .unwrap_or(serde_json::Value::Null)
+                                }
+                                _ => serde_json::Value::Null
+                            }
+                        }
+                        // Date and Time types
+                        "DATETIME" | "TIMESTAMP" => {
+                            match row.try_get::<String, _>(i) {
+                                Ok(v) => serde_json::Value::String(v),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        }
+                        // Default to string for all other types
+                        _ => {
+                            match row.try_get::<String, _>(i) {
+                                Ok(v) => serde_json::Value::String(v),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        }
+                    };
+                    
+                    map.insert(column.name().to_string(), value);
                 }
                 
                 serde_json::Value::Object(map)

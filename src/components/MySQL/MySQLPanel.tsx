@@ -120,7 +120,12 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
                         value={config.password}
                         onChange={(e) => setConfig({ ...config, password: e.target.value })}
                         disabled={isConnected}
-                        autoComplete="new-password"
+                        autoComplete="new-password"  // Keep this
+                        spellCheck={false}
+                        data-form-type="other"
+                        inputWrapperProps={{
+                            'data-form-type': 'other'
+                        }}
                     />
                 </Group>
 
@@ -130,6 +135,11 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
                     onChange={(e) => setConfig({ ...config, database: e.target.value })}
                     disabled={isConnected}
                     autoComplete="off"
+                    spellCheck={false}
+                    data-form-type="other"  // This helps prevent browsers from trying to autofill
+                    inputWrapperProps={{
+                        'data-form-type': 'other'
+                    }}
                 />
 
                 <Group justify="flex-end">
