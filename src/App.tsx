@@ -3,6 +3,7 @@ import React from 'react';
 import { Tabs } from '@mantine/core';
 import { Database, Terminal } from 'lucide-react';
 import { MongoDBPanel } from './components/MongoDB';
+import MySQLPanel from './components/MySQL/MySQLPanel';
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
           </Tabs.Panel>
 
           <Tabs.Panel value="mysql" className="p-4">
-            <div>MySQL Panel Coming Soon</div>
+            <MySQLPanel />
           </Tabs.Panel>
 
           <Tabs.Panel value="python" className="p-4">
