@@ -1,12 +1,12 @@
 [package]
-name = "pieverse-desktop"
-version = "0.1.0"
-description = "PiEVerse Desktop App"
+name = "pieverse"
+version = "1.0.0"
+description = "πeVerse - Financial Data Analysis Tool"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "pieverse_desktop_lib"
+name = "pieverse_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

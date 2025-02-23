@@ -3,5 +3,5 @@
 
 // Prevents additional console window on Windows in release
 fn main() {
-    pieverse_desktop_lib::run()
+    pieverse_lib::run()
 }

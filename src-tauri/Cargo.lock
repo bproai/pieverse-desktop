@@ -3360,8 +3360,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pieverse-desktop"
-version = "0.1.0"
+name = "pieverse"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
