@@ -22,7 +22,7 @@ pub struct ExecutionResult {
 }
 
 pub struct PythonService {
-    interpreter: Arc<Mutex<Option<PyObject>>>,
+    interpreter: Arc<Mutex<Option<Py<PyAny>>>>,
 }
 
 impl PythonService {
@@ -32,66 +32,76 @@ impl PythonService {
         }
     }
 
-    pub fn init(&self) -> Result<(), PythonError> {
-        Python::with_gil(|py| {
-            let locals = PyDict::new(py);
-            let builtins = py.import("builtins")
-                .map_err(|e| PythonError::InitError(e.to_string()))?;
-            
-            locals.set_item("__builtins__", &builtins)
-                .map_err(|e| PythonError::InitError(e.to_string()))?;
+    pub async fn init(&self) -> Result<(), PythonError> {
+        let interpreter = self.interpreter.clone();
+        
+        tokio::task::spawn_blocking(move || {
+            Python::with_gil(|py| {
+                let locals = PyDict::new(py);
+                let builtins = py.import("builtins")
+                    .map_err(|e| PythonError::InitError(e.to_string()))?;
+                
+                locals.set_item("__builtins__", &builtins)
+                    .map_err(|e| PythonError::InitError(e.to_string()))?;
 
-            let globals = PyDict::new(py);
-            globals.set_item("__builtins__", &builtins)
-                .map_err(|e| PythonError::InitError(e.to_string()))?;
+                let globals = PyDict::new(py);
+                globals.set_item("__builtins__", &builtins)
+                    .map_err(|e| PythonError::InitError(e.to_string()))?;
 
-            // Convert PyDict to PyObject
-            let globals_ref = globals.into_py(py);
-            
-            let mut interpreter = self.interpreter.blocking_lock();
-            *interpreter = Some(globals_ref);
+                // Convert to Py<PyAny>
+                let globals_ref = globals.into_py(py);
+                
+                let mut interpreter_guard = futures::executor::block_on(interpreter.lock());
+                *interpreter_guard = Some(globals_ref);
 
-            Ok(())
-        })
+                Ok(())
+            })
+        }).await.map_err(|e| PythonError::InitError(e.to_string()))?
     }
 
     pub async fn execute(&self, code: &str) -> Result<ExecutionResult, PythonError> {
-        Python::with_gil(|py| {
-            let interpreter_guard = self.interpreter.blocking_lock();
-            
-            let globals = interpreter_guard.as_ref()
-                .ok_or_else(|| PythonError::PythonError("Interpreter not initialized".to_string()))?
-                .clone_ref(py);
+        let interpreter = self.interpreter.clone();
+        let code = code.to_string();
+        
+        tokio::task::spawn_blocking(move || {
+            Python::with_gil(|py| {
+                let interpreter_guard = futures::executor::block_on(interpreter.lock());
+                
+                let globals = interpreter_guard.as_ref()
+                    .ok_or_else(|| PythonError::PythonError("Interpreter not initialized".to_string()))?
+                    .clone_ref(py);
 
-            let globals = globals.downcast_bound(py)
-                .map_err(|e| PythonError::PythonError(e.to_string()))?;
+                let globals = globals.downcast_bound::<PyDict>(py)
+                    .map_err(|e| PythonError::PythonError(e.to_string()))?;
 
-            let code_c = CString::new(code)
-                .map_err(|e| PythonError::PythonError(e.to_string()))?;
+                let code_c = CString::new(code)
+                    .map_err(|e| PythonError::PythonError(e.to_string()))?;
 
-            let result = py.eval(code_c.as_c_str(), Some(globals), None)
-                .map_err(|e| PythonError::PythonError(e.to_string()))?;
+                let result = py.eval(code_c.as_c_str(), Some(globals), None)
+                    .map_err(|e| PythonError::PythonError(e.to_string()))?;
 
-            let output = result.to_string();
-            
-            Ok(ExecutionResult {
-                output,
-                error: None,
-                plots: None,
+                let output = result.to_string();
+                
+                Ok(ExecutionResult {
+                    output,
+                    error: None,
+                    plots: None,
+                })
             })
-        })
+        }).await.map_err(|e| PythonError::PythonError(e.to_string()))?
     }
 
     pub async fn reset(&self) -> Result<(), PythonError> {
         let mut interpreter = self.interpreter.lock().await;
         *interpreter = None;
-        self.init()
+        drop(interpreter);
+        self.init().await
     }
 }
 
 #[tauri::command]
 pub async fn python_init(state: tauri::State<'_, PythonService>) -> Result<(), String> {
-    state.init().map_err(|e| e.to_string())
+    state.init().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
