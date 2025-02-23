@@ -23,13 +23,16 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<MySQLExecuteResult | null>(null);
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState<string | null>(null);
 
     const handleConnect = async () => {
         setLoading(true);
         setError(null);
+        setSuccess(null);
         try {
             const result = await MySQLService.connect(config);
             setIsConnected(true);
+            setSuccess('Connected successfully');
             onConnect?.(result);
         } catch (err) {
             const errorMsg = (err as Error).message;
@@ -44,14 +47,24 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
     const handleExecuteQuery = async () => {
         setLoading(true);
         setError(null);
+        setSuccess(null);
         try {
             const queryResults = await MySQLService.executeQuery(query);
-            setResults(queryResults);
-            if (queryResults.error) {
-                setError(queryResults.error);
+            console.log('Raw query response:', queryResults);
+    
+            if (Array.isArray(queryResults)) {
+                setResults({ data: queryResults });  // Wrap the array in a data property
+                setSuccess(`Query executed successfully. ${queryResults.length} rows returned.`);
+            } else if (queryResults && 'affectedRows' in queryResults) {
+                setResults(queryResults);
+                setSuccess(`Query executed successfully. ${queryResults.affectedRows} rows affected.`);
+            } else {
+                console.log('Unexpected response format:', queryResults);
+                setError('Unexpected response format from query');
             }
         } catch (err) {
             const errorMsg = (err as Error).message;
+            console.error('Query execution error:', err);
             setError(errorMsg);
             setResults(null);
         } finally {
@@ -60,20 +73,20 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
     };
 
     const handleDisconnect = async () => {
+        setError(null);
+        setSuccess(null);
         try {
-            const result = await MySQLService.disconnect();
-            if (result.success) {
-                setIsConnected(false);
-                setResults(null);
-                setQuery('');
-            } else if (result.error) {
-                setError(result.error);
-            }
+            await MySQLService.disconnect();
+            setIsConnected(false);
+            setResults(null);
+            setQuery('');
+            setSuccess('Disconnected successfully');
         } catch (err) {
             setError((err as Error).message);
         }
     };
 
+    // Rest of your component remains exactly the same
     return (
         <Card className="w-full" shadow="sm" padding="lg">
             <Stack>
@@ -140,6 +153,18 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
                     )}
                 </Group>
 
+                {error && (
+                    <Alert color="red" title="Error" variant="light">
+                        {error}
+                    </Alert>
+                )}
+
+                {success && (
+                    <Alert color="green" title="Success" variant="light">
+                        {success}
+                    </Alert>
+                )}
+
                 {isConnected && (
                     <Stack>
                         <Textarea
@@ -164,14 +189,8 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
                             </Button>
                         </Group>
 
-                        {error && (
-                            <Alert color="red" title="Error">
-                                {error}
-                            </Alert>
-                        )}
-
                         {results?.affectedRows !== undefined && (
-                            <Alert color="blue" title="Query Result">
+                            <Alert color="blue" title="Query Result" variant="light">
                                 Affected rows: {results.affectedRows}
                                 {results.insertId !== undefined && (
                                     <Text>Insert ID: {results.insertId}</Text>

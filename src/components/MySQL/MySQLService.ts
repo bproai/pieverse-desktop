@@ -8,8 +8,10 @@ export class MySQLService {
   }
 
   static async executeQuery(query: string): Promise<any> {
-    console.log('Calling mysql_execute_query with query:', query);
-    return core.invoke('mysql_execute_query', { query });
+    // Normalize the query by removing the database prefix if it exists
+    const normalizedQuery = query.replace('stock_data.', '');
+    console.log('Calling mysql_execute_query with query:', normalizedQuery);
+    return core.invoke('mysql_execute_query', { query: normalizedQuery });
   }
 
   static async disconnect(): Promise<void> {
