@@ -6,8 +6,8 @@ import { core } from '@tauri-apps/api';
 
 const MongoDBPanel = () => {
   const [status, setStatus] = useState('stopped');
-  const [port, setPort] = useState(27018);
-  const [url, setUrl] = useState('mongodb://localhost:27018');
+  const [port, setPort] = useState(27017);
+  const [url, setUrl] = useState('mongodb://localhost:27017');
 
   const handleStartService = async () => {
     try {

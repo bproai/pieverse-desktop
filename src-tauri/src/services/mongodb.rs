@@ -14,7 +14,7 @@ pub async fn start_mongodb(state: tauri::State<'_, MongoDBState>) -> Result<Stri
         return Err("MongoDB is already running".to_string());
     }
 
-    let client_options = ClientOptions::parse("mongodb://localhost:27018")
+    let client_options = ClientOptions::parse("mongodb://localhost:27017")
         .await
         .map_err(|e| e.to_string())?;
 
