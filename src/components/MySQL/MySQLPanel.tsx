@@ -30,10 +30,15 @@ function MySQLPanel({ onConnect }: MySQLPanelProps) {
         setError(null);
         setSuccess(null);
         try {
-            const result = await MySQLService.connect(config);
-            setIsConnected(true);
-            setSuccess('Connected successfully');
-            onConnect?.(result);
+            await MySQLService.connect(config);
+            const isConnected = await MySQLService.testConnection();
+            if (isConnected) {
+                setIsConnected(true);
+                setSuccess('Connected successfully');
+                onConnect?.({ success: true });
+            } else {
+                throw new Error('Failed to verify connection');
+            }
         } catch (err) {
             const errorMsg = (err as Error).message;
             setError(errorMsg);
