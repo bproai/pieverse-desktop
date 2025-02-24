@@ -24,20 +24,13 @@ import {
   ChartBar,
   Pencil,
   Trash,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 import { MySQLService } from '../MySQL/MySQLService';
 import promptService, { Prompt } from '../../services/MySQLPromptService';
 
 const CATEGORIES = ['WRITING & ANALYSIS', 'FINANCE & MARKETS', 'CODE & DEVELOPMENT'];
-
-// Helper function to convert MySQL tinyint (0,1) to boolean
-const tinyintToBoolean = (value: number | null | undefined): boolean => {
-  if (typeof value === 'number') {
-    return value === 1;
-  }
-  return false;
-};
 
 const PromptsManager = () => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -45,6 +38,10 @@ const PromptsManager = () => {
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // States for bulk import
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [bulkJson, setBulkJson] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   useEffect(() => {
     const removeListener = MySQLService.addConnectionListener(async (connected) => {
@@ -83,16 +80,95 @@ const PromptsManager = () => {
     }
   };
 
-  const getCategoryIcon = (categoryName: string) => {
-    switch (categoryName) {
-      case 'WRITING & ANALYSIS':
-        return <Book size={20} className="text-blue-500" />;
-      case 'FINANCE & MARKETS':
-        return <ChartBar size={20} className="text-green-500" />;
-      case 'CODE & DEVELOPMENT':
-        return <Code size={20} className="text-purple-500" />;
-      default:
-        return null;
+  const tinyintToBoolean = (value: number | null | undefined): boolean => {
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    return false;
+  };
+
+  const validatePromptData = (data: any[]): { isValid: boolean; error?: string } => {
+    if (!Array.isArray(data)) {
+      return { isValid: false, error: 'Input must be a JSON array' };
+    }
+
+    const requiredFields = ['title', 'description', 'category', 'display_order', 'is_active'];
+    
+    for (let i = 0; i < data.length; i++) {
+      const prompt = data[i];
+      // Check required fields
+      for (const field of requiredFields) {
+        if (!(field in prompt)) {
+          return { isValid: false, error: `Item ${i + 1} is missing required field: ${field}` };
+        }
+      }
+      
+      // Validate category
+      if (!CATEGORIES.includes(prompt.category)) {
+        return { 
+          isValid: false, 
+          error: `Item ${i + 1} has invalid category. Must be one of: ${CATEGORIES.join(', ')}` 
+        };
+      }
+      
+      // Validate types
+      if (typeof prompt.title !== 'string' || prompt.title.length === 0) {
+        return { isValid: false, error: `Item ${i + 1} has invalid title` };
+      }
+      if (typeof prompt.description !== 'string') {
+        return { isValid: false, error: `Item ${i + 1} has invalid description` };
+      }
+      if (typeof prompt.display_order !== 'number') {
+        return { isValid: false, error: `Item ${i + 1} has invalid display_order` };
+      }
+      if (typeof prompt.is_active !== 'boolean') {
+        return { isValid: false, error: `Item ${i + 1} has invalid is_active value` };
+      }
+    }
+
+    return { isValid: true };
+  };
+
+  const handleBulkImport = async () => {
+    setJsonError(null);
+    
+    try {
+      const data = JSON.parse(bulkJson);
+      const validation = validatePromptData(data);
+      
+      if (!validation.isValid) {
+        setJsonError(validation.error);
+        return;
+      }
+
+      setLoading(true);
+      
+      // Prepare prompts for MySQL (convert boolean to number)
+      const promptsToSave = data.map(prompt => ({
+        ...prompt,
+        is_active: prompt.is_active ? 1 : 0
+      }));
+
+      // Create bulk insert query
+      const values = promptsToSave.map(prompt => 
+        `('${prompt.title}', '${prompt.description}', '${prompt.category}', ${prompt.display_order}, ${prompt.is_active})`
+      ).join(',');
+      
+      const query = `INSERT INTO pieverse.prompts (title, description, category, display_order, is_active) VALUES ${values}`;
+      
+      await MySQLService.executeQuery(query);
+      await loadData();
+      setIsBulkImportOpen(false);
+      setBulkJson('');
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        setJsonError('Invalid JSON format');
+      } else {
+        console.error('Failed to import prompts:', error);
+        setError('Failed to import prompts. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -147,6 +223,19 @@ const PromptsManager = () => {
     setIsModalOpen(true);
   };
 
+  const getCategoryIcon = (categoryName: string) => {
+    switch (categoryName) {
+      case 'WRITING & ANALYSIS':
+        return <Book size={20} className="text-blue-500" />;
+      case 'FINANCE & MARKETS':
+        return <ChartBar size={20} className="text-green-500" />;
+      case 'CODE & DEVELOPMENT':
+        return <Code size={20} className="text-purple-500" />;
+      default:
+        return null;
+    }
+  };
+
   if (error) {
     return (
       <Alert 
@@ -171,24 +260,33 @@ const PromptsManager = () => {
       
       <Group position="apart" className="mb-6">
         <Title order={3}>AI Assistant Playbook</Title>
-        <Button
-          leftSection={<Plus size={16} />}
-          onClick={() => {
-            setEditingPrompt({
-              id: 0,
-              title: '',
-              description: '',
-              category: CATEGORIES[0],
-              display_order: 0,
-              is_active: true,
-              created_at: '',
-              updated_at: ''
-            });
-            setIsModalOpen(true);
-          }}
-        >
-          Add Prompt
-        </Button>
+        <Group>
+          <Button
+            variant="outline"
+            leftSection={<Upload size={16} />}
+            onClick={() => setIsBulkImportOpen(true)}
+          >
+            Bulk Import
+          </Button>
+          <Button
+            leftSection={<Plus size={16} />}
+            onClick={() => {
+              setEditingPrompt({
+                id: 0,
+                title: '',
+                description: '',
+                category: CATEGORIES[0],
+                display_order: 0,
+                is_active: true,
+                created_at: '',
+                updated_at: ''
+              });
+              setIsModalOpen(true);
+            }}
+          >
+            Add Prompt
+          </Button>
+        </Group>
       </Group>
 
       {CATEGORIES.map(category => (
@@ -297,17 +395,10 @@ const PromptsManager = () => {
 
             <Switch
               label="Active"
-              checked={Boolean(editingPrompt?.is_active)}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                const checked = event.currentTarget.checked;
-                console.log('Switch onChange:', { newValue: checked, currentValue: editingPrompt?.is_active });
-                setEditingPrompt(prev => {
-                  if (!prev) return null;
-                  const updated = { ...prev, is_active: checked };
-                  console.log('Updated prompt:', updated);
-                  return updated;
-                });
-              }}
+              checked={editingPrompt?.is_active}
+              onChange={(checked) => setEditingPrompt(prev => 
+                prev ? { ...prev, is_active: checked } : null
+              )}
             />
 
             <Group position="right">
@@ -320,6 +411,57 @@ const PromptsManager = () => {
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      <Modal
+        opened={isBulkImportOpen}
+        onClose={() => {
+          setIsBulkImportOpen(false);
+          setBulkJson('');
+          setJsonError(null);
+        }}
+        title="Bulk Import Prompts"
+        size="lg"
+      >
+        <Stack spacing="md">
+          <Text size="sm" color="dimmed">
+            Paste your JSON array of prompts. Each prompt should have: title, description, category, display_order, and is_active fields.
+          </Text>
+          <Text size="sm" color="dimmed">
+            Example format:
+            <pre className="bg-gray-100 p-2 rounded mt-1 text-xs">
+{JSON.stringify([{
+  title: "Example Prompt",
+  description: "Description here",
+  category: "WRITING & ANALYSIS",
+  display_order: 0,
+  is_active: true
+}], null, 2)}
+            </pre>
+          </Text>
+          <Textarea
+            placeholder="Paste JSON here..."
+            minRows={10}
+            value={bulkJson}
+            onChange={(e) => setBulkJson(e.target.value)}
+            error={jsonError}
+          />
+          <Group position="right">
+            <Button variant="subtle" onClick={() => {
+              setIsBulkImportOpen(false);
+              setBulkJson('');
+              setJsonError(null);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkImport}
+              disabled={!bulkJson.trim()}
+            >
+              Import
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </div>
   );
