@@ -316,15 +316,30 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       <Group position="apart" className="mb-6">
         <Group>
           <Title order={3}>AI Assistant Playbook</Title>
-          <SegmentedControl
-            data={[
-              { label: 'SQLite', value: 'sqlite' },
-              { label: 'MySQL', value: 'mysql' }
-            ]}
-            value={backend}
-            onChange={(value: 'mysql' | 'sqlite') => onBackendChange(value)}
-            size="sm"
-          />
+          
+          {/* Custom SegmentedControl that works in both light and dark mode */}
+          <div className="flex p-1 bg-gray-200 dark:bg-gray-800 rounded-md shadow-sm">
+            <button 
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                backend === 'sqlite' 
+                  ? 'bg-blue-500 text-white shadow-sm' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              }`}
+              onClick={() => onBackendChange('sqlite')}
+            >
+              SQLite
+            </button>
+            <button 
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                backend === 'mysql' 
+                  ? 'bg-blue-500 text-white shadow-sm' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              }`}
+              onClick={() => onBackendChange('mysql')}
+            >
+              MySQL
+            </button>
+          </div>
         </Group>
         <Group>
           <Button
@@ -473,11 +488,15 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             <Switch
               label="Active"
               checked={editingPrompt?.is_active}
-              onChange={(checked) => setEditingPrompt(prev => 
-                prev ? { ...prev, is_active: checked } : null
-              )}
+              onChange={(event) => {
+                // Extract the checked value from the event target
+                const isChecked = event.currentTarget.checked;
+                console.log("Switch toggled:", isChecked);
+                setEditingPrompt(prev => 
+                  prev ? { ...prev, is_active: isChecked } : null
+                );
+              }}
             />
-
             <Group position="right">
               <Button variant="subtle" onClick={() => setIsModalOpen(false)}>
                 Cancel

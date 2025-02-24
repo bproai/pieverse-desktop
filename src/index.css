@@ -1,3 +1,4 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -246,6 +247,25 @@ body.dark-mode {
   background-color: #ADB5BD;
 }
 
+/* Fix for Switch component in modals */
+.mantine-Switch-root {
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.mantine-Switch-input {
+  cursor: pointer;
+  z-index: 2;
+  position: relative;
+  opacity: 0;
+}
+
+.mantine-Switch-body {
+  position: relative;
+  z-index: 0;
+}
+
 /* Text styles */
 .dark-mode .mantine-Text-root {
   color: var(--text-secondary-dark);
@@ -302,4 +322,43 @@ body.dark-mode {
 /* Hover highlight effects */
 .dark-mode .hover\:bg-gray-50:hover {
   background-color: var(--hover-bg-dark) !important;
+}
+
+/* SegmentedControl styles for SQLite/MySQL switch */
+.dark-mode .mantine-SegmentedControl-root {
+  background-color: #1A1B1E;
+  border-color: #4C5055;
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 4px;
+}
+
+/* For inactive labels */
+.dark-mode .mantine-SegmentedControl-label {
+  color: #E5E7EB;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+/* Specific override for SQLite/MySQL switch in PromptsManager */
+.dark-mode [data-value="sqlite"].mantine-SegmentedControl-label.mantine-SegmentedControl-labelActive,
+.dark-mode [data-value="mysql"].mantine-SegmentedControl-label.mantine-SegmentedControl-labelActive {
+  color: #000000 !important;
+  background-color: #FFFFFF !important; 
+  font-weight: 800 !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Inactive state for SQLite/MySQL switch */
+.dark-mode [data-value="sqlite"].mantine-SegmentedControl-label:not(.mantine-SegmentedControl-labelActive),
+.dark-mode [data-value="mysql"].mantine-SegmentedControl-label:not(.mantine-SegmentedControl-labelActive) {
+  color: #E5E7EB !important;
+  background-color: transparent !important;
+}
+
+/* Hover state for inactive labels */
+.dark-mode [data-value="sqlite"].mantine-SegmentedControl-label:hover:not(.mantine-SegmentedControl-labelActive),
+.dark-mode [data-value="mysql"].mantine-SegmentedControl-label:hover:not(.mantine-SegmentedControl-labelActive) {
+  background-color: #374151 !important;
+  color: #FFFFFF !important;
 }

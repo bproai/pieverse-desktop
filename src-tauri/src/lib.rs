@@ -1,5 +1,6 @@
 // src-tauri/src/lib.rs
 mod services;
+mod tray;
 
 use services::{
     mongodb::{
@@ -46,12 +47,20 @@ use services::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // Setup tray icon handlers
+            tray::setup_tray_handler(&app.handle());
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            tray::handle_window_event(window, event);
+        })
         .plugin(tauri_plugin_opener::init())
         .manage(MongoDBState::new())
         .manage(MySqlService::new())
         .manage(PythonService::new())
         .manage(SqliteService::new())
-        .manage(ApiServerState::default())  // Add API server state
+        .manage(ApiServerState::default())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
