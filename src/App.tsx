@@ -10,6 +10,7 @@ import BrandLogo from './components/BrandLogo';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
+  const [promptsBackend, setPromptsBackend] = React.useState<'mysql' | 'sqlite'>('sqlite');
   const theme = useMantineTheme();
 
   const toggleColorScheme = () => {
@@ -38,8 +39,11 @@ function App() {
         </header>
         
         <main className="p-6 gesture-stable-content">
-          <Tabs defaultValue="mongodb">
+          <Tabs defaultValue="prompts">
             <Tabs.List>
+              <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
+                AI Prompts
+              </Tabs.Tab>
               <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                 MongoDB
               </Tabs.Tab>
@@ -49,10 +53,11 @@ function App() {
               <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
                 Python Sandbox
               </Tabs.Tab>
-              <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
-                AI Prompts
-              </Tabs.Tab>
             </Tabs.List>
+
+            <Tabs.Panel value="prompts" className="p-4">
+              <PromptsManager backend={promptsBackend} onBackendChange={setPromptsBackend} />
+            </Tabs.Panel>
 
             <Tabs.Panel value="mongodb" className="p-4">
               <MongoDBPanel />
@@ -64,10 +69,6 @@ function App() {
 
             <Tabs.Panel value="python" className="p-4">
               <PythonPanel />
-            </Tabs.Panel>
-
-            <Tabs.Panel value="prompts" className="p-4">
-              <PromptsManager />
             </Tabs.Panel>
           </Tabs>
         </main>

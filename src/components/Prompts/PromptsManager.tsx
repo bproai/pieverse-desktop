@@ -14,7 +14,8 @@ import {
   Switch,
   LoadingOverlay,
   Alert,
-  Select
+  Select,
+  SegmentedControl
 } from '@mantine/core';
 import { 
   ChevronRight, 
@@ -25,14 +26,22 @@ import {
   Pencil,
   Trash,
   AlertCircle,
-  Upload
+  Upload,
+  ArrowLeftRight
 } from 'lucide-react';
 import { MySQLService } from '../MySQL/MySQLService';
-import promptService, { Prompt } from '../../services/MySQLPromptService';
+import promptService from '../../services/MySQLPromptService';
+import SQLitePromptService from '../../services/SQLitePromptService';
+import type { Prompt } from '../../services/MySQLPromptService';
+
+interface PromptsManagerProps {
+  backend: 'mysql' | 'sqlite';
+  onBackendChange: (backend: 'mysql' | 'sqlite') => void;
+}
 
 const CATEGORIES = ['WRITING & ANALYSIS', 'FINANCE & MARKETS', 'CODE & DEVELOPMENT'];
 
-const PromptsManager = () => {
+const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
@@ -46,32 +55,52 @@ const PromptsManager = () => {
     opened: false
   });
 
-  useEffect(() => {
-    const removeListener = MySQLService.addConnectionListener(async (connected) => {
-      console.log('MySQL connection status in PromptsManager:', connected);
-      setLoading(true);
-      try {
-        if (connected) {
-          await promptService.initializeDatabase();
-          await loadData();
-          setError(null);
-        } else {
-          setError('MySQL is not connected. Please connect to MySQL in the MySQL tab first.');
-        }
-      } catch (error) {
-        console.error('Error in PromptsManager:', error);
-        setError('Failed to initialize database. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    });
+  // Get the active service based on backend selection
+  const activeService = backend === 'sqlite' ? SQLitePromptService : promptService;
 
-    return () => removeListener();
-  }, []);
+  useEffect(() => {
+    if (backend === 'sqlite') {
+      initialize();
+    } else {
+      const removeListener = MySQLService.addConnectionListener(async (connected) => {
+        console.log('MySQL connection status in PromptsManager:', connected);
+        setLoading(true);
+        try {
+          if (connected) {
+            await promptService.initializeDatabase();
+            await loadData();
+            setError(null);
+          } else {
+            setError('MySQL is not connected. Please connect to MySQL in the MySQL tab first.');
+          }
+        } catch (error) {
+          console.error('Error in PromptsManager:', error);
+          setError('Failed to initialize database. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      });
+      return () => removeListener();
+    }
+  }, [backend]);
+
+  const initialize = async () => {
+    try {
+      setLoading(true);
+      await SQLitePromptService.initializeDatabase();
+      await loadData();
+      setError(null);
+    } catch (error) {
+      console.error('Failed to initialize:', error);
+      setError('Failed to initialize SQLite database. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     try {
-      const fetchedPrompts = await promptService.getPrompts();
+      const fetchedPrompts = await activeService.getPrompts();
       const convertedPrompts = fetchedPrompts.map(prompt => ({
         ...prompt,
         is_active: tinyintToBoolean(Number(prompt.is_active))
@@ -80,6 +109,42 @@ const PromptsManager = () => {
     } catch (error) {
       console.error('Failed to load prompts:', error);
       setError('Failed to load prompts. Please try again.');
+    }
+  };
+
+  const handleTransferPrompts = async () => {
+    try {
+      setLoading(true);
+      // Get prompts from current backend
+      const sourceService = backend === 'sqlite' ? SQLitePromptService : promptService;
+      const targetService = backend === 'sqlite' ? promptService : SQLitePromptService;
+      
+      // If transferring to MySQL, check connection first
+      if (backend === 'sqlite' && !MySQLService.getConnectionStatus()) {
+        setError('MySQL is not connected. Please connect to MySQL in the MySQL tab first.');
+        return;
+      }
+
+      const fetchedPrompts = await sourceService.getPrompts();
+      
+      // Transfer to other backend
+      if (fetchedPrompts.length > 0) {
+        await targetService.bulkImport(fetchedPrompts.map(prompt => ({
+          title: prompt.title,
+          description: prompt.description,
+          category: prompt.category,
+          display_order: prompt.display_order,
+          is_active: prompt.is_active
+        })));
+        
+        // Switch to the other backend
+        onBackendChange(backend === 'sqlite' ? 'mysql' : 'sqlite');
+      }
+    } catch (error) {
+      console.error('Failed to transfer prompts:', error);
+      setError('Failed to transfer prompts. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,19 +207,7 @@ const PromptsManager = () => {
       }
 
       setLoading(true);
-      
-      const promptsToSave = data.map(prompt => ({
-        ...prompt,
-        is_active: prompt.is_active ? 1 : 0
-      }));
-
-      const values = promptsToSave.map(prompt => 
-        `('${prompt.title}', '${prompt.description}', '${prompt.category}', ${prompt.display_order}, ${prompt.is_active})`
-      ).join(',');
-      
-      const query = `INSERT INTO pieverse.prompts (title, description, category, display_order, is_active) VALUES ${values}`;
-      
-      await MySQLService.executeQuery(query);
+      await activeService.bulkImport(data);
       await loadData();
       setIsBulkImportOpen(false);
       setBulkJson('');
@@ -176,15 +229,10 @@ const PromptsManager = () => {
 
     try {
       setLoading(true);
-      const promptToSave = {
-        ...editingPrompt,
-        is_active: editingPrompt.is_active ? 1 : 0
-      };
-
       if (editingPrompt.id) {
-        await promptService.updatePrompt(editingPrompt.id, promptToSave);
+        await activeService.updatePrompt(editingPrompt.id, editingPrompt);
       } else {
-        await promptService.createPrompt(promptToSave);
+        await activeService.createPrompt(editingPrompt);
       }
       await loadData();
       setIsModalOpen(false);
@@ -200,8 +248,9 @@ const PromptsManager = () => {
   const handleDelete = async (prompt: Prompt) => {
     try {
       setLoading(true);
-      await promptService.deletePrompt(prompt.id);
+      await activeService.deletePrompt(prompt.id);
       await loadData();
+      setDeleteConfirmation({ prompt: null as any, opened: false });
     } catch (error) {
       console.error('Failed to delete prompt:', error);
       setError('Failed to delete prompt. Please try again.');
@@ -232,16 +281,26 @@ const PromptsManager = () => {
     }
   };
 
-  if (error) {
+  if (error && backend === 'mysql') {
     return (
-      <Alert 
-        icon={<AlertCircle size={16} />}
-        title="Error" 
-        color="red"
-        className="max-w-xl mx-auto mt-8"
-      >
-        {error}
-      </Alert>
+      <Stack spacing="md">
+        <Alert 
+          icon={<AlertCircle size={16} />}
+          title="MySQL Connection Error" 
+          color="red"
+          className="max-w-xl mx-auto mt-8"
+        >
+          {error}
+        </Alert>
+        <Button
+          variant="light"
+          color="blue"
+          onClick={() => onBackendChange('sqlite')}
+          className="mx-auto"
+        >
+          Switch to SQLite
+        </Button>
+      </Stack>
     );
   }
 
@@ -255,8 +314,26 @@ const PromptsManager = () => {
       <LoadingOverlay visible={loading} overlayBlur={2} />
       
       <Group position="apart" className="mb-6">
-        <Title order={3}>AI Assistant Playbook</Title>
         <Group>
+          <Title order={3}>AI Assistant Playbook</Title>
+          <SegmentedControl
+            data={[
+              { label: 'SQLite', value: 'sqlite' },
+              { label: 'MySQL', value: 'mysql' }
+            ]}
+            value={backend}
+            onChange={(value: 'mysql' | 'sqlite') => onBackendChange(value)}
+            size="sm"
+          />
+        </Group>
+        <Group>
+          <Button
+            variant="outline"
+            leftSection={<ArrowLeftRight size={16} />}
+            onClick={handleTransferPrompts}
+          >
+            Transfer to {backend === 'sqlite' ? 'MySQL' : 'SQLite'}
+          </Button>
           <Button
             variant="outline"
             leftSection={<Upload size={16} />}
@@ -423,7 +500,7 @@ const PromptsManager = () => {
         <Stack>
           <Text>Are you sure you want to delete this prompt?</Text>
           <Group position="right">
-            <Button 
+            <Button
               variant="subtle" 
               onClick={() => setDeleteConfirmation({ prompt: null as any, opened: false })}
             >

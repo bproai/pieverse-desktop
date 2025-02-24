@@ -23,6 +23,11 @@ use services::{
         python_init,
         python_execute,
         python_reset
+    },
+    sqlite::{
+        SqliteService,
+        sqlite_init,
+        sqlite_execute_query
     }
 };
 
@@ -38,6 +43,7 @@ pub fn run() {
         .manage(MongoDBState::new())
         .manage(MySqlService::new())
         .manage(PythonService::new())
+        .manage(SqliteService::new().expect("Failed to create SQLite service"))
         .invoke_handler(tauri::generate_handler![
             greet,
             // MongoDB commands
@@ -56,7 +62,10 @@ pub fn run() {
             // Python commands
             python_init,
             python_execute,
-            python_reset
+            python_reset,
+            // SQLite commands
+            sqlite_init,
+            sqlite_execute_query
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
