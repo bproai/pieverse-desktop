@@ -43,7 +43,7 @@ pub fn run() {
         .manage(MongoDBState::new())
         .manage(MySqlService::new())
         .manage(PythonService::new())
-        .manage(SqliteService::new().expect("Failed to create SQLite service"))
+        .manage(SqliteService::new())  // Removed .expect() since new() no longer returns Result
         .invoke_handler(tauri::generate_handler![
             greet,
             // MongoDB commands

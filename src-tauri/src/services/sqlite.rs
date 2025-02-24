@@ -2,37 +2,49 @@
 use rusqlite::{Connection, Result, Row};
 use serde_json::Value;
 use std::sync::Mutex;
+use tauri::AppHandle;
 use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SqliteError {
     #[error("Database error: {0}")]
     DatabaseError(String),
+    #[error("Path error: {0}")]
+    PathError(String),
 }
 
 pub struct SqliteService {
-    connection: Mutex<Connection>,
-}
-
-impl Default for SqliteService {
-    fn default() -> Self {
-        Self::new().expect("Failed to create SQLite service")
-    }
+    connection: Mutex<Option<Connection>>,
 }
 
 impl SqliteService {
-    pub fn new() -> Result<Self, SqliteError> {
-        let db_path = PathBuf::from("prompts.db");
-        let conn = Connection::open(db_path)
-            .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
-        
-        Ok(Self {
-            connection: Mutex::new(conn),
-        })
+    pub fn new() -> Self {
+        Self {
+            connection: Mutex::new(None),
+        }
     }
 
-    pub fn init_database(&self) -> Result<(), SqliteError> {
-        let conn = self.connection.lock().unwrap();
+    pub async fn init_database(&self, app: &AppHandle) -> Result<(), SqliteError> {
+        let app_dir = if cfg!(debug_assertions) {
+            // Development mode
+            PathBuf::from(".local/share/pieverse")
+        } else {
+            // Production mode
+            dirs::data_local_dir()
+                .ok_or_else(|| SqliteError::PathError("Could not get local data directory".to_string()))?
+                .join("pieverse")
+        };
+        
+        // Create app directory if it doesn't exist
+        std::fs::create_dir_all(&app_dir)
+            .map_err(|e| SqliteError::PathError(format!("Failed to create directory: {}", e)))?;
+        
+        let db_path = app_dir.join("prompts.db");
+        println!("SQLite database path: {:?}", db_path); // Debug log
+        
+        let conn = Connection::open(&db_path)
+            .map_err(|e| SqliteError::DatabaseError(format!("Failed to open database at {:?}: {}", db_path, e)))?;
+    
         conn.execute(
             "CREATE TABLE IF NOT EXISTS prompts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,8 +57,11 @@ impl SqliteService {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )",
             [],
-        ).map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
-
+        ).map_err(|e| SqliteError::DatabaseError(format!("Failed to create table: {}", e)))?;
+    
+        let mut conn_guard = self.connection.lock().unwrap();
+        *conn_guard = Some(conn);
+    
         Ok(())
     }
 
@@ -81,7 +96,10 @@ impl SqliteService {
     }
 
     pub fn execute_query(&self, query: &str) -> Result<Vec<Value>, SqliteError> {
-        let conn = self.connection.lock().unwrap();
+        let conn_guard = self.connection.lock().unwrap();
+        let conn = conn_guard.as_ref()
+            .ok_or_else(|| SqliteError::DatabaseError("Database not initialized".to_string()))?;
+
         let mut stmt = conn.prepare(query)
             .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
 
@@ -95,8 +113,12 @@ impl SqliteService {
 }
 
 #[tauri::command]
-pub async fn sqlite_init(state: tauri::State<'_, SqliteService>) -> Result<(), String> {
-    state.init_database()
+pub async fn sqlite_init(
+    state: tauri::State<'_, SqliteService>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    state.init_database(&app)
+        .await
         .map_err(|e| e.to_string())
 }
 

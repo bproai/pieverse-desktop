@@ -3378,6 +3378,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "dirs 5.0.1",
  "futures",
  "mongodb",
  "pyo3",
