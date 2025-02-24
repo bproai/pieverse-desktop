@@ -14,63 +14,64 @@ function App() {
 
   const toggleColorScheme = () => {
     setIsDark(!isDark);
-    // Also update body class for global dark mode
     document.body.classList.toggle('dark-mode');
   };
 
   return (
-    <div className={`h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm p-4 flex items-center justify-between transition-colors duration-200`}>
-        <div className="flex items-center space-x-4">
-          <BrandLogo isDark={isDark} />
-          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-            PiEVerse Desktop
-          </h1>
-        </div>
-        <ActionIcon
-          variant="outline"
-          className={isDark ? 'border-gray-600' : 'border-gray-300'}
-          onClick={toggleColorScheme}
-          title="Toggle color scheme"
-        >
-          {isDark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} />}
-        </ActionIcon>
-      </header>
-      
-      <main className="p-6">
-        <Tabs defaultValue="mongodb">
-          <Tabs.List>
-            <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
-              MongoDB
-            </Tabs.Tab>
-            <Tabs.Tab value="mysql" leftSection={<Database size={16} />}>
-              MySQL
-            </Tabs.Tab>
-            <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
-              Python Sandbox
-            </Tabs.Tab>
-            <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
-              AI Prompts
-            </Tabs.Tab>
-          </Tabs.List>
+    <div className="gesture-stable-container">
+      <div className={`h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm p-4 flex items-center justify-between transition-colors duration-200`}>
+          <div className="flex items-center space-x-4">
+            <BrandLogo isDark={isDark} />
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              PiEVerse Desktop
+            </h1>
+          </div>
+          <ActionIcon
+            variant="outline"
+            className={isDark ? 'border-gray-600' : 'border-gray-300'}
+            onClick={toggleColorScheme}
+            title="Toggle color scheme"
+          >
+            {isDark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} />}
+          </ActionIcon>
+        </header>
+        
+        <main className="p-6 gesture-stable-content">
+          <Tabs defaultValue="mongodb">
+            <Tabs.List>
+              <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
+                MongoDB
+              </Tabs.Tab>
+              <Tabs.Tab value="mysql" leftSection={<Database size={16} />}>
+                MySQL
+              </Tabs.Tab>
+              <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
+                Python Sandbox
+              </Tabs.Tab>
+              <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
+                AI Prompts
+              </Tabs.Tab>
+            </Tabs.List>
 
-          <Tabs.Panel value="mongodb" className="p-4">
-            <MongoDBPanel />
-          </Tabs.Panel>
+            <Tabs.Panel value="mongodb" className="p-4">
+              <MongoDBPanel />
+            </Tabs.Panel>
 
-          <Tabs.Panel value="mysql" className="p-4">
-            <MySQLPanel />
-          </Tabs.Panel>
+            <Tabs.Panel value="mysql" className="p-4">
+              <MySQLPanel />
+            </Tabs.Panel>
 
-          <Tabs.Panel value="python" className="p-4">
-            <PythonPanel />
-          </Tabs.Panel>
+            <Tabs.Panel value="python" className="p-4">
+              <PythonPanel />
+            </Tabs.Panel>
 
-          <Tabs.Panel value="prompts" className="p-4">
-            <PromptsManager />
-          </Tabs.Panel>
-        </Tabs>
-      </main>
+            <Tabs.Panel value="prompts" className="p-4">
+              <PromptsManager />
+            </Tabs.Panel>
+          </Tabs>
+        </main>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles and gesture handling */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior-x: none;
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  .gesture-stable-container {
+    position: relative;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+    width: 100%;
+  }
+  
+  .gesture-stable-content {
+    position: relative;
+    overflow-x: hidden;
+    touch-action: pan-y pinch-zoom;
+  }
+  
 /* Dark mode variables */
 :root {
   --mantine-color-dark: #1a1b1e;
