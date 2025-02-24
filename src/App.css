@@ -30,8 +30,8 @@
 
 /* Dark mode overrides */
 body.dark-mode {
-  color: #f6f6f6;
-  background-color: #2f2f2f;
+  color: var(--text-primary-dark);
+  background-color: var(--mantine-color-dark);
 }
 
 body.dark-mode a {

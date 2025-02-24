@@ -31,6 +31,14 @@ import promptService, { Prompt } from '../../services/MySQLPromptService';
 
 const CATEGORIES = ['WRITING & ANALYSIS', 'FINANCE & MARKETS', 'CODE & DEVELOPMENT'];
 
+// Helper function to convert MySQL tinyint (0,1) to boolean
+const tinyintToBoolean = (value: number | null | undefined): boolean => {
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+  return false;
+};
+
 const PromptsManager = () => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +72,11 @@ const PromptsManager = () => {
   const loadData = async () => {
     try {
       const fetchedPrompts = await promptService.getPrompts();
-      setPrompts(fetchedPrompts);
+      const convertedPrompts = fetchedPrompts.map(prompt => ({
+        ...prompt,
+        is_active: tinyintToBoolean(Number(prompt.is_active))
+      }));
+      setPrompts(convertedPrompts);
     } catch (error) {
       console.error('Failed to load prompts:', error);
       setError('Failed to load prompts. Please try again.');
@@ -90,10 +102,15 @@ const PromptsManager = () => {
 
     try {
       setLoading(true);
+      const promptToSave = {
+        ...editingPrompt,
+        is_active: editingPrompt.is_active ? 1 : 0
+      };
+
       if (editingPrompt.id) {
-        await promptService.updatePrompt(editingPrompt.id, editingPrompt);
+        await promptService.updatePrompt(editingPrompt.id, promptToSave);
       } else {
-        await promptService.createPrompt(editingPrompt);
+        await promptService.createPrompt(promptToSave);
       }
       await loadData();
       setIsModalOpen(false);
@@ -119,6 +136,15 @@ const PromptsManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (prompt: Prompt) => {
+    const convertedPrompt = {
+      ...prompt,
+      is_active: tinyintToBoolean(Number(prompt.is_active))
+    };
+    setEditingPrompt(convertedPrompt);
+    setIsModalOpen(true);
   };
 
   if (error) {
@@ -186,7 +212,10 @@ const PromptsManager = () => {
                     {getCategoryIcon(category)}
                     <div>
                       <Text size="lg" weight={500}>{prompt.title}</Text>
-                      <Text size="sm" color="dimmed">{prompt.description}</Text>
+                      <Text size="sm" color="dimmed">
+                        {prompt.description}
+                        {prompt.is_active && <span className="ml-2 text-green-500">(Active)</span>}
+                      </Text>
                     </div>
                   </Group>
                   <Group spacing="xs" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -195,8 +224,7 @@ const PromptsManager = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingPrompt(prompt);
-                        setIsModalOpen(true);
+                        handleEdit(prompt);
                       }}
                     >
                       <Pencil size={16} />
@@ -269,10 +297,17 @@ const PromptsManager = () => {
 
             <Switch
               label="Active"
-              checked={editingPrompt?.is_active || false}
-              onChange={(e) => setEditingPrompt(prev => 
-                prev ? { ...prev, is_active: e.currentTarget.checked } : null
-              )}
+              checked={Boolean(editingPrompt?.is_active)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                const checked = event.currentTarget.checked;
+                console.log('Switch onChange:', { newValue: checked, currentValue: editingPrompt?.is_active });
+                setEditingPrompt(prev => {
+                  if (!prev) return null;
+                  const updated = { ...prev, is_active: checked };
+                  console.log('Updated prompt:', updated);
+                  return updated;
+                });
+              }}
             />
 
             <Group position="right">

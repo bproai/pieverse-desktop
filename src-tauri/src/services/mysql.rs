@@ -87,6 +87,13 @@ impl MySqlService {
                                 Err(_) => serde_json::Value::Null
                             }
                         },
+                        // Handle boolean/tinyint columns
+                        (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
+                            match row.try_get::<i8, _>(i) {
+                                Ok(v) => serde_json::Value::Number(v.into()),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        },
                         // Handle specific numeric columns
                         (_, "DOUBLE") => {
                             match row.try_get::<f64, _>(i) {
