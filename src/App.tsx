@@ -1,11 +1,12 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings } from 'lucide-react';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
 import { PythonPanel } from './components/Python/PythonPanel';
 import { PromptsManager } from './components/Prompts';
+import { APISettings } from './components/APISettings';  
 import BrandLogo from './components/BrandLogo';
 
 function App() {
@@ -53,6 +54,9 @@ function App() {
               <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
                 Python Sandbox
               </Tabs.Tab>
+              <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
+                API Settings
+              </Tabs.Tab>
             </Tabs.List>
 
             <Tabs.Panel value="prompts" className="p-4">
@@ -69,6 +73,10 @@ function App() {
 
             <Tabs.Panel value="python" className="p-4">
               <PythonPanel />
+            </Tabs.Panel>
+
+            <Tabs.Panel value="api" className="p-4">
+              <APISettings />
             </Tabs.Panel>
           </Tabs>
         </main>

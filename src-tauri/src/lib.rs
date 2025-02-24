@@ -1,3 +1,4 @@
+// src-tauri/src/lib.rs
 mod services;
 
 use services::{
@@ -28,13 +29,19 @@ use services::{
         SqliteService,
         sqlite_init,
         sqlite_execute_query
+    },
+    sqlite_prompts::{
+        sqlite_get_prompts,
+        sqlite_create_prompt,
+        sqlite_update_prompt,
+        sqlite_delete_prompt
+    },
+    api_server::{
+        ApiServerState,
+        start_api_server,
+        stop_api_server
     }
 };
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -43,9 +50,9 @@ pub fn run() {
         .manage(MongoDBState::new())
         .manage(MySqlService::new())
         .manage(PythonService::new())
-        .manage(SqliteService::new())  // Removed .expect() since new() no longer returns Result
+        .manage(SqliteService::new())
+        .manage(ApiServerState::default())  // Add API server state
         .invoke_handler(tauri::generate_handler![
-            greet,
             // MongoDB commands
             start_mongodb,
             stop_mongodb,
@@ -65,7 +72,15 @@ pub fn run() {
             python_reset,
             // SQLite commands
             sqlite_init,
-            sqlite_execute_query
+            sqlite_execute_query,
+            // SQLite prompts commands
+            sqlite_get_prompts,
+            sqlite_create_prompt,
+            sqlite_update_prompt,
+            sqlite_delete_prompt,
+            // API Server commands
+            start_api_server,
+            stop_api_server
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

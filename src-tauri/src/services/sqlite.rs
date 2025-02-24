@@ -1,7 +1,7 @@
 // src-tauri/src/services/sqlite.rs
 use rusqlite::{Connection, Result, Row};
 use serde_json::Value;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};  // Added Arc here
 use tauri::AppHandle;
 use std::path::PathBuf;
 
@@ -13,18 +13,19 @@ pub enum SqliteError {
     PathError(String),
 }
 
+#[derive(Clone)]
 pub struct SqliteService {
-    connection: Mutex<Option<Connection>>,
+    connection: Arc<Mutex<Option<Connection>>>,
 }
 
 impl SqliteService {
     pub fn new() -> Self {
         Self {
-            connection: Mutex::new(None),
+            connection: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub async fn init_database(&self, app: &AppHandle) -> Result<(), SqliteError> {
+    pub async fn init_database(&self, _app: &AppHandle) -> Result<(), SqliteError> {
         let app_dir = if cfg!(debug_assertions) {
             // Development mode
             PathBuf::from(".local/share/pieverse")
