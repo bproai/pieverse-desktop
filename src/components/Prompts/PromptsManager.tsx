@@ -38,10 +38,13 @@ const PromptsManager = () => {
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // States for bulk import
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [bulkJson, setBulkJson] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{prompt: Prompt, opened: boolean}>({
+    prompt: null as any,
+    opened: false
+  });
 
   useEffect(() => {
     const removeListener = MySQLService.addConnectionListener(async (connected) => {
@@ -96,14 +99,12 @@ const PromptsManager = () => {
     
     for (let i = 0; i < data.length; i++) {
       const prompt = data[i];
-      // Check required fields
       for (const field of requiredFields) {
         if (!(field in prompt)) {
           return { isValid: false, error: `Item ${i + 1} is missing required field: ${field}` };
         }
       }
       
-      // Validate category
       if (!CATEGORIES.includes(prompt.category)) {
         return { 
           isValid: false, 
@@ -111,7 +112,6 @@ const PromptsManager = () => {
         };
       }
       
-      // Validate types
       if (typeof prompt.title !== 'string' || prompt.title.length === 0) {
         return { isValid: false, error: `Item ${i + 1} has invalid title` };
       }
@@ -143,13 +143,11 @@ const PromptsManager = () => {
 
       setLoading(true);
       
-      // Prepare prompts for MySQL (convert boolean to number)
       const promptsToSave = data.map(prompt => ({
         ...prompt,
         is_active: prompt.is_active ? 1 : 0
       }));
 
-      // Create bulk insert query
       const values = promptsToSave.map(prompt => 
         `('${prompt.title}', '${prompt.description}', '${prompt.category}', ${prompt.display_order}, ${prompt.is_active})`
       ).join(',');
@@ -200,8 +198,6 @@ const PromptsManager = () => {
   };
 
   const handleDelete = async (prompt: Prompt) => {
-    if (!window.confirm('Are you sure you want to delete this prompt?')) return;
-    
     try {
       setLoading(true);
       await promptService.deletePrompt(prompt.id);
@@ -301,9 +297,10 @@ const PromptsManager = () => {
             {promptsByCategory[category]?.map(prompt => (
               <Card
                 key={prompt.id}
-                className="bg-white hover:bg-gray-50 cursor-pointer transition-colors duration-200 group"
+                className="bg-white hover:bg-gray-50 transition-colors duration-200 group"
                 shadow="sm"
                 padding="md"
+                onClick={(e) => e.preventDefault()}
               >
                 <Group position="apart">
                   <Group>
@@ -321,6 +318,7 @@ const PromptsManager = () => {
                       variant="subtle"
                       size="sm"
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         handleEdit(prompt);
                       }}
@@ -332,8 +330,9 @@ const PromptsManager = () => {
                       color="red"
                       size="sm"
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
-                        handleDelete(prompt);
+                        setDeleteConfirmation({ prompt, opened: true });
                       }}
                     >
                       <Trash size={16} />
@@ -347,6 +346,7 @@ const PromptsManager = () => {
         </div>
       ))}
 
+      {/* Edit Modal */}
       <Modal
         opened={isModalOpen}
         onClose={() => {
@@ -413,6 +413,36 @@ const PromptsManager = () => {
         </form>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
+      <Modal
+        opened={deleteConfirmation.opened}
+        onClose={() => setDeleteConfirmation({ prompt: null as any, opened: false })}
+        title="Delete Prompt"
+        size="sm"
+      >
+        <Stack>
+          <Text>Are you sure you want to delete this prompt?</Text>
+          <Group position="right">
+            <Button 
+              variant="subtle" 
+              onClick={() => setDeleteConfirmation({ prompt: null as any, opened: false })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              color="red"
+              onClick={() => {
+                handleDelete(deleteConfirmation.prompt);
+                setDeleteConfirmation({ prompt: null as any, opened: false });
+              }}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Bulk Import Modal */}
       <Modal
         opened={isBulkImportOpen}
         onClose={() => {
