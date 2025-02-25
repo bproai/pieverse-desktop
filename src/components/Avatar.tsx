@@ -28,6 +28,8 @@ const Avatar = () => {
   const avatarRef = useRef(null);
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);  // Add this ref for the audio element
+  const audioChunksRef = useRef([]);
+
 
   // Initialize position to bottom right corner
   const [position, setPosition] = useState({ 
@@ -73,7 +75,13 @@ const Avatar = () => {
 
   // Add this to handle when audio playback ends
   const handleAudioEnded = () => {
+    // Reset playback state when audio finishes playing
     setIsPlaying(false);
+    
+    // Reset audio element position
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
   };
 
   // Add this function to prompt user for API key if not set
@@ -322,15 +330,21 @@ const Avatar = () => {
         // Create a new MediaRecorder
         // Try to get a supported format
         let mimeType = '';
-        if (MediaRecorder.isTypeSupported) {
-          const formats = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg'];
-          for (const format of formats) {
-            if (MediaRecorder.isTypeSupported(format)) {
-              mimeType = format;
-              console.log(`Using format: ${mimeType}`);
-              break;
+        
+        try {
+          if (MediaRecorder.isTypeSupported) {
+            const formats = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg'];
+            for (const format of formats) {
+              if (MediaRecorder.isTypeSupported(format)) {
+                mimeType = format;
+                console.log(`Using format: ${mimeType}`);
+                break;
+              }
             }
           }
+        } catch (e) {
+          console.warn("Error checking supported types:", e);
+          // Continue without a specific mime type
         }
         
         let recorderOptions = {};
@@ -338,68 +352,106 @@ const Avatar = () => {
           recorderOptions = { mimeType };
         }
         
-        const recorder = new MediaRecorder(stream, recorderOptions);
+        // Create recorder with fallback handling
+        let recorder;
+        try {
+          recorder = new MediaRecorder(stream, recorderOptions);
+        } catch (e) {
+          console.warn("Error with specified mime type, using default:", e);
+          recorder = new MediaRecorder(stream);
+        }
+        
         setMediaRecorder(recorder);
         
-        // Clear previous chunks
+        // Reset the audio state before starting a new recording
+        if (audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+          setAudioUrl(null);
+        }
+        setRecordedAudioData(null);
+        
+        // Reset both state and ref for chunks
         setAudioChunks([]);
+        audioChunksRef.current = [];
         
         // Add event handlers
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
+            console.log(`Audio chunk received: ${e.data.size} bytes`);
+            // Update both state and ref
             setAudioChunks(prev => [...prev, e.data]);
+            audioChunksRef.current.push(e.data);
           }
         };
         
         recorder.onstop = async () => {
           try {
-            // Combine chunks into a blob
-            const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/mp3' });
-            
-            // Create a URL for the audio blob for playback
-            const url = URL.createObjectURL(audioBlob);
-            setAudioUrl(url);
-            
-            // Convert to base64
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            
-            reader.onloadend = async () => {
-              try {
-                // Extract base64 data (remove the prefix)
-                const base64Data = reader.result.split(',')[1];
-                
-                // Show playback option with a prompt
-                setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
-                setExpression('happy');
-                
-                // Store the base64 data and API key for when user clicks Send
-                setRecordedAudioData({
-                  base64: base64Data,
-                  apiKey: key
-                });
-                
-              } catch (error) {
-                console.error('Error processing audio:', error);
-                setIntentResponse(`Processing error: ${error.message || 'Unknown error'}`);
-                setExpression('thoughtful');
-              } finally {
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
+            // Try to request final data
+            try {
+              if (recorder.state !== "inactive") {
+                recorder.requestData();
               }
-            };
+            } catch (e) {
+              console.warn("Could not request final data:", e);
+            }
+            
+            // Small delay to ensure all chunks are processed
+            setTimeout(() => {
+              // Use chunks from ref for reliability
+              const chunks = audioChunksRef.current;
+              console.log(`Processing ${chunks.length} audio chunks`);
+              
+              // Combine chunks into a blob
+              const audioBlob = new Blob(chunks, { type: mimeType || 'audio/mp3' });
+              console.log(`Created audio blob: ${audioBlob.size} bytes`);
+              
+              // Create a URL for the audio blob for playback
+              const url = URL.createObjectURL(audioBlob);
+              setAudioUrl(url);
+              
+              // Convert to base64
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              
+              reader.onloadend = async () => {
+                try {
+                  // Extract base64 data (remove the prefix)
+                  const base64Data = reader.result.split(',')[1];
+                  
+                  // Show playback option with a prompt
+                  setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
+                  setExpression('happy');
+                  
+                  // Store the base64 data and API key for when user clicks Send
+                  setRecordedAudioData({
+                    base64: base64Data,
+                    apiKey: key
+                  });
+                  
+                } catch (error) {
+                  console.error('Error processing audio:', error);
+                  setIntentResponse(`Processing error: ${error.message || 'Unknown error'}`);
+                  setExpression('thoughtful');
+                } finally {
+                  // Stop all tracks
+                  stream.getTracks().forEach(track => track.stop());
+                }
+              };
+            }, 100); // Small delay to ensure all chunks are collected
           } catch (error) {
             console.error('Error in onstop event:', error);
             setIntentResponse("Error processing the recording. Please try again.");
             setExpression('thoughtful');
+            // Make sure to stop tracks even on error
+            stream.getTracks().forEach(track => track.stop());
           } finally {
             setIsListening(false);
           }
         };
         
-        // Start recording
-        recorder.start();
-        console.log(`Recording started`);
+        // Start recording with time slices to ensure we get multiple chunks
+        recorder.start(100);
+        console.log(`Recording started with timeslice: 100ms`);
         
         // Auto stop after 5 seconds
         setTimeout(() => {
@@ -408,6 +460,9 @@ const Avatar = () => {
               recorder.stop();
             } catch (e) {
               console.error('Error stopping recorder:', e);
+              // Make sure to stop tracks
+              stream.getTracks().forEach(track => track.stop());
+              setIsListening(false);
             }
           }
         }, 5000);
@@ -842,11 +897,13 @@ const Avatar = () => {
                   className="close-button"
                   onClick={() => {
                     setShowHelp(false);
-                    // Clean up audio when closing
+                    // Clean up audio resources when closing
                     if (audioUrl) {
                       URL.revokeObjectURL(audioUrl);
                       setAudioUrl(null);
                     }
+                    setRecordedAudioData(null);
+                    setAudioChunks([]);
                   }}
                 >
                   Close
