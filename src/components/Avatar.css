@@ -1,0 +1,250 @@
+/* src/components/Avatar.css */
+.avatar-container {
+  position: fixed; /* Will be overridden by inline styles */
+  cursor: grab;
+  z-index: 9999;
+  animation: float 4s ease-in-out infinite;
+  transition: filter 0.3s, transform 0.3s;
+  transform-origin: center center;
+  user-select: none; /* Prevent text selection during drag */
+  -webkit-user-drag: none; /* Prevent default dragging */
+  width: 200px; /* Set explicit width/height */
+  height: 240px;
+}
+
+.avatar-container:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 15px rgba(146, 119, 255, 0.7));
+}
+
+/* Base animations */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-10px) rotate(-2deg); }
+  50% { transform: translateY(-15px) rotate(0deg); }
+  75% { transform: translateY(-10px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* Dragging state */
+.avatar-container.dragging {
+  animation: none !important;
+  cursor: grabbing !important;
+  filter: drop-shadow(0 0 20px rgba(146, 119, 255, 0.9)) !important;
+  transform: scale(1.05) !important;
+  z-index: 10000;
+  transition: none; /* Disable transitions while dragging for responsiveness */
+}
+
+/* Running animation override */
+.avatar-container.running {
+  animation: active 1s ease-out forwards;
+}
+
+@keyframes active {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  50% { transform: scale(1.05) rotate(0deg); }
+  75% { transform: scale(1.1) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Aura pulsing animation */
+.aura {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
+/* Hair animations */
+.hair-strand-left {
+  transform-origin: top center;
+  animation: hair-sway-left 4s ease-in-out infinite;
+}
+
+.hair-strand-right {
+  transform-origin: top center;
+  animation: hair-sway-right 4s ease-in-out infinite;
+}
+
+@keyframes hair-sway-left {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-5deg); }
+}
+
+@keyframes hair-sway-right {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(5deg); }
+}
+
+/* Hair accessory animation */
+.hair-accessory {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0)); }
+  50% { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); }
+}
+
+/* Expression-specific styles */
+/* Hide all mouths by default */
+.mouth-neutral, .mouth-happy, .mouth-thoughtful, .mouth-excited {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Show the appropriate mouth based on expression */
+.expression-neutral .mouth-neutral {
+  opacity: 1;
+}
+
+.expression-happy .mouth-happy {
+  opacity: 1;
+}
+
+.expression-thoughtful .mouth-thoughtful {
+  opacity: 1;
+}
+
+.expression-excited .mouth-excited {
+  opacity: 1;
+}
+
+/* Expression-specific animations */
+.expression-happy .blush-left,
+.expression-happy .blush-right {
+  opacity: 0.8;
+}
+
+.expression-happy .eyebrows {
+  transform: translateY(-2px);
+}
+
+.expression-thoughtful .iris-left,
+.expression-thoughtful .iris-right {
+  transform: translateY(-1px) translateX(1px);
+}
+
+.expression-excited .eyebrows {
+  transform: translateY(-3px) scaleY(1.2);
+}
+
+.expression-excited .blush-left,
+.expression-excited .blush-right {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* Eyebrow animations */
+.eyebrow-left, .eyebrow-right {
+  transition: transform 0.3s;
+}
+
+/* Eye animations */
+.eye-left, .eye-right, 
+.iris-left, .iris-right,
+.highlight-left, .highlight-right {
+  transition: all 0.2s;
+}
+
+/* Help panel styling */
+.help-panel {
+  position: absolute;
+  background: linear-gradient(145deg, rgba(146, 119, 255, 0.9), rgba(112, 104, 255, 0.9));
+  border-radius: 15px;
+  padding: 20px;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-in-out;
+  color: #fff;
+  min-width: 220px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2), 
+              inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.help-content h2 {
+  margin: 0 0 15px;
+  font-family: 'Segoe UI', 'Helvetica', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.help-content p {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.help-content button {
+  padding: 10px 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.help-content button:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.help-content button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .avatar-container {
+    transform: scale(0.8);
+  }
+  
+  .avatar-container:hover {
+    transform: scale(0.85);
+  }
+  
+  .help-panel {
+    padding: 15px;
+    min-width: 180px;
+  }
+  
+  .help-content h2 {
+    font-size: 20px;
+  }
+  
+  .help-content p {
+    font-size: 14px;
+  }
+  
+  .help-content button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}

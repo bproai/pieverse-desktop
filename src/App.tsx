@@ -8,6 +8,7 @@ import { PythonPanel } from './components/Python/PythonPanel';
 import { PromptsManager } from './components/Prompts';
 import { APISettings } from './components/APISettings';  
 import BrandLogo from './components/BrandLogo';
+import Avatar from './components/Avatar'; // Import the Avatar component
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -80,6 +81,9 @@ function App() {
             </Tabs.Panel>
           </Tabs>
         </main>
+
+        {/* Render the floating Avatar */}
+        <Avatar />
       </div>
     </div>
   );
