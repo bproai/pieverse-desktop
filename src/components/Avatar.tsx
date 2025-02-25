@@ -13,6 +13,7 @@ const Avatar = () => {
   const [intentResponse, setIntentResponse] = useState('');
   const dragStartRef = useRef({ x: 0, y: 0 });
   const avatarRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Initialize position to bottom right corner
   const [position, setPosition] = useState({ 
@@ -62,6 +63,43 @@ const Avatar = () => {
     }
   };
 
+  // Speak a response with the appropriate voice
+  const speakResponse = (text) => {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const speech = new SpeechSynthesisUtterance(text);
+      
+      // Try to get the Samantha voice specifically
+      const voices = window.speechSynthesis.getVoices();
+      const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
+      
+      if (samanthaVoice) {
+        speech.voice = samanthaVoice;
+      } else {
+        // Fallback to any female voice if Samantha isn't available
+        const femaleVoices = voices.filter(voice => 
+          voice.name.toLowerCase().includes('female') || 
+          voice.name.toLowerCase().includes('girl') ||
+          voice.name.includes('Victoria') ||
+          voice.name.includes('Tessa')
+        );
+        
+        if (femaleVoices.length > 0) {
+          speech.voice = femaleVoices[0];
+        }
+      }
+      
+      // Higher pitch and slightly faster rate for young girl voice
+      speech.rate = 1.1;
+      speech.pitch = 1.4;
+      speech.volume = 0.8;
+      
+      window.speechSynthesis.speak(speech);
+    }
+  };
+
   // Handle submission of user input
   const handleInputSubmit = (e) => {
     e.preventDefault();
@@ -91,36 +129,7 @@ const Avatar = () => {
     }
     
     // Speak the response
-    if ('speechSynthesis' in window) {
-      const speech = new SpeechSynthesisUtterance(result.response);
-      
-      // Try to get the Samantha voice specifically
-      const voices = window.speechSynthesis.getVoices();
-      const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
-      
-      if (samanthaVoice) {
-        speech.voice = samanthaVoice;
-      } else {
-        // Fallback to any female voice if Samantha isn't available
-        const femaleVoices = voices.filter(voice => 
-          voice.name.toLowerCase().includes('female') || 
-          voice.name.toLowerCase().includes('girl') ||
-          voice.name.includes('Victoria') ||
-          voice.name.includes('Tessa')
-        );
-        
-        if (femaleVoices.length > 0) {
-          speech.voice = femaleVoices[0];
-        }
-      }
-      
-      // Higher pitch and slightly faster rate for young girl voice
-      speech.rate = 1.1;
-      speech.pitch = 1.4;
-      speech.volume = 0.8;
-      
-      window.speechSynthesis.speak(speech);
-    }
+    speakResponse(result.response);
     
     // Clear the input field
     setUserInput('');
@@ -141,37 +150,8 @@ const Avatar = () => {
     if (!showHelp) {
       const message = "How can I assist you today?";
       
-      // Use speech synthesis if available
-      if ('speechSynthesis' in window) {
-        const speech = new SpeechSynthesisUtterance(message);
-        
-        // Try to get the Samantha voice specifically
-        const voices = window.speechSynthesis.getVoices();
-        const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
-        
-        if (samanthaVoice) {
-          speech.voice = samanthaVoice;
-        } else {
-          // Fallback to any female voice if Samantha isn't available
-          const femaleVoices = voices.filter(voice => 
-            voice.name.toLowerCase().includes('female') || 
-            voice.name.toLowerCase().includes('girl') ||
-            voice.name.includes('Victoria') ||
-            voice.name.includes('Tessa')
-          );
-          
-          if (femaleVoices.length > 0) {
-            speech.voice = femaleVoices[0];
-          }
-        }
-        
-        // Higher pitch and slightly faster rate for young girl voice
-        speech.rate = 1.1;    // Slightly faster speaking rate
-        speech.pitch = 1.4;   // Higher pitch for young girl voice
-        speech.volume = 0.8;
-        
-        window.speechSynthesis.speak(speech);
-      }
+      // Speak the welcome message
+      speakResponse(message);
       
       // Clear previous responses
       setIntentResponse('');
@@ -243,27 +223,75 @@ const Avatar = () => {
     document.addEventListener('mousemove', handleMouseMove);
   };
 
+  // Handle permission for microphone and start listening
+  const requestMicrophonePermission = () => {
+    if (isListening) {
+      // If already listening, stop
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.error("Error stopping recognition:", e);
+        }
+      }
+      setIsListening(false);
+      setExpression('neutral');
+      return;
+    }
+
+    // Set listening state immediately for UI feedback
+    setIsListening(true);
+    setExpression('excited');
+    setIntentResponse("I'm listening...");
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // Request permission to use the microphone
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          // Stop the stream immediately, we just needed permission
+          stream.getTracks().forEach(track => track.stop());
+          
+          // Start speech recognition now that we have permission
+          startSpeechRecognition();
+        })
+        .catch(error => {
+          console.error('Microphone permission denied or error:', error);
+          setIntentResponse("I need permission to access your microphone. Please try again and allow microphone access.");
+          setIsListening(false);
+          setExpression('thoughtful');
+        });
+    } else {
+      setIntentResponse("Sorry, your browser doesn't support microphone access. Please try typing instead.");
+      setIsListening(false);
+      setExpression('thoughtful');
+    }
+  };
+
   // Toggle speech recognition
-  const toggleListening = () => {
-    if (!isListening) {
-      setIsListening(true);
-      setExpression('excited');
+  const startSpeechRecognition = () => {
+    // Check if speech recognition is available
+    if ('webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
       
-      // Check if speech recognition is available
-      if ('webkitSpeechRecognition' in window) {
-        const SpeechRecognition = window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-        
-        recognition.onstart = () => {
-          setIntentResponse("I'm listening...");
-        };
-        
-        recognition.onresult = (event) => {
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      // Store the recognition instance in a ref so we can stop it later
+      recognitionRef.current = recognition;
+      
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+        // We already set the intent response to "I'm listening..." earlier
+      };
+      
+      recognition.onresult = (event) => {
+        console.log('Speech recognition result received', event);
+        try {
           const transcript = event.results[0][0].transcript;
+          console.log('Transcript:', transcript);
+          
           setUserInput(transcript);
           
           // Process the transcript immediately
@@ -287,64 +315,67 @@ const Avatar = () => {
           }
           
           // Speak the response
-          if ('speechSynthesis' in window) {
-            const speech = new SpeechSynthesisUtterance(result.response);
-            
-            // Try to get the Samantha voice
-            const voices = window.speechSynthesis.getVoices();
-            const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
-            
-            if (samanthaVoice) {
-              speech.voice = samanthaVoice;
-            } else {
-              const femaleVoices = voices.filter(voice => 
-                voice.name.toLowerCase().includes('female') || 
-                voice.name.toLowerCase().includes('girl') ||
-                voice.name.includes('Victoria') ||
-                voice.name.includes('Tessa')
-              );
-              
-              if (femaleVoices.length > 0) {
-                speech.voice = femaleVoices[0];
-              }
-            }
-            
-            speech.rate = 1.1;
-            speech.pitch = 1.4;
-            speech.volume = 0.8;
-            
-            window.speechSynthesis.speak(speech);
-          }
-        };
-        
-        recognition.onerror = (event) => {
-          console.error('Speech recognition error', event.error);
-          setIntentResponse("Sorry, I couldn't hear you clearly. Please try typing instead.");
-          setIsListening(false);
-          setExpression('thoughtful');
-        };
-        
-        recognition.onend = () => {
-          setIsListening(false);
-          setExpression('neutral');
-        };
-        
-        try {
-          recognition.start();
+          speakResponse(result.response);
         } catch (e) {
-          console.error('Speech recognition error:', e);
-          setIntentResponse("Sorry, there was an error starting speech recognition. Please try typing instead.");
-          setIsListening(false);
+          console.error('Error processing speech recognition result:', e);
+          setIntentResponse("Sorry, I had trouble understanding that. Could you try again?");
         }
-      } else {
-        setIntentResponse("Sorry, speech recognition isn't supported in your browser. Please type your question instead.");
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'no-speech') {
+          setIntentResponse("I didn't hear anything. Please try speaking again or type your question.");
+        } else {
+          setIntentResponse("Sorry, I couldn't hear you clearly. Please try typing instead.");
+        }
+        setIsListening(false);
+        setExpression('thoughtful');
+      };
+      
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+        // Only set isListening to false if we have a result or an error
+        // This helps prevent the button from flickering
+        setTimeout(() => {
+          // Add a small delay to give onresult a chance to process
+          if (isListening) {
+            setIsListening(false);
+            setExpression('neutral');
+          }
+        }, 500);
+        recognitionRef.current = null;
+      };
+      
+      try {
+        recognition.start();
+        console.log('Speech recognition started successfully');
+      } catch (e) {
+        console.error('Speech recognition error when starting:', e);
+        setIntentResponse("Sorry, there was an error starting speech recognition. Please try typing instead.");
         setIsListening(false);
         setExpression('thoughtful');
       }
     } else {
+      console.warn('Speech Recognition not supported');
+      setIntentResponse("Sorry, speech recognition isn't supported in your browser. Please type your question instead.");
       setIsListening(false);
+      setExpression('thoughtful');
     }
   };
+
+  // Clean up recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.error("Error stopping recognition on unmount:", e);
+        }
+      }
+    };
+  }, []);
 
   // Initialize position on component mount
   useEffect(() => {
@@ -643,7 +674,7 @@ const Avatar = () => {
                 <button 
                   type="button" 
                   className={`voice-button ${isListening ? 'listening' : ''}`}
-                  onClick={toggleListening}
+                  onClick={requestMicrophonePermission}
                 >
                   {isListening ? 'Listening...' : 'Speak'}
                 </button>
