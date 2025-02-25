@@ -8,14 +8,123 @@ const Avatar = () => {
   const [expression, setExpression] = useState('neutral');
   const [blinkState, setBlinkState] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [userInput, setUserInput] = useState('');
+  const [intentResponse, setIntentResponse] = useState('');
   const dragStartRef = useRef({ x: 0, y: 0 });
   const avatarRef = useRef(null);
-  
+
   // Initialize position to bottom right corner
   const [position, setPosition] = useState({ 
     x: typeof window !== 'undefined' ? window.innerWidth - 250 : 0, 
     y: typeof window !== 'undefined' ? window.innerHeight - 250 : 0 
   });
+
+  // Process user input and determine intent
+  const processIntent = (input) => {
+    const text = input.toLowerCase().trim();
+    
+    // Simple intent matching system
+    if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
+      return { intent: 'greeting', response: "Hello there! How can I help you today?" };
+    }
+    else if (text.includes('weather')) {
+      return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
+    }
+    else if (text.includes('time')) {
+      const now = new Date();
+      return { intent: 'time', response: `The current time is ${now.toLocaleTimeString()}.` };
+    }
+    else if (text.includes('date') || text.includes('day')) {
+      const now = new Date();
+      return { intent: 'date', response: `Today is ${now.toLocaleDateString()}.` };
+    }
+    else if (text.includes('name')) {
+      return { intent: 'name', response: "I'm your friendly anime assistant. You can call me Miku!" };
+    }
+    else if (text.includes('thank')) {
+      return { intent: 'gratitude', response: "You're welcome! Is there anything else I can help with?" };
+    }
+    else if (text.includes('bye') || text.includes('goodbye')) {
+      return { intent: 'farewell', response: "Goodbye! Have a wonderful day!" };
+    }
+    else if (text.includes('help')) {
+      return { 
+        intent: 'help', 
+        response: "I can help with basic questions about the time, date, weather, and more. Just type your question!" 
+      };
+    }
+    else {
+      return { 
+        intent: 'unknown', 
+        response: "I'm not sure I understand. Could you try phrasing that differently?" 
+      };
+    }
+  };
+
+  // Handle submission of user input
+  const handleInputSubmit = (e) => {
+    e.preventDefault();
+    
+    if (userInput.trim() === '') return;
+    
+    // Process the input to determine intent
+    const result = processIntent(userInput);
+    
+    // Set the response
+    setIntentResponse(result.response);
+    
+    // Change expression based on intent
+    switch (result.intent) {
+      case 'greeting':
+      case 'gratitude':
+        setExpression('happy');
+        break;
+      case 'farewell':
+        setExpression('thoughtful');
+        break;
+      case 'unknown':
+        setExpression('thoughtful');
+        break;
+      default:
+        setExpression('excited');
+    }
+    
+    // Speak the response
+    if ('speechSynthesis' in window) {
+      const speech = new SpeechSynthesisUtterance(result.response);
+      
+      // Try to get the Samantha voice specifically
+      const voices = window.speechSynthesis.getVoices();
+      const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
+      
+      if (samanthaVoice) {
+        speech.voice = samanthaVoice;
+      } else {
+        // Fallback to any female voice if Samantha isn't available
+        const femaleVoices = voices.filter(voice => 
+          voice.name.toLowerCase().includes('female') || 
+          voice.name.toLowerCase().includes('girl') ||
+          voice.name.includes('Victoria') ||
+          voice.name.includes('Tessa')
+        );
+        
+        if (femaleVoices.length > 0) {
+          speech.voice = femaleVoices[0];
+        }
+      }
+      
+      // Higher pitch and slightly faster rate for young girl voice
+      speech.rate = 1.1;
+      speech.pitch = 1.4;
+      speech.volume = 0.8;
+      
+      window.speechSynthesis.speak(speech);
+    }
+    
+    // Clear the input field
+    setUserInput('');
+  };
 
   // Separate click handler from drag functionality
   const handleClick = () => {
@@ -63,6 +172,9 @@ const Avatar = () => {
         
         window.speechSynthesis.speak(speech);
       }
+      
+      // Clear previous responses
+      setIntentResponse('');
     }
     
     // Reset running animation after it completes
@@ -70,7 +182,7 @@ const Avatar = () => {
       setIsRunning(false);
     }, 1000);
   };
-  
+
   const handleMouseMove = (e) => {
     if (isDragging) {
       const newX = e.clientX - dragStartRef.current.x;
@@ -79,7 +191,7 @@ const Avatar = () => {
       setPosition({ x: newX, y: newY });
     }
   };
-  
+
   const handleMouseUp = () => {
     if (isDragging) {
       setIsDragging(false);
@@ -95,7 +207,7 @@ const Avatar = () => {
       document.removeEventListener('mousemove', handleMouseMove);
     }
   };
-  
+
   const handleMouseDown = (e) => {
     // Prevent default behaviors
     e.preventDefault();
@@ -131,6 +243,109 @@ const Avatar = () => {
     document.addEventListener('mousemove', handleMouseMove);
   };
 
+  // Toggle speech recognition
+  const toggleListening = () => {
+    if (!isListening) {
+      setIsListening(true);
+      setExpression('excited');
+      
+      // Check if speech recognition is available
+      if ('webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = () => {
+          setIntentResponse("I'm listening...");
+        };
+        
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setUserInput(transcript);
+          
+          // Process the transcript immediately
+          const result = processIntent(transcript);
+          setIntentResponse(result.response);
+          
+          // Update expression based on intent
+          switch (result.intent) {
+            case 'greeting':
+            case 'gratitude':
+              setExpression('happy');
+              break;
+            case 'farewell':
+              setExpression('thoughtful');
+              break;
+            case 'unknown':
+              setExpression('thoughtful');
+              break;
+            default:
+              setExpression('excited');
+          }
+          
+          // Speak the response
+          if ('speechSynthesis' in window) {
+            const speech = new SpeechSynthesisUtterance(result.response);
+            
+            // Try to get the Samantha voice
+            const voices = window.speechSynthesis.getVoices();
+            const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
+            
+            if (samanthaVoice) {
+              speech.voice = samanthaVoice;
+            } else {
+              const femaleVoices = voices.filter(voice => 
+                voice.name.toLowerCase().includes('female') || 
+                voice.name.toLowerCase().includes('girl') ||
+                voice.name.includes('Victoria') ||
+                voice.name.includes('Tessa')
+              );
+              
+              if (femaleVoices.length > 0) {
+                speech.voice = femaleVoices[0];
+              }
+            }
+            
+            speech.rate = 1.1;
+            speech.pitch = 1.4;
+            speech.volume = 0.8;
+            
+            window.speechSynthesis.speak(speech);
+          }
+        };
+        
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          setIntentResponse("Sorry, I couldn't hear you clearly. Please try typing instead.");
+          setIsListening(false);
+          setExpression('thoughtful');
+        };
+        
+        recognition.onend = () => {
+          setIsListening(false);
+          setExpression('neutral');
+        };
+        
+        try {
+          recognition.start();
+        } catch (e) {
+          console.error('Speech recognition error:', e);
+          setIntentResponse("Sorry, there was an error starting speech recognition. Please try typing instead.");
+          setIsListening(false);
+        }
+      } else {
+        setIntentResponse("Sorry, speech recognition isn't supported in your browser. Please type your question instead.");
+        setIsListening(false);
+        setExpression('thoughtful');
+      }
+    } else {
+      setIsListening(false);
+    }
+  };
+
   // Initialize position on component mount
   useEffect(() => {
     // Set initial position to bottom right corner
@@ -147,7 +362,7 @@ const Avatar = () => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
-  
+
   // Handle blinking effect
   useEffect(() => {
     const blinkInterval = setInterval(() => {
@@ -157,7 +372,7 @@ const Avatar = () => {
     
     return () => clearInterval(blinkInterval);
   }, []);
-  
+
   // Cycle through expressions
   useEffect(() => {
     if (!showHelp) {
@@ -173,6 +388,15 @@ const Avatar = () => {
       return () => clearInterval(expressionInterval);
     }
   }, [showHelp]);
+
+  // Load voices when component mounts
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
 
   return (
     <>
@@ -397,8 +621,41 @@ const Avatar = () => {
         >
           <div className="help-content">
             <h2>Hello!</h2>
-            <p>How can I assist you today?</p>
-            <button onClick={() => setShowHelp(false)}>Close</button>
+            
+            {intentResponse ? (
+              <p className="intent-response">{intentResponse}</p>
+            ) : (
+              <p>How can I assist you today?</p>
+            )}
+            
+            <form onSubmit={handleInputSubmit} className="intent-form">
+              <input
+                type="text"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="Type your question here..."
+                className="intent-input"
+              />
+              <div className="button-group">
+                <button type="submit" className="submit-button">
+                  Send
+                </button>
+                <button 
+                  type="button" 
+                  className={`voice-button ${isListening ? 'listening' : ''}`}
+                  onClick={toggleListening}
+                >
+                  {isListening ? 'Listening...' : 'Speak'}
+                </button>
+                <button 
+                  type="button" 
+                  className="close-button"
+                  onClick={() => setShowHelp(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
