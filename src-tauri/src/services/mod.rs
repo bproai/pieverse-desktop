@@ -5,3 +5,4 @@ pub mod python;
 pub mod sqlite;
 pub mod sqlite_prompts;
 pub mod api_server;
+pub mod whisper;

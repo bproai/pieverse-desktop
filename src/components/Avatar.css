@@ -288,6 +288,111 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Audio Controls Styling */
+.audio-controls {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0 15px;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.play-button,
+.send-button,
+.discard-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  flex: 1;
+  margin: 0 3px;
+}
+
+.play-button {
+  background-color: #50C878; /* Emerald green */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-button::before {
+  content: "▶";
+  margin-right: 5px;
+  font-size: 10px;
+}
+
+.play-button.playing {
+  background-color: #ff4081;
+}
+
+.play-button.playing::before {
+  content: "■";
+}
+
+.play-button:hover {
+  background-color: #3CB371; /* Medium sea green */
+  transform: translateY(-2px);
+}
+
+.play-button.playing:hover {
+  background-color: #FF1493; /* Deep pink */
+  transform: translateY(-2px);
+}
+
+.send-button {
+  background-color: #9370DB; /* Medium purple */
+  color: white;
+}
+
+.send-button:hover {
+  background-color: #8A2BE2; /* Blue violet */
+  transform: translateY(-2px);
+}
+
+.discard-button {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+.discard-button:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Audio visualization for playing state */
+@keyframes audioWave {
+  0% { height: 4px; }
+  50% { height: 12px; }
+  100% { height: 4px; }
+}
+
+.play-button.playing::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 10px;
+  margin-left: 8px;
+  background-color: white;
+  animation: audioWave 0.5s infinite;
+}
+
+.play-button.playing::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 10px;
+  margin-right: 3px;
+  background-color: white;
+  animation: audioWave 0.5s infinite 0.2s;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .avatar-container {
@@ -322,5 +427,18 @@
     width: 100%;
     padding: 8px 16px;
     margin-bottom: 5px;
+  }
+  
+  .audio-controls {
+    flex-direction: column;
+    padding: 10px;
+  }
+  
+  .play-button,
+  .send-button,
+  .discard-button {
+    width: 100%;
+    margin: 3px 0;
+    padding: 8px 16px;
   }
 }

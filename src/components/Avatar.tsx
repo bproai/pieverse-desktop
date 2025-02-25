@@ -1,5 +1,6 @@
 // src/components/Avatar.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { core } from '@tauri-apps/api'; // Changed to import core instead of invoke
 import './Avatar.css';
 
 const Avatar = () => {
@@ -11,15 +12,83 @@ const Avatar = () => {
   const [isListening, setIsListening] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [intentResponse, setIntentResponse] = useState('');
+  const [apiKey, setApiKey] = useState(() => {
+    // Try to retrieve from localStorage
+    return localStorage.getItem('whisper_api_key') || '';
+  });
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  
+  // Add these new state variables for audio playback
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [recordedAudioData, setRecordedAudioData] = useState(null);
+  
   const dragStartRef = useRef({ x: 0, y: 0 });
   const avatarRef = useRef(null);
   const recognitionRef = useRef(null);
+  const audioRef = useRef(null);  // Add this ref for the audio element
 
   // Initialize position to bottom right corner
   const [position, setPosition] = useState({ 
     x: typeof window !== 'undefined' ? window.innerWidth - 250 : 0, 
     y: typeof window !== 'undefined' ? window.innerHeight - 250 : 0 
   });
+
+  // Add these functions to handle audio playback
+  const playRecordedAudio = () => {
+    if (audioUrl && audioRef.current) {
+      setIsPlaying(true);
+      audioRef.current.play();
+    }
+  };
+
+  const stopPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+    }
+  };
+
+  // Add this function to handle sending the audio for transcription
+  const sendRecordedAudio = async () => {
+    if (recordedAudioData) {
+      setIntentResponse("Processing your speech...");
+      setExpression('thoughtful');
+      
+      try {
+        await transcribeWithWhisper(recordedAudioData.base64, recordedAudioData.apiKey);
+        
+        // Clear recorded audio after sending
+        setAudioUrl(null);
+        setRecordedAudioData(null);
+      } catch (error) {
+        console.error('Error transcribing audio:', error);
+        setIntentResponse(`Sorry, there was an error processing your speech: ${error}`);
+        setExpression('thoughtful');
+      }
+    }
+  };
+
+  // Add this to handle when audio playback ends
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
+  // Add this function to prompt user for API key if not set
+  const ensureApiKey = () => {
+    if (!apiKey) {
+      const key = window.prompt("Please enter your OpenAI API key for speech recognition:");
+      if (key) {
+        setApiKey(key);
+        localStorage.setItem('whisper_api_key', key);
+        return key;
+      }
+      return null;
+    }
+    return apiKey;
+  };
 
   // Process user input and determine intent
   const processIntent = (input) => {
@@ -226,16 +295,19 @@ const Avatar = () => {
   // Handle permission for microphone and start listening
   const requestMicrophonePermission = () => {
     if (isListening) {
-      // If already listening, stop
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          console.error("Error stopping recognition:", e);
-        }
+      // If already listening, stop recording
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
       }
       setIsListening(false);
       setExpression('neutral');
+      return;
+    }
+
+    // Check for API key
+    const key = ensureApiKey();
+    if (!key) {
+      setIntentResponse("I need an OpenAI API key to process speech. Please try again.");
       return;
     }
 
@@ -244,123 +316,164 @@ const Avatar = () => {
     setExpression('excited');
     setIntentResponse("I'm listening...");
 
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // Request permission to use the microphone
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          // Stop the stream immediately, we just needed permission
-          stream.getTracks().forEach(track => track.stop());
-          
-          // Start speech recognition now that we have permission
-          startSpeechRecognition();
-        })
-        .catch(error => {
-          console.error('Microphone permission denied or error:', error);
-          setIntentResponse("I need permission to access your microphone. Please try again and allow microphone access.");
-          setIsListening(false);
-          setExpression('thoughtful');
-        });
-    } else {
-      setIntentResponse("Sorry, your browser doesn't support microphone access. Please try typing instead.");
-      setIsListening(false);
-      setExpression('thoughtful');
-    }
+    // Request microphone access using browser API
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // Create a new MediaRecorder
+        // Try to get a supported format
+        let mimeType = '';
+        if (MediaRecorder.isTypeSupported) {
+          const formats = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg'];
+          for (const format of formats) {
+            if (MediaRecorder.isTypeSupported(format)) {
+              mimeType = format;
+              console.log(`Using format: ${mimeType}`);
+              break;
+            }
+          }
+        }
+        
+        let recorderOptions = {};
+        if (mimeType) {
+          recorderOptions = { mimeType };
+        }
+        
+        const recorder = new MediaRecorder(stream, recorderOptions);
+        setMediaRecorder(recorder);
+        
+        // Clear previous chunks
+        setAudioChunks([]);
+        
+        // Add event handlers
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            setAudioChunks(prev => [...prev, e.data]);
+          }
+        };
+        
+        recorder.onstop = async () => {
+          try {
+            // Combine chunks into a blob
+            const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/mp3' });
+            
+            // Create a URL for the audio blob for playback
+            const url = URL.createObjectURL(audioBlob);
+            setAudioUrl(url);
+            
+            // Convert to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            
+            reader.onloadend = async () => {
+              try {
+                // Extract base64 data (remove the prefix)
+                const base64Data = reader.result.split(',')[1];
+                
+                // Show playback option with a prompt
+                setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
+                setExpression('happy');
+                
+                // Store the base64 data and API key for when user clicks Send
+                setRecordedAudioData({
+                  base64: base64Data,
+                  apiKey: key
+                });
+                
+              } catch (error) {
+                console.error('Error processing audio:', error);
+                setIntentResponse(`Processing error: ${error.message || 'Unknown error'}`);
+                setExpression('thoughtful');
+              } finally {
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+              }
+            };
+          } catch (error) {
+            console.error('Error in onstop event:', error);
+            setIntentResponse("Error processing the recording. Please try again.");
+            setExpression('thoughtful');
+          } finally {
+            setIsListening(false);
+          }
+        };
+        
+        // Start recording
+        recorder.start();
+        console.log(`Recording started`);
+        
+        // Auto stop after 5 seconds
+        setTimeout(() => {
+          if (recorder && recorder.state === "recording") {
+            try {
+              recorder.stop();
+            } catch (e) {
+              console.error('Error stopping recorder:', e);
+            }
+          }
+        }, 5000);
+      })
+      .catch(error => {
+        console.error('Error accessing microphone:', error);
+        setIntentResponse("I need permission to access your microphone. Please try again and allow microphone access.");
+        setIsListening(false);
+        setExpression('thoughtful');
+      });
   };
 
-  // Toggle speech recognition
-  const startSpeechRecognition = () => {
-    // Check if speech recognition is available
-    if ('webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+  // Process audio with Whisper API
+  const transcribeWithWhisper = async (audioBase64, apiKey) => {
+    try {
+      // Get the format that was used for recording
+      const mimeType = mediaRecorder ? mediaRecorder.mimeType : 'audio/mp3';
       
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      console.log(`Transcribing audio with format: ${mimeType || 'unknown'}`);
       
-      // Store the recognition instance in a ref so we can stop it later
-      recognitionRef.current = recognition;
+      // Changed from invoke to core.invoke
+      const transcription = await core.invoke('transcribe_audio', {
+        audioBase64,
+        apiKey
+      });
       
-      recognition.onstart = () => {
-        console.log('Speech recognition started');
-        // We already set the intent response to "I'm listening..." earlier
-      };
+      console.log('-----------------------------------');
+      console.log('TRANSCRIPTION RESULT:');
+      console.log(`"${transcription}"`);
+      console.log(`Length: ${transcription ? transcription.length : 0} characters`);
+      console.log('-----------------------------------');  
       
-      recognition.onresult = (event) => {
-        console.log('Speech recognition result received', event);
-        try {
-          const transcript = event.results[0][0].transcript;
-          console.log('Transcript:', transcript);
-          
-          setUserInput(transcript);
-          
-          // Process the transcript immediately
-          const result = processIntent(transcript);
-          setIntentResponse(result.response);
-          
-          // Update expression based on intent
-          switch (result.intent) {
-            case 'greeting':
-            case 'gratitude':
-              setExpression('happy');
-              break;
-            case 'farewell':
-              setExpression('thoughtful');
-              break;
-            case 'unknown':
-              setExpression('thoughtful');
-              break;
-            default:
-              setExpression('excited');
-          }
-          
-          // Speak the response
-          speakResponse(result.response);
-        } catch (e) {
-          console.error('Error processing speech recognition result:', e);
-          setIntentResponse("Sorry, I had trouble understanding that. Could you try again?");
+      if (transcription) {
+        setUserInput(transcription);
+        
+        // Process the transcript
+        const result = processIntent(transcription);
+        setIntentResponse(result.response);
+        
+        // Update expression based on intent
+        switch (result.intent) {
+          case 'greeting':
+          case 'gratitude':
+            setExpression('happy');
+            break;
+          case 'farewell':
+            setExpression('thoughtful');
+            break;
+          case 'unknown':
+            setExpression('thoughtful');
+            break;
+          default:
+            setExpression('excited');
         }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'no-speech') {
-          setIntentResponse("I didn't hear anything. Please try speaking again or type your question.");
-        } else {
-          setIntentResponse("Sorry, I couldn't hear you clearly. Please try typing instead.");
-        }
-        setIsListening(false);
-        setExpression('thoughtful');
-      };
-      
-      recognition.onend = () => {
-        console.log('Speech recognition ended');
-        // Only set isListening to false if we have a result or an error
-        // This helps prevent the button from flickering
-        setTimeout(() => {
-          // Add a small delay to give onresult a chance to process
-          if (isListening) {
-            setIsListening(false);
-            setExpression('neutral');
-          }
-        }, 500);
-        recognitionRef.current = null;
-      };
-      
-      try {
-        recognition.start();
-        console.log('Speech recognition started successfully');
-      } catch (e) {
-        console.error('Speech recognition error when starting:', e);
-        setIntentResponse("Sorry, there was an error starting speech recognition. Please try typing instead.");
-        setIsListening(false);
-        setExpression('thoughtful');
+        
+        // Speak the response
+        speakResponse(result.response);
+      } else {
+        setIntentResponse("I couldn't understand what you said. Could you try again?");
       }
-    } else {
-      console.warn('Speech Recognition not supported');
-      setIntentResponse("Sorry, speech recognition isn't supported in your browser. Please type your question instead.");
-      setIsListening(false);
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      setIntentResponse(`Sorry, there was an error processing your speech: ${error}`);
       setExpression('thoughtful');
+    } finally {
+      setIsListening(false);
     }
   };
 
@@ -423,6 +536,9 @@ const Avatar = () => {
   // Load voices when component mounts
   useEffect(() => {
     if ('speechSynthesis' in window) {
+      // Force load voices
+      window.speechSynthesis.getVoices();
+      
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
       };
@@ -431,6 +547,14 @@ const Avatar = () => {
 
   return (
     <>
+      {/* Hidden audio element for playback */}
+      <audio 
+        ref={audioRef}
+        src={audioUrl || ''}
+        onEnded={handleAudioEnded}
+        style={{ display: 'none' }}
+      />
+    
       <div 
         ref={avatarRef}
         className={`avatar-container ${isRunning ? 'running' : ''} ${isDragging ? 'dragging' : ''} expression-${expression}`} 
@@ -659,6 +783,36 @@ const Avatar = () => {
               <p>How can I assist you today?</p>
             )}
             
+            {/* Audio playback controls when audioUrl exists */}
+            {audioUrl && (
+              <div className="audio-controls">
+                <button 
+                  className={`play-button ${isPlaying ? 'playing' : ''}`}
+                  onClick={isPlaying ? stopPlayback : playRecordedAudio}
+                >
+                  {isPlaying ? 'Stop' : 'Play Recording'}
+                </button>
+                
+                <button 
+                  className="send-button"
+                  onClick={sendRecordedAudio}
+                >
+                  Send
+                </button>
+                
+                <button 
+                  className="discard-button"
+                  onClick={() => {
+                    setAudioUrl(null);
+                    setRecordedAudioData(null);
+                    setIntentResponse("Recording discarded. What would you like to do next?");
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            )}
+            
             <form onSubmit={handleInputSubmit} className="intent-form">
               <input
                 type="text"
@@ -671,17 +825,29 @@ const Avatar = () => {
                 <button type="submit" className="submit-button">
                   Send
                 </button>
-                <button 
-                  type="button" 
-                  className={`voice-button ${isListening ? 'listening' : ''}`}
-                  onClick={requestMicrophonePermission}
-                >
-                  {isListening ? 'Listening...' : 'Speak'}
-                </button>
+                
+                {/* Only show the speak button if we're not currently showing audio playback controls */}
+                {!audioUrl && (
+                  <button 
+                    type="button" 
+                    className={`voice-button ${isListening ? 'listening' : ''}`}
+                    onClick={requestMicrophonePermission}
+                  >
+                    {isListening ? 'Listening...' : 'Speak'}
+                  </button>
+                )}
+                
                 <button 
                   type="button" 
                   className="close-button"
-                  onClick={() => setShowHelp(false)}
+                  onClick={() => {
+                    setShowHelp(false);
+                    // Clean up audio when closing
+                    if (audioUrl) {
+                      URL.revokeObjectURL(audioUrl);
+                      setAudioUrl(null);
+                    }
+                  }}
                 >
                   Close
                 </button>

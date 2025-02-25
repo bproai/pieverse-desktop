@@ -44,6 +44,11 @@ use services::{
     }
 };
 
+// Import the whisper module functions
+use services::whisper::{
+    transcribe_audio
+};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -89,7 +94,9 @@ pub fn run() {
             sqlite_delete_prompt,
             // API Server commands
             start_api_server,
-            stop_api_server
+            stop_api_server,
+            // Whisper commands
+            transcribe_audio
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
