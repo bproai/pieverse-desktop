@@ -68,52 +68,61 @@ const Avatar = () => {
       // setIntentResponse(`DEBUG: ${audioUrl}`);
       
       try {
-        // Store the current time when playback starts
-        const startTime = Date.now();
+        // Stop any current playback
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
         
-        // Create an interval that regularly checks and forces termination if needed
-        const checkInterval = setInterval(() => {
-          const currentTime = Date.now();
-          const elapsedTimeInSeconds = (currentTime - startTime) / 1000;
-          
-          // If more than 10 seconds elapsed, force stop regardless of state
-          if (elapsedTimeInSeconds > 10) {
-            clearInterval(checkInterval);
-            setIntentResponse("DEBUG: Forcing stop after 10s");
-            
-            // Force audio to stop completely
-            if (audioRef.current) {
-              audioRef.current.pause();
-              audioRef.current.currentTime = 0;
-            }
-            
-            // Reset UI state directly
+        // Handle different URL types
+        if (audioUrl.startsWith('asset://') || !audioUrl.startsWith('blob:')) {
+          // For Tauri asset URLs, use them directly
+          console.log(`Using file URL directly: ${audioUrl}`);
+          audioRef.current.src = audioUrl;
+        }
+        
+        // Ensure the audio is loaded
+        await audioRef.current.load();
+        
+        // Start playback with explicit promise handling
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Error playing audio:', error);
+            setIntentResponse(`Playback error: ${error.message}`);
             setIsPlaying(false);
-          }
-        }, 1000); // Check every second
-        
-        // Start playback
-        audioRef.current.play();
-        
+          });
+        }
       } catch (error) {
+        console.error('Exception during playback:', error);
         setIsPlaying(false);
       }
     } else {
-      setIntentResponse("DEBUG: Using ELSE path (backend file) for playback");
+      setIntentResponse("Using Tauri backend file for playback");
       try {
         const filePath = await core.invoke('play_last_recording');
         console.log(`Playing recording from file: ${filePath}`);
+        
+        // Use the proper Tauri asset protocol
+        // Use the file path directly with asset protocol
         const fileUrl = `asset://localhost/${filePath}`;
+        
         setAudioUrl(fileUrl);
-        setTimeout(() => {
+        
+        setTimeout(async () => {
           if (audioRef.current) {
-            setIsPlaying(true);
-            audioRef.current.play().catch(e => {
+            try {
+              audioRef.current.src = fileUrl;
+              await audioRef.current.load();
+              setIsPlaying(true);
+              audioRef.current.play();
+            } catch (e) {
               console.error('Error playing audio from file:', e);
               setIntentResponse("Couldn't play the recording from file.");
-            });
+            }
           }
-        }, 100);
+        }, 200);
       } catch (error) {
         console.error('Error playing last recording:', error);
         setIntentResponse("No saved recording found.");
@@ -360,42 +369,59 @@ const Avatar = () => {
       };
       recorder.onstop = async () => {
         console.log("MediaRecorder onstop event triggered");
-        setTimeout(() => {
-          const chunks = audioChunksRef.current;
-          console.log(`Processing ${chunks.length} audio chunks`);
-          if (chunks.length === 0) {
-            console.warn("No audio chunks collected during recording");
-            setIntentResponse("No audio was recorded. Please try again.");
-            setExpression('thoughtful');
-            stream.getTracks().forEach(track => track.stop());
-            return;
-          }
-          const audioBlob = new Blob(chunks, { type: mimeType || 'audio/mp3' });
-          console.log(`Created audio blob: ${audioBlob.size} bytes`);
-          const url = URL.createObjectURL(audioBlob);
-          console.log("Created blob URL for audio playback");
-          setAudioUrl(url);
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          reader.onloadend = async () => {
-            try {
-              const base64Data = reader.result.split(',')[1];
-              console.log("Converted audio to base64");
-              setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
-              setExpression('happy');
-              setRecordedAudioData({
-                base64: base64Data,
-                apiKey: key
-              });
-              console.log("Audio data prepared for sending");
-            } catch (error) {
-              console.error('Error processing audio:', error);
-              setIntentResponse(`Processing error: ${error.message || 'Unknown error'}`);
+        setTimeout(async () => {
+          try {
+            const chunks = audioChunksRef.current;
+            console.log(`Processing ${chunks.length} audio chunks`);
+            if (chunks.length === 0) {
+              console.warn("No audio chunks collected during recording");
+              setIntentResponse("No audio was recorded. Please try again.");
               setExpression('thoughtful');
-            } finally {
-              stream.getTracks().forEach(track => track.stop());
+              return;
             }
-          };
+            const audioBlob = new Blob(chunks, { type: mimeType || 'audio/mp3' });
+            console.log(`Created audio blob: ${audioBlob.size} bytes`);
+            
+            // Create a blob URL for development playback
+            const url = URL.createObjectURL(audioBlob);
+            console.log(`Created audio blob URL: ${url}`);
+            
+            setAudioUrl(url);
+            setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
+            setExpression('happy');
+            
+            // Process the blob for API submission
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+              try {
+                const base64Data = reader.result.split(',')[1];
+                console.log("Converted audio to base64");
+                setRecordedAudioData({
+                  base64: base64Data,
+                  apiKey: key
+                });
+                
+                // Also save the audio via core.invoke for production playback
+                try {
+                  await core.invoke('save_audio_recording', {
+                    audioBase64: base64Data
+                  });
+                  console.log("Saved recording through Tauri backend");
+                } catch (e) {
+                  console.log("Failed to save recording through backend:", e);
+                }
+                
+                console.log("Audio data prepared for sending");
+              } catch (error) {
+                console.error('Error processing audio:', error);
+                setIntentResponse(`Processing error: ${error.message || 'Unknown error'}`);
+                setExpression('thoughtful');
+              }
+            };
+          } finally {
+            stream.getTracks().forEach(track => track.stop());
+          }
         }, 200);
         setIsListening(false);
         console.log("isListening set to false");
@@ -531,6 +557,7 @@ const Avatar = () => {
         onEnded={handleAudioEnded}
         onError={(e) => console.error("Audio playback error:", e)}
         style={{ display: 'none' }}
+        preload="auto"
       />
       
       {/* Custom API Key Modal with inline styles for debugging */}
@@ -757,6 +784,7 @@ const Avatar = () => {
             ) : (
               <p>How can I assist you today?</p>
             )}
+
             {audioUrl && (
               <div className="audio-controls">
                 <button 
@@ -774,7 +802,10 @@ const Avatar = () => {
                 <button 
                   className="discard-button"
                   onClick={() => {
-                    setAudioUrl(null);
+                    if (audioUrl) {
+                      URL.revokeObjectURL(audioUrl);
+                      setAudioUrl(null);
+                    }
                     setRecordedAudioData(null);
                     setIntentResponse("Recording discarded. What would you like to do next?");
                   }}
