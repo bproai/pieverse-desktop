@@ -40,6 +40,9 @@
     "webview": {
       "allowedMediaPermissions": ["microphone"],
       "permissions": ["microphone"]
-    }
+    },
+    "microphone": {
+      "enabled": true
+    }  
   }
 }
