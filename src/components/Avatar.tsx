@@ -38,10 +38,38 @@ const Avatar = () => {
   });
 
   // Add these functions to handle audio playback
-  const playRecordedAudio = () => {
+  const playRecordedAudio = async () => {
+    // First try to play from the blob URL if available
     if (audioUrl && audioRef.current) {
       setIsPlaying(true);
       audioRef.current.play();
+    } 
+    // If no blob URL, try to play from the saved file
+    else {
+      try {
+        // Call the Rust function to get the file path
+        const filePath = await core.invoke('play_last_recording');
+        console.log(`Playing recording from file: ${filePath}`);
+        
+        // Set the audio source to the file path
+        // For Tauri apps with custom protocol enabled, we can use tauri://
+        const fileUrl = `asset://localhost/${filePath}`;
+        setAudioUrl(fileUrl);
+        
+        // Wait a brief moment for the audio element to update
+        setTimeout(() => {
+          if (audioRef.current) {
+            setIsPlaying(true);
+            audioRef.current.play().catch(e => {
+              console.error('Error playing audio from file:', e);
+              setIntentResponse("Couldn't play the recording from file.");
+            });
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Error playing last recording:', error);
+        setIntentResponse("No saved recording found.");
+      }
     }
   };
 
@@ -319,16 +347,18 @@ const Avatar = () => {
       return;
     }
 
-    // Set listening state immediately for UI feedback
-    setIsListening(true);
+    // Show "preparing" message but don't set isListening yet
+    setIntentResponse("Preparing microphone...");
     setExpression('excited');
-    setIntentResponse("I'm listening...");
 
     // Request microphone access using browser API
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
-        // Create a new MediaRecorder
-        // Try to get a supported format
+        // Only set isListening to true after mic access is granted
+        setIsListening(true);
+        setIntentResponse("I'm listening...");
+        
+        // Create a new MediaRecorder - rest of your code stays the same
         let mimeType = '';
         
         try {
@@ -344,7 +374,6 @@ const Avatar = () => {
           }
         } catch (e) {
           console.warn("Error checking supported types:", e);
-          // Continue without a specific mime type
         }
         
         let recorderOptions = {};
@@ -352,7 +381,6 @@ const Avatar = () => {
           recorderOptions = { mimeType };
         }
         
-        // Create recorder with fallback handling
         let recorder;
         try {
           recorder = new MediaRecorder(stream, recorderOptions);
@@ -374,17 +402,19 @@ const Avatar = () => {
         setAudioChunks([]);
         audioChunksRef.current = [];
         
+        // The rest of your recorder setup code...
+        
         // Add event handlers
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
             console.log(`Audio chunk received: ${e.data.size} bytes`);
-            // Update both state and ref
             setAudioChunks(prev => [...prev, e.data]);
             audioChunksRef.current.push(e.data);
           }
         };
-        
+
         recorder.onstop = async () => {
+          console.log("MediaRecorder onstop event triggered");
           try {
             // Try to request final data
             try {
@@ -401,12 +431,24 @@ const Avatar = () => {
               const chunks = audioChunksRef.current;
               console.log(`Processing ${chunks.length} audio chunks`);
               
+              // Check if we have any chunks to process
+              if (chunks.length === 0) {
+                console.warn("No audio chunks collected during recording");
+                setIntentResponse("No audio was recorded. Please try again.");
+                setExpression('thoughtful');
+                
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+                return;
+              }
+              
               // Combine chunks into a blob
               const audioBlob = new Blob(chunks, { type: mimeType || 'audio/mp3' });
               console.log(`Created audio blob: ${audioBlob.size} bytes`);
               
               // Create a URL for the audio blob for playback
               const url = URL.createObjectURL(audioBlob);
+              console.log("Created blob URL for audio playback");
               setAudioUrl(url);
               
               // Convert to base64
@@ -417,6 +459,7 @@ const Avatar = () => {
                 try {
                   // Extract base64 data (remove the prefix)
                   const base64Data = reader.result.split(',')[1];
+                  console.log("Converted audio to base64");
                   
                   // Show playback option with a prompt
                   setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
@@ -427,6 +470,7 @@ const Avatar = () => {
                     base64: base64Data,
                     apiKey: key
                   });
+                  console.log("Audio data prepared for sending");
                   
                 } catch (error) {
                   console.error('Error processing audio:', error);
@@ -437,7 +481,7 @@ const Avatar = () => {
                   stream.getTracks().forEach(track => track.stop());
                 }
               };
-            }, 100); // Small delay to ensure all chunks are collected
+            }, 200); // Increased delay to ensure all chunks are collected
           } catch (error) {
             console.error('Error in onstop event:', error);
             setIntentResponse("Error processing the recording. Please try again.");
@@ -446,10 +490,13 @@ const Avatar = () => {
             stream.getTracks().forEach(track => track.stop());
           } finally {
             setIsListening(false);
+            console.log("isListening set to false");
           }
         };
         
-        // Start recording with time slices to ensure we get multiple chunks
+        // Rest of your onstop handler code...
+        
+        // Start recording with time slices
         recorder.start(100);
         console.log(`Recording started with timeslice: 100ms`);
         
@@ -460,7 +507,6 @@ const Avatar = () => {
               recorder.stop();
             } catch (e) {
               console.error('Error stopping recorder:', e);
-              // Make sure to stop tracks
               stream.getTracks().forEach(track => track.stop());
               setIsListening(false);
             }
@@ -470,7 +516,6 @@ const Avatar = () => {
       .catch(error => {
         console.error('Error accessing microphone:', error);
         setIntentResponse("I need permission to access your microphone. Please try again and allow microphone access.");
-        setIsListening(false);
         setExpression('thoughtful');
       });
   };
@@ -607,6 +652,7 @@ const Avatar = () => {
         ref={audioRef}
         src={audioUrl || ''}
         onEnded={handleAudioEnded}
+        onError={(e) => console.error("Audio playback error:", e)}
         style={{ display: 'none' }}
       />
     
@@ -882,15 +928,15 @@ const Avatar = () => {
                 </button>
                 
                 {/* Only show the speak button if we're not currently showing audio playback controls */}
-                {!audioUrl && (
-                  <button 
-                    type="button" 
-                    className={`voice-button ${isListening ? 'listening' : ''}`}
-                    onClick={requestMicrophonePermission}
-                  >
-                    {isListening ? 'Listening...' : 'Speak'}
-                  </button>
-                )}
+                <button 
+                  type="button" 
+                  className={`voice-button ${isListening ? 'listening' : ''}`}
+                  onClick={requestMicrophonePermission}
+                  disabled={intentResponse === "Preparing microphone..."}
+                >
+                  {isListening ? 'Listening...' : 
+                  intentResponse === "Preparing microphone..." ? 'Preparing...' : 'Speak'}
+                </button>
                 
                 <button 
                   type="button" 
