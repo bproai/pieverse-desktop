@@ -438,7 +438,7 @@ const Avatar = () => {
             setIsListening(false);
           }
         }
-      }, 5000);
+      }, 30000);
     })
     .catch(error => {
       console.error('Error accessing microphone:', error);
