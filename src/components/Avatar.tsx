@@ -65,8 +65,41 @@ const Avatar = () => {
   const playRecordedAudio = async () => {
     if (audioUrl && audioRef.current) {
       setIsPlaying(true);
-      audioRef.current.play();
+      // setIntentResponse(`DEBUG: ${audioUrl}`);
+      
+      try {
+        // Store the current time when playback starts
+        const startTime = Date.now();
+        
+        // Create an interval that regularly checks and forces termination if needed
+        const checkInterval = setInterval(() => {
+          const currentTime = Date.now();
+          const elapsedTimeInSeconds = (currentTime - startTime) / 1000;
+          
+          // If more than 10 seconds elapsed, force stop regardless of state
+          if (elapsedTimeInSeconds > 10) {
+            clearInterval(checkInterval);
+            setIntentResponse("DEBUG: Forcing stop after 10s");
+            
+            // Force audio to stop completely
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current.currentTime = 0;
+            }
+            
+            // Reset UI state directly
+            setIsPlaying(false);
+          }
+        }, 1000); // Check every second
+        
+        // Start playback
+        audioRef.current.play();
+        
+      } catch (error) {
+        setIsPlaying(false);
+      }
     } else {
+      setIntentResponse("DEBUG: Using ELSE path (backend file) for playback");
       try {
         const filePath = await core.invoke('play_last_recording');
         console.log(`Playing recording from file: ${filePath}`);
@@ -84,7 +117,7 @@ const Avatar = () => {
       } catch (error) {
         console.error('Error playing last recording:', error);
         setIntentResponse("No saved recording found.");
-      }
+      }      
     }
   };
 
@@ -342,9 +375,6 @@ const Avatar = () => {
           const url = URL.createObjectURL(audioBlob);
           console.log("Created blob URL for audio playback");
           setAudioUrl(url);
-          // Playback the recorded audio immediately
-          const audioElement = new Audio(url);
-          audioElement.play().catch(e => console.error("Playback error:", e));
           const reader = new FileReader();
           reader.readAsDataURL(audioBlob);
           reader.onloadend = async () => {
