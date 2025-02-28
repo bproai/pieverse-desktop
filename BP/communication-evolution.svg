@@ -36,7 +36,7 @@
   <text x="250" y="347" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Linear, Single-Thread Communication</text>
   
   <rect x="125" y="365" width="250" height="25" rx="12.5" ry="12.5" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
-  <text x="250" y="382" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Dominant Voices & Status Hierarchies</text>
+  <text x="250" y="382" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Dominant Voices &amp; Status Hierarchies</text>
   
   <rect x="125" y="400" width="250" height="25" rx="12.5" ry="12.5" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
   <text x="250" y="417" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Information Asymmetry</text>
@@ -105,7 +105,7 @@
   <path d="M350,220 L415,220" fill="none" stroke="#ddd" stroke-width="2" stroke-dasharray="5,5"/>
   <polygon points="415,220 405,215 410,220 405,225" fill="#ddd"/>
   
-  <path d="M585,220 L590,220" fill="none" stroke="#6A3DE8" stroke-width="2" stroke-dasharray="5,5"/>
+  <path d="M575,220 L590,220" fill="none" stroke="#6A3DE8" stroke-width="2" stroke-dasharray="5,5"/>
   <polygon points="590,220 580,215 585,220 580,225" fill="#6A3DE8"/>
   
   <!-- Bottom section: Key insights -->

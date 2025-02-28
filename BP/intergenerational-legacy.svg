@@ -87,8 +87,7 @@
   
   <!-- PiEVerse Node for Generation 3 -->
   <rect x="670" y="250" width="160" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.3)" stroke="#6A3DE8" stroke-width="2"/>
-  <text x="750" y="270" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#6A3DE8">PiEVerse + Gen 1 & 2 Wisdom</text>
-  
+  <text x="750" y="270" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#6A3DE8">PiEVerse + Gen 1 &amp; 2 Wisdom</text>
   <!-- Knowledge Transfer to Generation 3 -->
   <path d="M580,250 C610,250 630,250 670,250" fill="none" stroke="#6A3DE8" stroke-width="2" stroke-dasharray="5,5"/>
   <polygon points="670,250 660,245 665,250 660,255" fill="#6A3DE8"/>

@@ -18,12 +18,12 @@
   <!-- Human founder node -->
   <circle cx="500" cy="130" r="60" fill="#ffffff" stroke="#6A3DE8" stroke-width="3"/>
   <text x="500" y="110" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Yunpeng Brian Pan</text>
-  <text x="500" y="135" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Founder & CEO</text>
+  <text x="500" y="135" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Founder &amp; CEO</text>
   <text x="500" y="155" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Human Leadership</text>
   
   <!-- Human contributions -->
   <rect x="380" y="60" width="240" height="25" rx="12.5" ry="12.5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
-  <text x="500" y="77" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Vision & Purpose</text>
+  <text x="500" y="77" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Vision &amp; Purpose</text>
   
   <rect x="635" y="115" width="120" height="25" rx="12.5" ry="12.5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
   <text x="695" y="132" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Ethical Direction</text>

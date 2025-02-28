@@ -38,8 +38,8 @@
   <path d="M220,250 L240,260 L255,240 L270,260 L285,250 L300,245" fill="none" stroke="#FFCC33" stroke-width="2"/> <!-- muscle tension -->
   
   <!-- Wearable device icon -->
-  <rect x="120" cy="200" width="30" height="20" rx="5" ry="5" fill="#6A3DE8"/>
-  <rect x="125" cy="195" width="20" height="30" rx="5" ry="5" fill="#6A3DE8"/>
+  <rect x="120" y="200" width="30" height="20" rx="5" ry="5" fill="#6A3DE8"/>
+  <rect x="125" y="195" width="20" height="30" rx="5" ry="5" fill="#6A3DE8"/>
   <circle cx="135" cy="210" r="7" fill="#ffffff"/>
   
   <!-- Right side: Cognitive Assessment -->
@@ -56,7 +56,7 @@
   <text x="600" y="175" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Emotional Regulation</text>
   
   <path d="M550,200 C560,220 640,220 650,200" fill="rgba(51,255,87,0.2)" stroke="#33FF57" stroke-width="2"/>
-  <text x="600" y="210" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Focus & Attention</text>
+  <text x="600" y="210" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Focus &amp; Attention</text>
   
   <path d="M550,230 C575,260 625,260 650,230" fill="rgba(255,204,51,0.2)" stroke="#FFCC33" stroke-width="2"/>
   <text x="600" y="245" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Pattern Recognition</text>
