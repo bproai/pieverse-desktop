@@ -44,6 +44,7 @@ const Avatar = () => {
   });
 
   // --- Custom Modal for API Key ---
+  // Modified ensureApiKey: show modal if no key exists.
   const handleApiKeySave = () => {
     if (apiKeyInput.trim()) {
       setApiKey(apiKeyInput.trim());
