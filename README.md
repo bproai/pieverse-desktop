@@ -18,27 +18,23 @@ PiEVerse Desktop brings together essential development tools, database managemen
 
 ## Features
 
-### Interactive AI Assistant Avatar
-- Floating, draggable anime-style avatar that provides AI assistance
-- Voice recognition and text-to-speech capabilities using the OpenAI Whisper API
-- Multiple facial expression animations (happy, thoughtful, excited, neutral)
-- Integration with OpenAI models (including GPT-4o mini and GPT-4o realtime)
-- Support for both rule-based and AI-powered interactions
-- WebRTC-based real-time speech interface
-
-### Database Management
-- MySQL connection and query execution
-- MongoDB integration
-- SQLite local database support
-- Transfer data between MySQL and SQLite
-- Intuitive SQL query interface with results display
-
 ### AI Prompt Management
 - Create, edit, delete AI prompts and instructions
 - Categorize prompts (Writing & Analysis, Finance & Markets, Code & Development)
 - Bulk import and export of prompts
 - Toggle between SQLite and MySQL storage backends
 - Activation/deactivation of individual prompts
+
+### Interactive AI Assistant Avatar
+- Floating, draggable anime-style avatar that provides AI assistance
+- Voice recognition and text-to-speech capabilities using the OpenAI Whisper API
+- Multiple facial expression animations (happy, thoughtful, excited, neutral)
+- Multiple AI engine options:
+  - Rule-based mode: Simple, predefined responses for basic queries
+  - GPT-4o mini: Compact but powerful OpenAI model for efficient responses
+  - GPT-4o Realtime: Advanced WebRTC-based streaming model for natural conversations
+  - GPT-4o Realtime Mini: Lighter version of the Realtime model with faster responses
+- WebRTC-based real-time speech interface for fluid conversations
 
 ### Python Sandbox
 - Integrated Python environment for quick scripting and testing
@@ -53,6 +49,13 @@ PiEVerse Desktop brings together essential development tools, database managemen
 - Start/stop service controls
 - RESTful API for prompt management 
 - CORS support for cross-origin requests
+
+### Database Management
+- MySQL connection and query execution
+- MongoDB integration
+- SQLite local database support
+- Transfer data between MySQL and SQLite
+- Intuitive SQL query interface with results display
 
 ## Installation
 
@@ -143,12 +146,34 @@ PiEVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which
 - MySQL and MongoDB connectors
 - Axum for the REST API server
 
-### Key Components
-- **Avatar System**: A draggable anime-style assistant that uses the OpenAI Whisper API for speech-to-text and provides both rule-based and AI-generated responses.
-- **Database Connectors**: Native Rust implementations for connecting to MySQL, MongoDB, and SQLite databases.
-- **Prompt Management**: A system for creating, categorizing, and storing AI prompts that can be used with various AI models.
-- **Python Sandbox**: An embedded Python interpreter for running code directly within the application.
-- **API Server**: A RESTful API server for accessing PiEVerse functionality from other applications.
+### AI Technology
+The avatar assistant leverages multiple AI models with different capabilities:
+
+1. **Rule-based Engine**
+   - Simple, predefined patterns for common queries
+   - Zero latency responses
+   - No API key required
+   - Works offline for basic interactions
+
+2. **GPT-4o Mini Model**
+   - Compact version of OpenAI's GPT-4o
+   - Efficient balance of performance and speed
+   - Handles complex queries with good context understanding
+   - Requires OpenAI API key
+
+3. **GPT-4o Realtime**
+   - Advanced streaming model with near-instant responses
+   - WebRTC-based for true realtime conversation
+   - Highest quality responses and best context retention
+   - Natural back-and-forth conversational ability
+   - Requires OpenAI API key
+
+4. **OpenAI Whisper API Integration**
+   - Advanced speech-to-text capabilities
+   - Multiple audio format support
+   - High accuracy transcription
+   - Handles different accents and speaking styles
+   - Requires OpenAI API key
 
 ## API Reference
 
