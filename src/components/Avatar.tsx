@@ -43,6 +43,278 @@ const Avatar = () => {
     y: typeof window !== 'undefined' ? window.innerHeight - 250 : 0 
   });
 
+    // Add these state variables near the top of your Avatar component
+  const [modelType, setModelType] = useState('regular'); // 'regular', 'openai', or 'realtime'
+  const [peerConnection, setPeerConnection] = useState(null);
+  const [dataChannel, setDataChannel] = useState(null);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const rtcAudioElement = useRef(null);
+
+  // Add this useEffect to clean up WebRTC resources on unmount
+  useEffect(() => {
+    return () => {
+      // Close WebRTC connection when component unmounts
+      stopRealtimeSession();
+    };
+  }, []);
+
+  // Add these WebRTC functions
+
+  const startRealtimeSession = async () => {
+    try {
+      const key = ensureApiKey();
+      if (!key) {
+        setIntentResponse("API key is required for real-time mode.");
+        return;
+      }
+
+      setIntentResponse("Starting real-time session...");
+      setExpression('excited');
+
+      // Create a new WebRTC peer connection
+      const pc = new RTCPeerConnection();
+      setPeerConnection(pc);
+
+      // Set up audio element for the model's response
+      if (!rtcAudioElement.current) {
+        rtcAudioElement.current = document.createElement('audio');
+        rtcAudioElement.current.autoplay = true;
+      }
+
+      // Handle incoming audio stream
+      pc.ontrack = (event) => {
+        console.log("Received audio track from OpenAI");
+        rtcAudioElement.current.srcObject = event.streams[0];
+      };
+
+      // Get microphone access
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Add the microphone track to the peer connection
+      micStream.getAudioTracks().forEach(track => {
+        pc.addTrack(track, micStream);
+      });
+
+      // Create data channel for sending/receiving messages
+      const dc = pc.createDataChannel("openai-events");
+      setDataChannel(dc);
+
+      // Handle data channel events
+      dc.onopen = () => {
+        console.log("Data channel opened");
+        // Wait 500ms before updating the UI state to allow the connection to fully initiate
+        setTimeout(() => {
+          setIsRealtimeActive(true);
+          setIntentResponse("Real-time session started! You can speak or type normally.");
+          setExpression('happy');
+        }, 500);
+      };
+      
+
+      dc.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log("Received message:", message);
+          
+          // Handle different message types
+          if (message.type === "response.done" && message.response?.output) {
+            // Extract text response
+            const textOutputs = message.response.output.filter(o => o.type === "text");
+            if (textOutputs.length > 0) {
+              setIntentResponse(textOutputs[0].text);
+              // No need to speak text as we're using the audio stream
+            }
+          }
+        } catch (error) {
+          console.error("Error processing message:", error);
+        }
+      };
+
+      dc.onerror = (error) => {
+        console.error("Data channel error:", error);
+        setIntentResponse("Connection error occurred. Try again.");
+        setExpression('thoughtful');
+      };
+
+      dc.onclose = () => {
+        console.log("Data channel closed");
+        setIsRealtimeActive(false);
+        setExpression('neutral');
+      };
+
+      // Create an offer to start the connection
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Send the offer to OpenAI
+      const baseUrl = "https://api.openai.com/v1/realtime";
+      const model =
+        modelType === "realtime-mini" ? "gpt-4o-mini-realtime-preview" : "gpt-4o-realtime-preview";
+          
+      try {
+        const response = await fetch(`${baseUrl}?model=${model}`, {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/sdp",
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${await response.text()}`);
+        }
+        
+        const answerSdp = await response.text();
+        const answer = {
+          type: "answer",
+          sdp: answerSdp,
+        };
+        
+        await pc.setRemoteDescription(answer);
+        console.log("WebRTC connection established");
+        
+        // Initial setup message to OpenAI
+        setTimeout(() => {
+          if (dc.readyState === "open") {
+            sendRealtimeMessage("Hello, I'm ready to chat!");
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error("Error connecting to OpenAI:", error);
+        setIntentResponse(`Connection failed: ${error.message}`);
+        setExpression('thoughtful');
+        stopRealtimeSession();
+      }
+    } catch (error) {
+      console.error("Error setting up WebRTC:", error);
+      setIntentResponse(`WebRTC setup failed: ${error.message}`);
+      setExpression('thoughtful');
+      stopRealtimeSession();
+    }
+  };
+
+  const stopRealtimeSession = () => {
+    if (dataChannel) {
+      dataChannel.close();
+    }
+    
+    if (peerConnection) {
+      peerConnection.getSenders().forEach(sender => {
+        if (sender.track) {
+          sender.track.stop();
+        }
+      });
+      peerConnection.close();
+    }
+    
+    setDataChannel(null);
+    setPeerConnection(null);
+    setIsRealtimeActive(false);
+    setIntentResponse("Real-time session ended.");
+  };
+
+  const sendRealtimeMessage = (text) => {
+    if (!dataChannel || dataChannel.readyState !== "open") {
+      setIntentResponse("Real-time connection not ready. Try again.");
+      return;
+    }
+    
+    // Format message according to OpenAI's real-time API expectations
+    const message = {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: text,
+          },
+        ],
+      },
+      event_id: crypto.randomUUID(),
+    };
+    
+    dataChannel.send(JSON.stringify(message));
+    
+    // Request a response
+    const responseRequest = {
+      type: "response.create",
+      event_id: crypto.randomUUID(),
+    };
+    
+    dataChannel.send(JSON.stringify(responseRequest));
+  };
+
+  // Modify the real-time microphone handler
+  const handleRealtimeMicToggle = async () => {
+    try {
+      const key = ensureApiKey();
+      if (!key) {
+        setIntentResponse("API key is required for real-time mode.");
+        return;
+      }
+      if (!isRealtimeActive) {
+        // Update message based on the selected realtime variant
+        if (modelType === "realtime-mini") {
+          setIntentResponse("Starting realtime mini session...");
+        } else {
+          setIntentResponse("Starting real-time session...");
+        }
+        await startRealtimeSession();
+  
+        // Set up voice activity detection using the Web Audio API
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 256;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const THRESHOLD = 30; // Adjust this threshold as needed
+  
+        const detectVoice = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          if (avg > THRESHOLD) {
+            console.log("Voice activity detected.");
+            // Additional logic for streaming speech chunks can be added here.
+          }
+          requestAnimationFrame(detectVoice);
+        };
+        detectVoice();
+      } else {
+        // Toggle microphone mute/unmute in the realtime session.
+        if (peerConnection) {
+          const senders = peerConnection.getSenders();
+          const audioSender = senders.find((s) => s.track && s.track.kind === "audio");
+          if (audioSender && audioSender.track) {
+            audioSender.track.enabled = !audioSender.track.enabled;
+            setIntentResponse(
+              audioSender.track.enabled ? "Microphone activated" : "Microphone muted"
+            );
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Error in realtime mic toggle:", error);
+      setIntentResponse(`Realtime error: ${error.message}`);
+    }
+  };
+  
+
+  // Modified handleInputSubmit to support real-time mode
+  const handleRealtimeInputSubmit = (e) => {
+    e.preventDefault();
+    if (userInput.trim() === '') return;
+    
+    sendRealtimeMessage(userInput);
+    setIntentResponse(`You: ${userInput}`);
+    setUserInput('');
+  }; 
+  
   // --- Custom Modal for API Key ---
   // Modified ensureApiKey: show modal if no key exists.
   const handleApiKeySave = () => {
@@ -819,13 +1091,39 @@ const Avatar = () => {
               <p>How can I assist you today?</p>
             )}
 
-            {/* NEW: Toggle button for switching between rule-based and OpenAI 4o-mini */}
-            <button
-              style={{ marginBottom: '10px', cursor: 'pointer' }}
-              onClick={() => setUseOpenAIModel(!useOpenAIModel)}
+            {/* Model selection dropdown */}
+            <select
+              id="model-select"
+              value={modelType}
+              onChange={(e) => {
+                const newType = e.target.value;
+                // If currently in a realtime session and switching between realtime variants, close the connection.
+                if (
+                  isRealtimeActive &&
+                  (modelType === "realtime" || modelType === "realtime-mini") &&
+                  newType !== modelType
+                ) {
+                  stopRealtimeSession();
+                }
+                setModelType(newType);
+                // For backward compatibility with existing code.
+                setUseOpenAIModel(newType === "openai");
+              }}
+              style={{
+                padding: "6px 10px",
+                borderRadius: "8px",
+                background: "rgba(255, 255, 255, 0.2)",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                cursor: "pointer"
+              }}
             >
-              {useOpenAIModel ? 'Switch to Rule-based Intent' : 'Switch to OpenAI 4o-mini'}
-            </button>
+              <option value="regular">Rule-based</option>
+              <option value="openai">OpenAI 4o-mini</option>
+              <option value="realtime">OpenAI Real-time</option>
+              <option value="realtime-mini">OpenAI Real-time (mini)</option>
+            </select>
+
 
             {audioUrl && (
               <div className="audio-controls">
@@ -871,12 +1169,21 @@ const Avatar = () => {
                 </button>
                 <button 
                   type="button" 
-                  className={`voice-button ${isListening ? 'listening' : ''}`}
-                  onClick={requestMicrophonePermission}
+                  className={`voice-button ${isListening ? "listening" : ""}`}
+                  onClick={() => {
+                    if (modelType === "realtime" || modelType === "realtime-mini") {
+                      handleRealtimeMicToggle();
+                    } else {
+                      requestMicrophonePermission();
+                    }
+                  }}
                   disabled={intentResponse === "Preparing microphone..."}
                 >
-                  {isListening ? 'Listening...' : intentResponse === "Preparing microphone..." ? 'Preparing...' : 'Speak'}
+                  {(modelType === "realtime" || modelType === "realtime-mini")
+                    ? (isRealtimeActive ? "Toggle Mic" : "Start Realtime") 
+                    : (isListening ? "Listening..." : "Speak")}
                 </button>
+
                 <button 
                   type="button" 
                   className="close-button"
