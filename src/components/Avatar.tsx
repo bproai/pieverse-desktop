@@ -13,7 +13,10 @@ const Avatar = () => {
   const [isListening, setIsListening] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [intentResponse, setIntentResponse] = useState('');
-  
+
+  // NEW: Toggle for using the OpenAI model vs. rule-based
+  const [useOpenAIModel, setUseOpenAIModel] = useState(false);
+
   // API key state and custom modal state
   const [apiKey, setApiKey] = useState(() => {
     return localStorage.getItem('whisper_api_key') || '';
@@ -50,7 +53,6 @@ const Avatar = () => {
     }
   };
 
-  // Modified ensureApiKey: show modal if no key exists.
   const ensureApiKey = () => {
     console.log("ensureApiKey called, apiKey:", apiKey);
     if (!apiKey || apiKey.trim() === "") {
@@ -126,7 +128,7 @@ const Avatar = () => {
       } catch (error) {
         console.error('Error playing last recording:', error);
         setIntentResponse("No saved recording found.");
-      }      
+      }
     }
   };
 
@@ -161,35 +163,61 @@ const Avatar = () => {
     }
   };
 
-  // --- Core Functionality ---
-  const processIntent = (input: string) => {
-    const text = input.toLowerCase().trim();
-    if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
-      return { intent: 'greeting', response: "Hello there! How can I help you today?" };
-    } else if (text.includes('weather')) {
-      return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
-    } else if (text.includes('time')) {
-      const now = new Date();
-      return { intent: 'time', response: `The current time is ${now.toLocaleTimeString()}.` };
-    } else if (text.includes('date') || text.includes('day')) {
-      const now = new Date();
-      return { intent: 'date', response: `Today is ${now.toLocaleDateString()}.` };
-    } else if (text.includes('name')) {
-      return { intent: 'name', response: "I'm your friendly anime assistant. You can call me Miku!" };
-    } else if (text.includes('thank')) {
-      return { intent: 'gratitude', response: "You're welcome! Is there anything else I can help with?" };
-    } else if (text.includes('bye') || text.includes('goodbye')) {
-      return { intent: 'farewell', response: "Goodbye! Have a wonderful day!" };
-    } else if (text.includes('help')) {
-      return { 
-        intent: 'help', 
-        response: "I can help with basic questions about the time, date, weather, and more. Just type your question!" 
-      };
+  // ============== NEW HELPER: CALL OPENAI 4o-mini ==============
+  const callOpenAIMini = async (prompt: string, key: string) => {
+    try {
+      // Using Tauri's core.invoke to call our Rust backend function
+      console.log("Calling OpenAI 4o-mini with prompt length:", prompt.length);
+      const response = await core.invoke('openai_4o_mini', { 
+        prompt, 
+        apiKey: key 
+      });
+      console.log("OpenAI 4o-mini response received");
+      return response;
+    } catch (error) {
+      console.error('OpenAI 4o-mini error:', error);
+      return "There was an error calling the 4o-mini model.";
+    }
+  };
+
+  // ============== Modified: processIntent is now ASYNC ==============
+  const processIntent = async (input: string) => {
+    if (useOpenAIModel) {
+      const key = ensureApiKey();
+      if (!key) {
+        return { intent: 'error', response: "No API key set." };
+      }
+      const openAIResponse = await callOpenAIMini(input, key);
+      return { intent: 'openai', response: openAIResponse };
     } else {
-      return { 
-        intent: 'unknown', 
-        response: "I'm not sure I understand. Could you try phrasing that differently?" 
-      };
+      const text = input.toLowerCase().trim();
+      if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
+        return { intent: 'greeting', response: "Hello there! How can I help you today?" };
+      } else if (text.includes('weather')) {
+        return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
+      } else if (text.includes('time')) {
+        const now = new Date();
+        return { intent: 'time', response: `The current time is ${now.toLocaleTimeString()}.` };
+      } else if (text.includes('date') || text.includes('day')) {
+        const now = new Date();
+        return { intent: 'date', response: `Today is ${now.toLocaleDateString()}.` };
+      } else if (text.includes('name')) {
+        return { intent: 'name', response: "I'm your friendly anime assistant. You can call me Miku!" };
+      } else if (text.includes('thank')) {
+        return { intent: 'gratitude', response: "You're welcome! Is there anything else I can help with?" };
+      } else if (text.includes('bye') || text.includes('goodbye')) {
+        return { intent: 'farewell', response: "Goodbye! Have a wonderful day!" };
+      } else if (text.includes('help')) {
+        return { 
+          intent: 'help', 
+          response: "I can help with basic questions about the time, date, weather, and more. Just type your question!"
+        };
+      } else {
+        return { 
+          intent: 'unknown', 
+          response: "I'm not sure I understand. Could you try phrasing that differently?" 
+        };
+      }
     }
   };
 
@@ -219,11 +247,13 @@ const Avatar = () => {
     }
   };
 
-  const handleInputSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // ============== Modified: handleInputSubmit is now ASYNC ==============
+  const handleInputSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (userInput.trim() === '') return;
-    const result = processIntent(userInput);
+    const result = await processIntent(userInput);
     setIntentResponse(result.response);
+
     switch (result.intent) {
       case 'greeting':
       case 'gratitude':
@@ -389,8 +419,8 @@ const Avatar = () => {
             setAudioUrl(url);
             setIntentResponse("I recorded that! Click Play to review before sending, or Send to transcribe now.");
             setExpression('happy');
-            
-            // Process the blob for API submission
+
+            // Convert to base64
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
@@ -456,15 +486,18 @@ const Avatar = () => {
         audioBase64,
         apiKey
       });
+
       console.log('-----------------------------------');
       console.log('TRANSCRIPTION RESULT:');
       console.log(`"${transcription}"`);
       console.log(`Length: ${transcription ? transcription.length : 0} characters`);
-      console.log('-----------------------------------');  
+      console.log('-----------------------------------');
+
       if (transcription) {
         setUserInput(transcription);
-        const result = processIntent(transcription);
+        const result = await processIntent(transcription);
         setIntentResponse(result.response);
+
         switch (result.intent) {
           case 'greeting':
           case 'gratitude':
@@ -785,6 +818,14 @@ const Avatar = () => {
               <p>How can I assist you today?</p>
             )}
 
+            {/* NEW: Toggle button for switching between rule-based and OpenAI 4o-mini */}
+            <button
+              style={{ marginBottom: '10px', cursor: 'pointer' }}
+              onClick={() => setUseOpenAIModel(!useOpenAIModel)}
+            >
+              {useOpenAIModel ? 'Switch to Rule-based Intent' : 'Switch to OpenAI 4o-mini'}
+            </button>
+
             {audioUrl && (
               <div className="audio-controls">
                 <button 
@@ -814,6 +855,7 @@ const Avatar = () => {
                 </button>
               </div>
             )}
+
             <form onSubmit={handleInputSubmit} className="intent-form">
               <input
                 type="text"

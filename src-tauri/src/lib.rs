@@ -46,7 +46,10 @@ use services::{
 
 // Import the whisper module functions
 use services::whisper::{
-    transcribe_audio
+    transcribe_audio,
+    play_last_recording,
+    save_audio_recording,
+    openai_4o_mini
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -96,7 +99,10 @@ pub fn run() {
             start_api_server,
             stop_api_server,
             // Whisper commands
-            transcribe_audio
+            transcribe_audio,
+            play_last_recording,
+            save_audio_recording,
+            openai_4o_mini
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
