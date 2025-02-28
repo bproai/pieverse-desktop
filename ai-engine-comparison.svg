@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Header -->
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">AI Engine Comparison</text>
+  
+  <!-- Grid Lines -->
+  <line x1="50" y1="100" x2="950" y2="100" stroke="#ddd" stroke-width="2"/>
+  <line x1="50" y1="400" x2="950" y2="400" stroke="#ddd" stroke-width="2"/>
+  
+  <!-- Column 1: Rule-based Engine -->
+  <rect x="70" y="120" width="200" height="260" fill="#e9ecef" rx="10" ry="10"/>
+  <text x="170" y="150" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Rule-based</text>
+  
+  <!-- Avatar with neutral expression -->
+  <circle cx="170" cy="200" r="40" fill="#FFE6D9"/>
+  <circle cx="150" cy="190" r="5" fill="#333"/>
+  <circle cx="190" cy="190" r="5" fill="#333"/>
+  <path d="M150,220 Q170,230 190,220" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M120,160 Q170,120 220,160" fill="none" stroke="#6A3DE8" stroke-width="5"/>
+  
+  <!-- Rule-based characteristics -->
+  <rect x="90" y="260" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="170" y="280" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Zero Latency</text>
+  
+  <rect x="90" y="300" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="170" y="320" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">No API Key Required</text>
+  
+  <rect x="90" y="340" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="170" y="360" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Works Offline</text>
+  
+  <!-- Column 2: GPT-4o Mini -->
+  <rect x="290" y="120" width="200" height="260" fill="#e9ecef" rx="10" ry="10"/>
+  <text x="390" y="150" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">GPT-4o Mini</text>
+  
+  <!-- Avatar with happy expression -->
+  <circle cx="390" cy="200" r="40" fill="#FFE6D9"/>
+  <circle cx="370" cy="190" r="5" fill="#333"/>
+  <circle cx="410" cy="190" r="5" fill="#333"/>
+  <path d="M370,215 Q390,230 410,215" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M340,160 Q390,120 440,160" fill="none" stroke="#6A3DE8" stroke-width="5"/>
+  
+  <!-- Pipeline visualization -->
+  <path d="M330,250 L360,250 L360,240 L380,260 L360,280 L360,270 L330,270 Z" fill="#adb5bd"/>
+  <path d="M390,250 L420,250 L420,240 L440,260 L420,280 L420,270 L390,270 Z" fill="#adb5bd"/>
+  <path d="M450,250 L480,250 L480,240 L500,260 L480,280 L480,270 L450,270 Z" fill="#adb5bd"/>
+  
+  <!-- Mini characteristics -->
+  <rect x="310" y="300" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="390" y="320" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Multi-step Workflow</text>
+  
+  <rect x="310" y="340" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="390" y="360" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">System TTS</text>
+  
+  <!-- Column 3: GPT-4o Realtime -->
+  <rect x="510" y="120" width="200" height="260" fill="#e9ecef" rx="10" ry="10"/>
+  <text x="610" y="150" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">GPT-4o Realtime</text>
+  
+  <!-- Avatar with excited expression -->
+  <circle cx="610" cy="200" r="40" fill="#FFE6D9"/>
+  <circle cx="590" cy="185" r="5" fill="#333"/>
+  <circle cx="630" cy="185" r="5" fill="#333"/>
+  <path d="M590,215 Q610,240 630,215" fill="none" stroke="#333" stroke-width="2" fill="#FFA8A8" fill-opacity="0.4"/>
+  <path d="M560,160 Q610,120 660,160" fill="none" stroke="#6A3DE8" stroke-width="5"/>
+  
+  <!-- WebRTC visualization -->
+  <path d="M570,260 Q610,230 650,260" stroke="#333" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+  <path d="M570,280 Q610,310 650,280" stroke="#333" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+  <circle cx="610" cy="270" r="10" fill="#6A3DE8"/>
+  
+  <!-- Realtime characteristics -->
+  <rect x="530" y="300" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="610" y="320" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Voice-to-Voice</text>
+  
+  <rect x="530" y="340" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="610" y="360" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Higher Cost</text>
+  
+  <!-- Column 4: GPT-4o Realtime Mini -->
+  <rect x="730" y="120" width="200" height="260" fill="#e9ecef" rx="10" ry="10"/>
+  <text x="830" y="150" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Realtime Mini</text>
+  
+  <!-- Avatar with thoughtful expression -->
+  <circle cx="830" cy="200" r="40" fill="#FFE6D9"/>
+  <circle cx="810" cy="190" r="5" fill="#333"/>
+  <circle cx="850" cy="190" r="5" fill="#333"/>
+  <path d="M820,220 Q830,215 840,220" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M780,160 Q830,120 880,160" fill="none" stroke="#6A3DE8" stroke-width="5"/>
+  
+  <!-- WebRTC visualization (same as realtime) -->
+  <path d="M790,260 Q830,230 870,260" stroke="#333" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+  <path d="M790,280 Q830,310 870,280" stroke="#333" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+  <circle cx="830" cy="270" r="10" fill="#6A3DE8"/>
+  
+  <!-- Realtime Mini characteristics -->
+  <rect x="750" y="300" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="830" y="320" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Voice-to-Voice</text>
+  
+  <rect x="750" y="340" width="160" height="30" fill="#dee2e6" rx="5" ry="5"/>
+  <text x="830" y="360" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Cost Effective</text>
+  
+  <!-- Cost Comparison -->
+  <line x1="70" y1="440" x2="930" y2="440" stroke="#333" stroke-width="2"/>
+  <text x="500" y="470" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Cost Comparison</text>
+  
+  <!-- Cost bars -->
+  <rect x="100" y="490" width="140" height="20" fill="#28a745" rx="5" ry="5"/>
+  <text x="170" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white">$0</text>
+  
+  <rect x="320" y="490" width="140" height="20" fill="#ffc107" rx="5" ry="5"/>
+  <text x="390" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">$$</text>
+  
+  <rect x="540" y="490" width="140" height="20" fill="#dc3545" rx="5" ry="5"/>
+  <text x="610" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white">$$$</text>
+  
+  <rect x="760" y="490" width="140" height="20" fill="#fd7e14" rx="5" ry="5"/>
+  <text x="830" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white">$$</text>
+  
+  <!-- Labels -->
+  <text x="170" y="530" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Rule-based</text>
+  <text x="390" y="530" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">GPT-4o Mini</text>
+  <text x="610" y="530" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">GPT-4o Realtime</text>
+  <text x="830" y="530" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333">Realtime Mini</text>
+</svg>

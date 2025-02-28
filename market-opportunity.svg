@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Header -->
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">Market Opportunity</text>
+  
+  <!-- Left Side: Market Size -->
+  <text x="250" y="100" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Developer Tools Market</text>
+  
+  <!-- Bar Chart for Market Size -->
+  <rect x="100" y="130" width="300" height="220" fill="none" stroke="#ddd" stroke-width="1"/>
+  
+  <!-- Y-axis labels -->
+  <text x="95" y="135" font-family="Inter, sans-serif" font-size="12" text-anchor="end" fill="#666">$60B</text>
+  <text x="95" y="190" font-family="Inter, sans-serif" font-size="12" text-anchor="end" fill="#666">$45B</text>
+  <text x="95" y="245" font-family="Inter, sans-serif" font-size="12" text-anchor="end" fill="#666">$30B</text>
+  <text x="95" y="300" font-family="Inter, sans-serif" font-size="12" text-anchor="end" fill="#666">$15B</text>
+  <text x="95" y="355" font-family="Inter, sans-serif" font-size="12" text-anchor="end" fill="#666">$0</text>
+  
+  <!-- X-axis labels -->
+  <text x="130" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">2024</text>
+  <text x="190" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">2025</text>
+  <text x="250" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">2026</text>
+  <text x="310" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">2027</text>
+  <text x="370" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">2028</text>
+  
+  <!-- Bars for market size -->
+  <rect x="115" y="245" width="30" height="110" fill="#6A3DE8" rx="3" ry="3"/>
+  <rect x="175" y="230" width="30" height="125" fill="#6A3DE8" rx="3" ry="3"/>
+  <rect x="235" y="212" width="30" height="143" fill="#6A3DE8" rx="3" ry="3"/>
+  <rect x="295" y="190" width="30" height="165" fill="#6A3DE8" rx="3" ry="3"/>
+  <rect x="355" y="165" width="30" height="190" fill="#6A3DE8" rx="3" ry="3"/>
+  
+  <!-- Market size values -->
+  <text x="130" y="240" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white" font-weight="bold">$35B</text>
+  <text x="190" y="225" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white" font-weight="bold">$39B</text>
+  <text x="250" y="207" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white" font-weight="bold">$44B</text>
+  <text x="310" y="185" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white" font-weight="bold">$49B</text>
+  <text x="370" y="160" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="white" font-weight="bold">$55B</text>
+  
+  <!-- Growth annotation -->
+  <path d="M115,245 L370,165" stroke="#FF5733" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
+  <rect x="190" y="120" width="120" height="30" fill="#FF5733" rx="15" ry="15"/>
+  <text x="250" y="140" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="white" font-weight="bold">12% CAGR</text>
+  
+  <!-- Right Side: Target Audience -->
+  <text x="750" y="100" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Target Audience</text>
+  
+  <!-- Donut chart for target audience -->
+  <circle cx="750" cy="240" r="120" fill="none" stroke="#ddd" stroke-width="1"/>
+  
+  <!-- Donut segments -->
+  <!-- Software developers segment (28M - largest) -->
+  <path d="M750,240 L750,120 A120,120 0 0,1 855.86,197.57 L750,240 Z" fill="#6A3DE8"/>
+  <!-- Data scientists segment (7M - medium) -->
+  <path d="M750,240 L855.86,197.57 A120,120 0 0,1 825.98,345.53 L750,240 Z" fill="#FF5733"/>
+  <!-- IT professionals segment (12M - medium-large) -->
+  <path d="M750,240 L825.98,345.53 A120,120 0 0,1 644.14,197.57 L750,240 Z" fill="#33A8FF"/>
+  <!-- Others segment (small) -->
+  <path d="M750,240 L644.14,197.57 A120,120 0 0,1 750,120 L750,240 Z" fill="#33FF57"/>
+  
+  <!-- Inner white circle to create donut -->
+  <circle cx="750" cy="240" r="60" fill="white"/>
+  
+  <!-- Legend for donut chart -->
+  <rect x="650" y="380" width="20" height="20" fill="#6A3DE8" rx="3" ry="3"/>
+  <text x="680" y="395" font-family="Inter, sans-serif" font-size="14" text-anchor="start" fill="#333">Software Developers (28M)</text>
+  
+  <rect x="650" y="410" width="20" height="20" fill="#FF5733" rx="3" ry="3"/>
+  <text x="680" y="425" font-family="Inter, sans-serif" font-size="14" text-anchor="start" fill="#333">Data Scientists (7M)</text>
+  
+  <rect x="650" y="440" width="20" height="20" fill="#33A8FF" rx="3" ry="3"/>
+  <text x="680" y="455" font-family="Inter, sans-serif" font-size="14" text-anchor="start" fill="#333">IT Professionals (12M)</text>
+  
+  <rect x="650" y="470" width="20" height="20" fill="#33FF57" rx="3" ry="3"/>
+  <text x="680" y="485" font-family="Inter, sans-serif" font-size="14" text-anchor="start" fill="#333">Others (3M)</text>
+  
+  <!-- Bottom Section: Market Trends -->
+  <text x="500" y="420" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Key Market Trends</text>
+  
+  <!-- Trend boxes -->
+  <rect x="100" y="450" width="150" height="80" fill="#f1f3f5" rx="10" ry="10" stroke="#ddd" stroke-width="1"/>
+  <text x="175" y="480" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">AI Integration</text>
+  <text x="175" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Growing at 30% annually</text>
+  
+  <rect x="275" y="450" width="150" height="80" fill="#f1f3f5" rx="10" ry="10" stroke="#ddd" stroke-width="1"/>
+  <text x="350" y="480" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Tool Consolidation</text>
+  <text x="350" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">83% want fewer tools</text>
+  
+  <rect x="450" y="450" width="150" height="80" fill="#f1f3f5" rx="10" ry="10" stroke="#ddd" stroke-width="1"/>
+  <text x="525" y="480" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Voice Interfaces</text>
+  <text x="525" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">42% adoption growth</text>
+  
+  <rect x="625" y="450" width="150" height="80" fill="#f1f3f5" rx="10" ry="10" stroke="#ddd" stroke-width="1"/>
+  <text x="700" y="480" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Database Diversity</text>
+  <text x="700" y="505" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">3.2 DB types per org</text>
+</svg>
