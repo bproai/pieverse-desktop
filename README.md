@@ -27,14 +27,14 @@ PiEVerse Desktop brings together essential development tools, database managemen
 
 ### Interactive AI Assistant Avatar
 - Floating, draggable anime-style avatar that provides AI assistance
-- Voice recognition and text-to-speech capabilities using the OpenAI Whisper API
 - Multiple facial expression animations (happy, thoughtful, excited, neutral)
 - Multiple AI engine options:
   - Rule-based mode: Simple, predefined responses for basic queries
-  - GPT-4o mini: Compact but powerful OpenAI model for efficient responses
-  - GPT-4o Realtime: Advanced WebRTC-based streaming model for natural conversations
-  - GPT-4o Realtime Mini: Lighter version of the Realtime model with faster responses
-- WebRTC-based real-time speech interface for fluid conversations
+  - GPT-4o mini: Uses Whisper for STT, GPT-4o mini for text generation, and browser's TTS 
+  - GPT-4o Realtime: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
+  - GPT-4o Realtime Mini: Cost-effective version of the Realtime model with same voice capabilities
+- Different UI workflows based on selected AI engine
+- Record/playback capability for non-realtime modes
 
 ### Python Sandbox
 - Integrated Python environment for quick scripting and testing
@@ -147,7 +147,7 @@ PiEVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which
 - Axum for the REST API server
 
 ### AI Technology
-The avatar assistant leverages multiple AI models with different capabilities:
+The avatar assistant leverages multiple AI models with different interaction patterns:
 
 1. **Rule-based Engine**
    - Simple, predefined patterns for common queries
@@ -155,18 +155,31 @@ The avatar assistant leverages multiple AI models with different capabilities:
    - No API key required
    - Works offline for basic interactions
 
-2. **GPT-4o Mini Model**
-   - Compact version of OpenAI's GPT-4o
-   - Efficient balance of performance and speed
-   - Handles complex queries with good context understanding
+2. **GPT-4o Mini Pipeline**
+   - Multi-step workflow (record > preview > send > receive > TTS)
+   - Uses OpenAI Whisper API for speech-to-text conversion
+   - Processes text with GPT-4o mini model
+   - Browser's built-in speech synthesis for mechanical text-to-speech
+   - Requires manual recording and submission by user
+   - More control but less natural interaction flow
    - Requires OpenAI API key
 
 3. **GPT-4o Realtime**
-   - Advanced streaming model with near-instant responses
-   - WebRTC-based for true realtime conversation
+   - True voice-to-voice conversation with single click activation
+   - WebRTC-based streaming for instant response
+   - Voice Activity Detection (VAD) for natural turn-taking
+   - Human-like voice responses
+   - Much more natural conversation experience
    - Highest quality responses and best context retention
-   - Natural back-and-forth conversational ability
-   - Requires OpenAI API key
+   - Requires OpenAI API key with higher usage costs
+
+4. **GPT-4o Realtime Mini**
+   - More affordable version of the Realtime model
+   - Identical voice-to-voice WebRTC interface with VAD
+   - Same natural conversation experience as full Realtime version
+   - Good balance of quality and cost efficiency
+   - Ideal for extended conversation sessions
+   - Requires OpenAI API key with lower usage costs
 
 4. **OpenAI Whisper API Integration**
    - Advanced speech-to-text capabilities
