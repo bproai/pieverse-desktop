@@ -1,9 +1,21 @@
 // src/components/Python/PythonPanel.tsx
 import { useState, useEffect } from 'react';
-import { core } from '@tauri-apps/api'; // Updated import using core
+import { core } from '@tauri-apps/api';
 import { Card, Stack, Button, Alert } from '@mantine/core';
 import { Play, RefreshCw } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { loader, Editor } from '@monaco-editor/react';
+
+// Configure Monaco to use local files for both development and production
+loader.config({
+  paths: {
+    vs: './monaco-editor/vs'
+  }
+});
+
+// Add error handler for debugging
+loader.init().catch(error => {
+  console.error('Monaco loader initialization error:', error);
+});
 
 interface ExecutionResult {
   output: string;
@@ -12,11 +24,13 @@ interface ExecutionResult {
 }
 
 export function PythonPanel() {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState('# Your Python code here\nprint("Hello, world!")');
   const [output, setOutput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
 
   useEffect(() => {
     initializePython();
@@ -59,7 +73,7 @@ export function PythonPanel() {
     setIsLoading(true);
     try {
       await core.invoke('python_reset');
-      setCode('');
+      setCode('# Your Python code here\nprint("Hello, world!")');
       setOutput('');
       setError(null);
     } catch (err) {
@@ -68,26 +82,76 @@ export function PythonPanel() {
       setIsLoading(false);
     }
   };
+  
+  const handleEditorWillMount = (monaco) => {
+    console.log("Monaco editor will mount");
+  };
+  
+  const handleEditorDidMount = (editor, monaco) => {
+    console.log("Monaco editor mounted successfully");
+    setEditorReady(true);
+  };
+  
+  const handleEditorError = (error) => {
+    console.error("Monaco editor loading error:", error);
+    setEditorError(`Failed to load editor: ${error.message || 'Unknown error'}`);
+  };
+
+  // Fallback textarea if Monaco fails to load
+  const renderFallbackEditor = () => (
+    <div className="h-full">
+      <textarea
+        className="w-full h-full p-4 font-mono text-sm bg-gray-800 text-white"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="# Enter your Python code here"
+      />
+    </div>
+  );
 
   return (
     <Card className="w-full" shadow="sm" padding="lg">
       <Stack>
-        <div className="h-96">
-          <Editor
-            height="100%"
-            defaultLanguage="python"
-            value={code}
-            onChange={(value) => setCode(value || '')}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: "on",
-              rulers: [80],
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-            }}
-          />
+        <div className="h-96 relative">
+          {!editorReady && !editorError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+              <div className="text-center text-white">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <div>Loading editor...</div>
+              </div>
+            </div>
+          )}
+          
+          {editorError ? (
+            <>
+              <Alert color="red" title="Editor Error" className="mb-2">
+                {editorError}
+              </Alert>
+              {renderFallbackEditor()}
+            </>
+          ) : (
+            <Editor
+              height="100%"
+              defaultLanguage="python"
+              value={code}
+              onChange={(value) => setCode(value || '')}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: "on",
+                rulers: [80],
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 4,
+                insertSpaces: true,
+              }}
+              beforeMount={handleEditorWillMount}
+              onMount={handleEditorDidMount}
+              onError={handleEditorError}
+              loading={<div>Loading editor components...</div>}
+            />
+          )}
         </div>
 
         <div className="flex justify-end gap-2">

@@ -63,3 +63,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Monaco Editor files
+public/monaco-editor/

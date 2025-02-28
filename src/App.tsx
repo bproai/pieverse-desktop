@@ -6,9 +6,9 @@ import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
 import { PythonPanel } from './components/Python/PythonPanel';
 import { PromptsManager } from './components/Prompts';
-import { APISettings } from './components/APISettings';  
+import { APISettings } from './components/APISettings';
 import BrandLogo from './components/BrandLogo';
-import Avatar from './components/Avatar'; // Import the Avatar component
+import Avatar from './components/Avatar';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
