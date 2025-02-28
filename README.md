@@ -59,7 +59,7 @@ PiEVerse Desktop brings together essential development tools, database managemen
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install) 1.75 or higher
 - [Node.js](https://nodejs.org/) 18 or higher
-- [pnpm](https://pnpm.io/installation) or npm
+- npm (comes with Node.js)
 
 ### Build from Source
 1. Clone the repository:
@@ -70,12 +70,12 @@ PiEVerse Desktop brings together essential development tools, database managemen
 
 2. Install JavaScript dependencies:
    ```bash
-   pnpm install
+   npm install
    ```
 
 3. Build the application:
    ```bash
-   pnpm tauri build
+   npm run tauri build
    ```
 
 The compiled application will be available in the `src-tauri/target/release` directory.
@@ -89,12 +89,12 @@ Download the latest release for your platform from the [Releases page](https://g
 1. Clone the repository
 2. Install dependencies:
    ```bash
-   pnpm install
+   npm install
    ```
 
 3. Start the development server:
    ```bash
-   pnpm tauri dev
+   npm run tauri dev
    ```
 
 ### Project Structure
