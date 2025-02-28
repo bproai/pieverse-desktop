@@ -18,7 +18,8 @@ PiEVerse Desktop creates a collaborative intelligence environment where humans a
 - **Knowledge Bridge**: Translate between human and AGI understanding
 - **Perspective Enhancement**: Expand viewpoints and identify cognitive blind spots
 - **Co-creation Environment**: Develop ideas together in a shared workspace
-- **Performance Optimization**: Monitor physical and mental states to enhance abilities in competitive fields like sports and trading
+- **Performance Optimization**: Monitor physical and mental states to enhance abilities in competitive fields
+- **24/7 Continuous Operation**: Transcend human biological limitations while optimizing for them
 
 ---
 
@@ -38,9 +39,9 @@ PiEVerse Desktop creates a collaborative intelligence environment where humans a
 ---
 
 ### The Team
-- Yunpeng Brian Pan - Founder & CEO, visionary behind cognitive enhancement tools
-- [Co-founder Name] - AI specialist with background in [Relevant Field]
-- [Advisor Name] - Former [Position] at [Company]
+- Yunpeng Brian Pan - Founder & CEO
+- Claude AI - Core team member (complex reasoning, content creation, business strategy)
+- ChatGPT - Core team member (code generation, technical documentation, market research)
 
 ---
 
