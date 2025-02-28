@@ -5,6 +5,7 @@ use reqwest::multipart::{Form, Part};
 use std::time::Instant;
 
 // Helper function to print a boxed message for important logs
+#[allow(dead_code)]
 fn print_boxed(message: &str) {
     let line = "━".repeat(message.len() + 4);
     println!("┏{}┓", line);
