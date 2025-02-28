@@ -30,7 +30,7 @@ PiEVerse Desktop brings together essential development tools, database managemen
 - Multiple facial expression animations (happy, thoughtful, excited, neutral)
 - Multiple AI engine options:
   - Rule-based mode: Simple, predefined responses for basic queries
-  - GPT-4o mini: Uses Whisper for STT, GPT-4o mini for text generation, and browser's TTS 
+  - GPT-4o mini: Uses Whisper for STT, GPT-4o mini for text generation, and system's native TTS 
   - GPT-4o Realtime: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
   - GPT-4o Realtime Mini: Cost-effective version of the Realtime model with same voice capabilities
 - Different UI workflows based on selected AI engine
@@ -159,7 +159,7 @@ The avatar assistant leverages multiple AI models with different interaction pat
    - Multi-step workflow (record > preview > send > receive > TTS)
    - Uses OpenAI Whisper API for speech-to-text conversion
    - Processes text with GPT-4o mini model
-   - Browser's built-in speech synthesis for mechanical text-to-speech
+   - Uses system's native speech synthesis for mechanical text-to-speech
    - Requires manual recording and submission by user
    - More control but less natural interaction flow
    - Requires OpenAI API key
