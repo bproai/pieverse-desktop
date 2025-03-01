@@ -58,6 +58,13 @@ use services::brand_sound::{
     check_brand_sound_exists
 };
 
+// Import the Google Trends functions
+use services::google_trends::{
+    get_google_trends,
+    get_related_queries,
+    export_trends_data
+};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -70,6 +77,7 @@ pub fn run() {
             tray::handle_window_event(window, event);
         })
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(MongoDBState::new())
         .manage(MySqlService::new())
         .manage(PythonService::new())
@@ -111,7 +119,11 @@ pub fn run() {
             openai_4o_mini,
             // Brand sound commands
             get_brand_sound_path,
-            check_brand_sound_exists
+            check_brand_sound_exists,
+            // Google Trends commands
+            get_google_trends,
+            get_related_queries,
+            export_trends_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
