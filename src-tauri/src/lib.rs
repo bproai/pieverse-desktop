@@ -65,8 +65,31 @@ use services::google_trends::{
     export_trends_data
 };
 
+// Import the new Trend Spike Prediction functions
+use services::trend_spike_service::{
+    TrendSpikeService,
+    init_default_keywords,
+    get_trend_predictions,
+    get_saved_trend_predictions,
+    predict_trend_spike,
+    add_trend_spike_keyword,
+    remove_trend_spike_keyword,
+    start_trend_spike_monitoring,
+    stop_trend_spike_monitoring,
+    get_trend_spike_monitored_keywords,
+    set_trend_spike_threshold,
+    set_trend_spike_interval,
+    is_trend_spike_monitoring_active,
+    get_trend_spike_sources
+};
+use std::sync::Arc;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Create and initialize the trend spike service
+    let trend_spike_service = Arc::new(TrendSpikeService::new());
+    init_default_keywords(&trend_spike_service);
+
     tauri::Builder::default()
         .setup(|app| {
             // Setup tray icon handlers
@@ -83,6 +106,7 @@ pub fn run() {
         .manage(PythonService::new())
         .manage(SqliteService::new())
         .manage(ApiServerState::default())
+        .manage(trend_spike_service.clone()) // Add trend spike service to managed state
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -123,7 +147,20 @@ pub fn run() {
             // Google Trends commands
             get_google_trends,
             get_related_queries,
-            export_trends_data
+            export_trends_data,
+            // New Trend Spike Prediction commands
+            get_trend_predictions,
+            get_saved_trend_predictions,
+            predict_trend_spike,
+            add_trend_spike_keyword,
+            remove_trend_spike_keyword,
+            start_trend_spike_monitoring,
+            stop_trend_spike_monitoring,
+            get_trend_spike_monitored_keywords,
+            set_trend_spike_threshold,
+            set_trend_spike_interval,
+            is_trend_spike_monitoring_active,
+            get_trend_spike_sources
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

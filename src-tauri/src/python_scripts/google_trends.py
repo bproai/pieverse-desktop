@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
 # src-tauri/python_scripts/google_trends.py
 
 import json

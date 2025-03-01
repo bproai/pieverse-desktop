@@ -12,5 +12,6 @@ pub mod whisper;
 pub mod brand_sound;
 pub mod python;
 
-// Add the Google Trends module
+// Google Trends services
 pub mod google_trends;
+pub mod trend_spike_service;
