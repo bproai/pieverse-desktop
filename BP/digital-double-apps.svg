@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Header -->
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">Digital Double Applications</text>
+  <text x="500" y="80" font-family="Inter, sans-serif" font-size="18" font-style="italic" text-anchor="middle" fill="#666">Professional representation with progressive autonomy</text>
+  
+  <!-- Four application scenarios -->
+  <rect x="50" y="100" width="220" height="280" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="290" y="100" width="220" height="280" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="530" y="100" width="220" height="280" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="770" y="100" width="220" height="280" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- Scenario 1: Meeting Attendance -->
+  <text x="160" y="125" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Meeting Attendance</text>
+  
+  <!-- Meeting scenario illustration -->
+  <rect x="75" y="140" width="170" height="110" rx="5" ry="5" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- Meeting table with people -->
+  <rect x="95" y="170" width="130" height="60" rx="5" ry="5" fill="#FFFFFF" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- People at meeting -->
+  <circle cx="120" cy="180" r="10" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <circle cx="150" cy="180" r="10" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <circle cx="180" cy="180" r="10" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <circle cx="200" cy="200" r="10" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <circle cx="170" cy="220" r="10" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  
+  <!-- Digital double at meeting -->
+  <circle cx="120" cy="220" r="10" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="120" y="224" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#6A3DE8">DD</text>
+  
+  <!-- Capabilities list -->
+  <text x="160" y="270" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Capabilities</text>
+  <text x="70" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Takes comprehensive notes</text>
+  <text x="70" y="310" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Makes decisions within parameters</text>
+  <text x="70" y="330" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Represents your perspective</text>
+  <text x="70" y="350" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Flags issues requiring your attention</text>
+  
+  <!-- Scenario 2: Client Communication -->
+  <text x="400" y="125" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Client Communication</text>
+  
+  <!-- Email scenario illustration -->
+  <rect x="315" y="140" width="170" height="110" rx="5" ry="5" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- Email window -->
+  <rect x="325" y="150" width="150" height="90" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="325" y="150" width="150" height="20" rx="5" ry="5" fill="#EEEEEE" stroke="#CCCCCC" stroke-width="1"/>
+  <circle cx="335" cy="160" r="5" fill="#FF6B6B"/>
+  <circle cx="350" cy="160" r="5" fill="#FFD93D"/>
+  <circle cx="365" cy="160" r="5" fill="#6BCB77"/>
+  
+  <!-- Email text lines -->
+  <line x1="335" y1="185" x2="465" y2="185" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="335" y1="200" x2="465" y2="200" stroke="#EEEEEE" stroke-width="2"/>
+  <line x1="335" y1="215" x2="425" y2="215" stroke="#EEEEEE" stroke-width="2"/>
+  
+  <!-- Digital double icon -->
+  <circle cx="465" cy="225" r="10" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="465" y="229" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#6A3DE8">DD</text>
+  
+  <!-- Capabilities list -->
+  <text x="400" y="270" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Capabilities</text>
+  <text x="310" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Responds using your writing style</text>
+  <text x="310" y="310" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Handles routine inquiries</text>
+  <text x="310" y="330" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Maintains relationship continuity</text>
+  <text x="310" y="350" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Escalates complex matters to you</text>
+  
+  <!-- Scenario 3: Preliminary Consultations -->
+  <text x="640" y="125" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Preliminary Consultations</text>
+  
+  <!-- Consultation scenario illustration -->
+  <rect x="555" y="140" width="170" height="110" rx="5" ry="5" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- Consultation setting -->
+  <rect x="565" y="160" width="150" height="70" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Client figure -->
+  <circle cx="595" cy="195" r="15" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <line x1="595" y1="210" x2="595" y2="220" stroke="#333333" stroke-width="1"/>
+  <line x1="595" y1="210" x2="590" y2="215" stroke="#333333" stroke-width="1"/>
+  <line x1="595" y1="210" x2="600" y2="215" stroke="#333333" stroke-width="1"/>
+  
+  <!-- Digital double consultant -->
+  <circle cx="685" cy="195" r="15" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="1"/>
+  <line x1="685" y1="210" x2="685" y2="220" stroke="#6A3DE8" stroke-width="1"/>
+  <line x1="685" y1="210" x2="680" y2="215" stroke="#6A3DE8" stroke-width="1"/>
+  <line x1="685" y1="210" x2="690" y2="215" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="685" y="199" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#6A3DE8">DD</text>
+  
+  <!-- Conversation indicator -->
+  <path d="M615,185 Q640,175 665,185" stroke="#6A3DE8" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
+  <path d="M665,195 Q640,205 615,195" stroke="#333333" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
+  
+  <!-- Capabilities list -->
+  <text x="640" y="270" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Capabilities</text>
+  <text x="550" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Applies your expertise framework</text>
+  <text x="550" y="310" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Provides initial problem assessment</text>
+  <text x="550" y="330" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Qualifies leads for your attention</text>
+  <text x="550" y="350" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Extends your consulting capacity</text>
+  
+  <!-- Scenario 4: Cross-timezone Collaboration -->
+  <text x="880" y="125" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Cross-timezone Work</text>
+  
+  <!-- Global timezone scenario illustration -->
+  <rect x="795" y="140" width="170" height="110" rx="5" ry="5" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <!-- World map simplified -->
+  <ellipse cx="880" cy="195" rx="65" ry="40" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Time zones -->
+  <text x="830" y="185" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">NY 9AM</text>
+  <text x="880" y="175" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">LDN 2PM</text>
+  <text x="930" y="185" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">TYO 10PM</text>
+  
+  <!-- Sleeping human -->
+  <rect x="920" y="205" width="20" height="10" rx="5" ry="5" fill="#EEEEEE" stroke="#333333" stroke-width="1"/>
+  <text x="930" y="220" font-family="Inter, sans-serif" font-size="8" text-anchor="middle" fill="#333">💤</text>
+  
+  <!-- Working digital double -->
+  <circle cx="830" cy="200" r="10" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="830" y="204" font-family="Inter, sans-serif" font-size="8" text-anchor="middle" fill="#6A3DE8">DD</text>
+  
+  <!-- Capabilities list -->
+  <text x="880" y="270" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Capabilities</text>
+  <text x="790" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Works while you sleep</text>
+  <text x="790" y="310" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Handles international collaboration</text>
+  <text x="790" y="330" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Maintains workflow continuity</text>
+  <text x="790" y="350" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">• Eliminates timezone barriers</text>
+  
+  <!-- Implementation Framework -->
+  <rect x="50" y="400" width="900" height="180" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="500" y="425" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Implementation Framework</text>
+  
+  <!-- Progressive Autonomy Model -->
+  <rect x="75" y="445" width="250" height="115" rx="5" ry="5" fill="#FFFFFF" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="200" y="465" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Progressive Autonomy Model</text>
+  
+  <!-- Autonomy progression -->
+  <rect x="95" y="485" width="210" height="30" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="95" y="485" width="40" height="30" rx="5" ry="5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="135" y="485" width="50" height="30" rx="0" ry="0" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="185" y="485" width="60" height="30" rx="0" ry="0" fill="rgba(106, 61, 232, 0.3)" stroke="#6A3DE8" stroke-width="1"/>
+  <rect x="245" y="485" width="60" height="30" rx="0" ry="5" fill="rgba(106, 61, 232, 0.5)" stroke="#6A3DE8" stroke-width="1"/>
+  
+  <text x="115" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Supervised</text>
+  <text x="160" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Guided</text>
+  <text x="215" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Semi-autonomous</text>
+  <text x="275" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Autonomous</text>
+  
+  <text x="200" y="535" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">Gradually expand capabilities as the system</text>
+  <text x="200" y="550" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">demonstrates reliable alignment with your style</text>
+  
+  <!-- Transparency Framework -->
+  <rect x="375" y="445" width="250" height="115" rx="5" ry="5" fill="#FFFFFF" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="500" y="465" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Transparency Framework</text>
+  
+  <!-- Transparency elements -->
+  <rect x="395" y="485" width="90" height="50" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  <text x="440" y="510" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Digital Double</text>
+  <text x="440" y="525" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Disclosure</text>
+  
+  <rect x="515" y="485" width="90" height="50" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  <text x="560" y="510" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Activity</text>
+  <text x="560" y="525" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Reporting</text>
+  
+  <path d="M485,510 L515,510" stroke="#6A3DE8" stroke-width="1" stroke-dasharray="2,2"/>
+  <polygon points="515,510 510,507 510,513" fill="#6A3DE8"/>
+  
+  <text x="500" y="545" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">Clear disclosure to ensure ethical representation</text>
+  <text x="500" y="560" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">and comprehensive activity documentation</text>
+  
+  <!-- User Control System -->
+  <rect x="675" y="445" width="250" height="115" rx="5" ry="5" fill="#FFFFFF" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="800" y="465" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">User Control System</text>
+  
+  <!-- Control elements -->
+  <rect x="695" y="485" width="210" height="30" rx="5" ry="5" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Control slider -->
+  <rect x="695" y="485" width="210" height="30" rx="5" ry="5" fill="none" stroke="#CCCCCC" stroke-width="1"/>
+  <circle cx="780" cy="500" r="10" fill="#6A3DE8" stroke="none"/>
+  
+  <text x="720" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">More Human</text>
+  <text x="720" y="515" font-family="Inter, sans-serif" font-size="8" text-anchor="middle" fill="#333">Oversight</text>
+  
+  <text x="860" y="505" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">More Digital</text>
+  <text x="860" y="515" font-family="Inter, sans-serif" font-size="8" text-anchor="middle" fill="#333">Autonomy</text>
+  
+  <text x="800" y="545" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">Set boundaries and adjust levels of independence</text>
+  <text x="800" y="560" font-family="Inter, sans-serif" font-size="11" text-anchor="middle" fill="#666">based on context and personal comfort</text>
+</svg>
