@@ -52,6 +52,12 @@ use services::whisper::{
     openai_4o_mini
 };
 
+// Import the brand sound module functions
+use services::brand_sound::{
+    get_brand_sound_path,
+    check_brand_sound_exists
+};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -102,7 +108,10 @@ pub fn run() {
             transcribe_audio,
             play_last_recording,
             save_audio_recording,
-            openai_4o_mini
+            openai_4o_mini,
+            // Brand sound commands
+            get_brand_sound_path,
+            check_brand_sound_exists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

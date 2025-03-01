@@ -6,3 +6,4 @@ pub mod sqlite;
 pub mod sqlite_prompts;
 pub mod api_server;
 pub mod whisper;
+pub mod brand_sound;
