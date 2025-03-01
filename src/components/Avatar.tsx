@@ -217,7 +217,7 @@ const Avatar = () => {
 
   const sendRealtimeMessage = (text) => {
     if (!dataChannel || dataChannel.readyState !== "open") {
-      setIntentResponse("Real-time connection not ready. Try again.");
+      // setIntentResponse("Real-time connection not ready. Try again.");
       return;
     }
     
