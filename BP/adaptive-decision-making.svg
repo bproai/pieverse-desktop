@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Header -->
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">Adaptive Decision-Making Enhancement</text>
+  
+  <!-- Chinese proverb -->
+  <text x="500" y="90" font-family="Inter, sans-serif" font-size="18" font-style="italic" text-anchor="middle" fill="#666">"放弃了不该放弃的，坚持了不该坚持的"</text>
+  <text x="500" y="115" font-family="Inter, sans-serif" font-size="16" font-style="italic" text-anchor="middle" fill="#666">Abandoning what shouldn't be abandoned, persisting with what shouldn't be persisted with</text>
+  
+  <!-- Human decision path (left) -->
+  <rect x="50" y="150" width="400" height="320" rx="10" ry="10" fill="rgba(255,87,51,0.05)" stroke="#FF5733" stroke-width="1"/>
+  <text x="250" y="180" font-family="Inter, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#333">Emotional Decision Path</text>
+  
+  <!-- Human head silhouette -->
+  <ellipse cx="250" cy="260" rx="80" ry="100" fill="#ffffff" stroke="#333" stroke-width="2"/>
+  <path d="M215,220 Q250,205 285,220" fill="none" stroke="#333" stroke-width="2"/> <!-- eyebrow -->
+  <path d="M215,300 Q250,320 285,300" fill="none" stroke="#333" stroke-width="2"/> <!-- mouth -->
+  
+  <!-- Emotional brain chaos -->
+  <path d="M220,230 Q225,220 230,230 Q235,240 240,230 Q245,220 250,230 Q255,240 260,230 Q265,220 270,230 Q275,240 280,230" fill="none" stroke="#FF5733" stroke-width="2"/>
+  <circle cx="220" cy="250" r="5" fill="#FF5733"/>
+  <circle cx="240" cy="240" r="5" fill="#FF5733"/>
+  <circle cx="260" cy="265" r="5" fill="#FF5733"/>
+  <circle cx="280" cy="245" r="5" fill="#FF5733"/>
+  <path d="M220,250 Q250,275 280,245" fill="none" stroke="#FF5733" stroke-width="2" stroke-dasharray="3,3"/>
+  
+  <!-- Emotion labels -->
+  <rect x="100" y="230" width="80" height="30" rx="15" ry="15" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
+  <text x="140" y="250" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Fear</text>
+  
+  <rect x="100" y="270" width="80" height="30" rx="15" ry="15" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
+  <text x="140" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Greed</text>
+  
+  <rect x="320" y="230" width="80" height="30" rx="15" ry="15" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
+  <text x="360" y="250" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Overconfidence</text>
+  
+  <rect x="320" y="270" width="80" height="30" rx="15" ry="15" fill="rgba(255,87,51,0.1)" stroke="#FF5733" stroke-width="1"/>
+  <text x="360" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Regret</text>
+  
+  <!-- Human decision outcomes -->
+  <rect x="70" y="370" width="160" height="80" rx="10" ry="10" fill="#ffffff" stroke="#FF5733" stroke-width="1"/>
+  <text x="150" y="395" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Abandoning Too Early</text>
+  <text x="150" y="415" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Cutting winners short</text>
+  <text x="150" y="435" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Panic selling</text>
+  
+  <rect x="270" y="370" width="160" height="80" rx="10" ry="10" fill="#ffffff" stroke="#FF5733" stroke-width="1"/>
+  <text x="350" y="395" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Persisting Too Long</text>
+  <text x="350" y="415" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Holding losers</text>
+  <text x="350" y="435" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Doubling down on failures</text>
+  
+  <!-- AGI enhanced decision path (right) -->
+  <rect x="550" y="150" width="400" height="320" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="750" y="180" font-family="Inter, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#333">AGI-Enhanced Decision Path</text>
+  
+  <!-- Human with AGI augmentation -->
+  <ellipse cx="750" cy="260" rx="80" ry="100" fill="#ffffff" stroke="#333" stroke-width="2"/>
+  <path d="M715,225 Q750,240 785,225" fill="none" stroke="#333" stroke-width="2"/> <!-- happy eyebrow -->
+  <path d="M715,300 Q750,325 785,300" fill="none" stroke="#333" stroke-width="2"/> <!-- smile -->
+  
+  <!-- AGI connection nodes -->
+  <circle cx="715" cy="240" r="8" fill="#6A3DE8"/>
+  <circle cx="735" cy="220" r="8" fill="#6A3DE8"/>
+  <circle cx="765" cy="220" r="8" fill="#6A3DE8"/>
+  <circle cx="785" cy="240" r="8" fill="#6A3DE8"/>
+  <circle cx="750" cy="250" r="15" fill="rgba(106, 61, 232, 0.2)" stroke="#6A3DE8" stroke-width="2"/>
+  <text x="750" y="255" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#6A3DE8">AGI</text>
+  
+  <!-- AGI enhancement connections -->
+  <line x1="750" y1="250" x2="715" y2="240" stroke="#6A3DE8" stroke-width="2"/>
+  <line x1="750" y1="250" x2="735" y2="220" stroke="#6A3DE8" stroke-width="2"/>
+  <line x1="750" y1="250" x2="765" y2="220" stroke="#6A3DE8" stroke-width="2"/>
+  <line x1="750" y1="250" x2="785" y2="240" stroke="#6A3DE8" stroke-width="2"/>
+  
+  <!-- Enhancement skills -->
+  <rect x="600" y="220" width="80" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="640" y="240" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Metacognition</text>
+  
+  <rect x="600" y="260" width="80" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="640" y="280" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Emotional Regulation</text>
+  
+  <rect x="820" y="220" width="80" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="860" y="240" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Cognitive Flexibility</text>
+  
+  <rect x="820" y="260" width="80" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="860" y="280" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Probabilistic Thinking</text>
+  
+  <!-- Enhanced decision outcomes -->
+  <rect x="570" y="370" width="160" height="80" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="650" y="395" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Optimal Abandoning</text>
+  <text x="650" y="415" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Evidence-based exits</text>
+  <text x="650" y="435" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Strategic risk management</text>
+  
+  <rect x="770" y="370" width="160" height="80" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="850" y="395" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Optimal Persistence</text>
+  <text x="850" y="415" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Conviction with flexibility</text>
+  <text x="850" y="435" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#666">Adaptive plan execution</text>
+  
+  <!-- Bottom section: Real-time bias detection -->
+  <rect x="50" y="490" width="900" height="90" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="500" y="515" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Real-time Cognitive Bias Detection</text>
+  
+  <!-- Detection mechanisms -->
+  <rect x="80" y="535" width="180" height="30" rx="5" ry="5" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="170" y="555" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Emotional State Monitoring</text>
+  
+  <rect x="290" y="535" width="180" height="30" rx="5" ry="5" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="380" y="555" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Decision Pattern Analysis</text>
+  
+  <rect x="500" y="535" width="180" height="30" rx="5" ry="5" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="590" y="555" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Strategy Deviation Alerts</text>
+  
+  <rect x="710" y="535" width="180" height="30" rx="5" ry="5" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="800" y="555" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Just-in-time Interventions</text>
+</svg>

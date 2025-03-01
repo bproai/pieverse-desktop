@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Header -->
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">Performance Optimization Case Studies</text>
+  
+  <!-- Two main sections: Trading and Pickleball -->
+  <text x="250" y="100" font-family="Inter, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#333">Stock Trading Enhancement</text>
+  <text x="750" y="100" font-family="Inter, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#6A3DE8">Pickleball Skill Development</text>
+  
+  <!-- Trading Section (Left) -->
+  <rect x="50" y="120" width="400" height="230" rx="10" ry="10" fill="#ffffff" stroke="#ddd" stroke-width="2"/>
+  
+  <!-- Stock chart -->
+  <polyline points="80,240 120,200 160,260 200,230 240,180 280,210 320,190 360,150 400,180" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Decision points -->
+  <circle cx="120" cy="200" r="8" fill="#ff5733"/> <!-- Bad decision point -->
+  <circle cx="200" cy="230" r="8" fill="#6A3DE8"/> <!-- Good decision point -->
+  <circle cx="280" cy="210" r="8" fill="#ff5733"/> <!-- Bad decision point -->
+  <circle cx="360" cy="150" r="8" fill="#6A3DE8"/> <!-- Good decision point -->
+  
+  <!-- AGI intervention visualization -->
+  <path d="M120,200 C130,180 150,190 120,170" stroke="#6A3DE8" stroke-width="1.5" stroke-dasharray="3,3" fill="none"/>
+  <rect x="90" y="140" width="60" height="25" rx="5" ry="5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="120" y="157" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Fear Detected</text>
+  
+  <path d="M280,210 C290,190 310,200 280,180" stroke="#6A3DE8" stroke-width="1.5" stroke-dasharray="3,3" fill="none"/>
+  <rect x="250" y="150" width="60" height="25" rx="5" ry="5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="280" y="167" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Bias Alert</text>
+  
+  <!-- Realtime belief calibration -->
+  <rect x="70" y="270" width="170" height="60" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="155" y="290" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Belief Calibration</text>
+  <text x="155" y="310" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">Updating probabilities</text>
+  <text x="155" y="325" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">with new market data</text>
+  
+  <!-- Emotional trigger identification -->
+  <rect x="260" y="270" width="170" height="60" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="345" y="290" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Trigger Identification</text>
+  <text x="345" y="310" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">Detecting pattern-based</text>
+  <text x="345" y="325" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">emotional responses</text>
+  
+  <!-- Trading performance metrics -->
+  <rect x="50" y="350" width="400" height="90" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="250" y="375" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Performance Improvement</text>
+  
+  <!-- Before/After metrics -->
+  <line x1="100" y1="405" x2="220" y2="405" stroke="#ddd" stroke-width="1"/>
+  <rect x="100" y="400" width="40" height="10" rx="5" ry="5" fill="#ddd"/>
+  <rect x="100" y="400" width="120" height="10" rx="5" ry="5" fill="#FF5733"/>
+  <text x="230" y="405" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">Before: 15% Return</text>
+  
+  <line x1="100" y1="425" x2="220" y2="425" stroke="#ddd" stroke-width="1"/>
+  <rect x="100" y="420" width="40" height="10" rx="5" ry="5" fill="#ddd"/>
+  <rect x="100" y="420" width="180" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="230" y="425" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">After: 27% Return</text>
+  
+  <line x1="280" y1="405" x2="400" y2="405" stroke="#ddd" stroke-width="1"/>
+  <rect x="280" y="400" width="40" height="10" rx="5" ry="5" fill="#ddd"/>
+  <rect x="280" y="400" width="80" height="10" rx="5" ry="5" fill="#FF5733"/>
+  <text x="410" y="405" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">58% Drawdown</text>
+  
+  <line x1="280" y1="425" x2="400" y2="425" stroke="#ddd" stroke-width="1"/>
+  <rect x="280" y="420" width="40" height="10" rx="5" ry="5" fill="#ddd"/>
+  <rect x="280" y="420" width="40" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="410" y="425" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">23% Drawdown</text>
+  
+  <!-- Pickleball Section (Right) -->
+  <rect x="550" y="120" width="400" height="230" rx="10" ry="10" fill="#ffffff" stroke="#ddd" stroke-width="2"/>
+  
+  <!-- Pickleball court simplified -->
+  <rect x="600" y="150" width="300" height="150" fill="none" stroke="#333" stroke-width="2"/>
+  <line x1="750" y1="150" x2="750" y2="300" stroke="#333" stroke-width="2"/> <!-- Center line -->
+  <rect x="600" y="200" width="300" height="50" fill="none" stroke="#333" stroke-width="1" stroke-dasharray="5,5"/> <!-- Non-volley zone -->
+  
+  <!-- Player positions -->
+  <circle cx="650" cy="250" r="15" fill="#6A3DE8"/> <!-- Player 1 -->
+  <circle cx="850" cy="250" r="15" fill="#6A3DE8"/> <!-- Player 2 -->
+  <circle cx="650" cy="180" r="15" fill="#ff5733"/> <!-- Opponent 1 -->
+  <circle cx="850" cy="180" r="15" fill="#ff5733"/> <!-- Opponent 2 -->
+  
+  <!-- Shot trajectories -->
+  <path d="M650,250 Q700,200 750,180" fill="none" stroke="#6A3DE8" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <path d="M750,180 Q800,190 850,250" fill="none" stroke="#ff5733" stroke-width="1.5"/>
+  <path d="M850,250 Q825,220 800,210" fill="none" stroke="#6A3DE8" stroke-width="1.5"/>
+  
+  <!-- Skill development categories -->
+  <rect x="570" y="320" width="170" height="30" rx="5" ry="5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="655" y="340" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Skill Decomposition</text>
+  
+  <rect x="760" y="320" width="170" height="30" rx="5" ry="5" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="845" y="340" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Pattern Recognition</text>
+  
+  <!-- Pickleball performance metrics -->
+  <rect x="550" y="370" width="400" height="160" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
+  <text x="750" y="395" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Structured Improvement Timeline</text>
+  
+  <!-- Timeline visualization -->
+  <line x1="600" y1="430" x2="900" y2="430" stroke="#6A3DE8" stroke-width="3"/>
+  
+  <!-- Milestone points -->
+  <circle cx="650" cy="430" r="8" fill="#6A3DE8"/>
+  <text x="650" y="450" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Week 1</text>
+  <text x="650" y="465" font-family="Inter, sans-serif" font-size="9" text-anchor="middle" fill="#666">Basic Skills</text>
+  
+  <circle cx="720" cy="430" r="8" fill="#6A3DE8"/>
+  <text x="720" y="450" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Week 4</text>
+  <text x="720" y="465" font-family="Inter, sans-serif" font-size="9" text-anchor="middle" fill="#666">Shot Consistency</text>
+  
+  <circle cx="790" cy="430" r="8" fill="#6A3DE8"/>
+  <text x="790" y="450" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Week 8</text>
+  <text x="790" y="465" font-family="Inter, sans-serif" font-size="9" text-anchor="middle" fill="#666">Court Strategy</text>
+  
+  <circle cx="860" cy="430" r="8" fill="#6A3DE8"/>
+  <text x="860" y="450" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Week 12</text>
+  <text x="860" y="465" font-family="Inter, sans-serif" font-size="9" text-anchor="middle" fill="#666">Advanced Play</text>
+  
+  <!-- Skill progression diagram -->
+  <line x1="650" y1="490" x2="860" y2="490" stroke="#ddd" stroke-width="1"/>
+  <rect x="650" y="485" width="35" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="650" y="510" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Dink</text>
+  
+  <line x1="650" y1="515" x2="860" y2="515" stroke="#ddd" stroke-width="1"/>
+  <rect x="650" y="510" width="105" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="650" y="530" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Drop Shot</text>
+  
+  <line x1="720" y1="490" x2="930" y2="490" stroke="#ddd" stroke-width="1"/>
+  <rect x="720" y="485" width="70" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="720" y="510" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Third Shot</text>
+  
+  <line x1="790" y1="515" x2="1000" y2="515" stroke="#ddd" stroke-width="1"/>
+  <rect x="790" y="510" width="45" height="10" rx="5" ry="5" fill="#6A3DE8"/>
+  <text x="790" y="530" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Volley</text>
+  
+  <!-- Bottom section: Shared principles -->
+  <rect x="50" y="460" width="400" height="120" rx="10" ry="10" fill="rgba(51,168,255,0.05)" stroke="#33A8FF" stroke-width="1"/>
+  <text x="250" y="485" font-family="Inter, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Shared Training Principles</text>
+  
+  <!-- Training principles -->
+  <rect x="90" y="505" width="150" height="50" rx="5" ry="5" fill="#ffffff" stroke="#33A8FF" stroke-width="1"/>
+  <text x="165" y="525" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">Deliberate Practice</text>
+  <text x="165" y="545" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">Focused, specific improvement</text>
+  
+  <rect x="260" y="505" width="150" height="50" rx="5" ry="5" fill="#ffffff" stroke="#33A8FF" stroke-width="1"/>
+  <text x="335" y="525" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">Mental Models</text>
+  <text x="335" y="545" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#666">Systemic understanding</text>
+  
+  <!-- Footer with principles applicable across domains -->
+  <rect x="50" y="545" width="900" height="40" rx="10" ry="10" fill="rgba(51,51,51,0.05)" stroke="#666" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <circle cx="180" cy="565" r="6" fill="#6A3DE8"/>
+  <text x="195" y="569" font-family="Inter, sans-serif" font-size="11" text-anchor="start" fill="#333">Data-driven feedback loops</text>
+  
+  <circle cx="400" cy="565" r="6" fill="#6A3DE8"/>
+  <text x="415" y="569" font-family="Inter, sans-serif" font-size="11" text-anchor="start" fill="#333">Cognitive bias identification</text>
+  
+  <circle cx="620" cy="565" r="6" fill="#6A3DE8"/>
+  <text x="635" y="569" font-family="Inter, sans-serif" font-size="11" text-anchor="start" fill="#333">Progressive skill acquisition</text>
+  
+  <circle cx="840" cy="565" r="6" fill="#6A3DE8"/>
+  <text x="855" y="569" font-family="Inter, sans-serif" font-size="11" text-anchor="start" fill="#333">Performance measurement</text>
+</svg>

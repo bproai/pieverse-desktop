@@ -1,44 +1,5 @@
-### Slide 18: Intergenerational Legacy
-- Visualization of wisdom transfer across generations
-- Personal legacy creation process
-- Interactive ancestral wisdom concept
-- Contextual knowledge adaptation over time
-- Ethical and cultural continuity
-- Emotional connection preservation### Slide 17: Personal Confidant
-- Visual representation of emotional intelligence enhancement
-- Social dynamics analysis capabilities
-- Emotional pattern recognition
-- Non-judgmental safe space concept
-- Cultural context translation
-- Example dialogue showing interpersonal guidance### Slide 16: Reimagining Communication
-- Transformation from meetings to Intelligence Synthesis Sessions
-- Visualization of traditional vs. AGI-facilitated communication
-- Pre-session thought cultivation process
-- Multi-dimensional communication workflow
-- Dynamic consensus building mechanisms
-- Continuous intelligence evolution beyond session boundaries### Slide 15: Human-AGI Fusion Organization
-- Visual of 24/7 operational model
-- Contrast between traditional organization limitations and fusion approach
-- Human biological cycle optimization
-- AGI continuous operation capabilities
-- Handoff protocols visualization
-- Compelling metrics on operational efficiency gains### Slide 18: Roadmap & Future Vision
-- Timeline visualization of product evolution
-- Near-term feature releases (6-12 months)
-- Mid-term expansion (12-24 months)
-- Long-term vision for Performance Optimization System:
-  - Biometric integration concept
-  - Cognitive performance analysis
-  - Personalized enhancement programs
-  - High-stakes decision support
-
-### Slide 19: Performance Optimization Showcase
-- Visual mock-up of biometric monitoring dashboard
-- Example of personalized training regime for stock traders
-- Competitive sports enhancement scenario
-- Before/after performance metrics visualization
-- Real-time decision support interface during high-pressure situations# PiEVerse Desktop
-## PowerPoint Presentation Deck Outline
+# PiEVerse Desktop
+## PowerPoint Presentation - Comprehensive Outline
 
 ### Slide 1: Title Slide
 - Company name: Reason ONE AI
@@ -47,34 +8,40 @@
 - Tagline: "Building Bridges Between Humanity and AGI"
 - Yunpeng Brian Pan, Founder & CEO
 - Contact information: reasonone.ai
-- Visually appealing background with human-AGI collaboration concept
+- Design: Purple to blue gradient background with subtle floating animation of anime avatar character
 
 ### Slide 2: Our Vision
 - Compelling visualization of human-AGI partnership
-- Key quote from vision statement: "AGI is not merely a tool but a profound partner"
-- Visual representation of "building bridges"
+- Key quote: "AGI is not merely a tool but a profound partner in humanity's journey of discovery and growth"
+- Visual representation of "building bridges" concept
 - Brief statement on mutual growth and discovery
-- Company values visualization
+- Company values: Accessibility, human values alignment, mutual evolution
 
 ### Slide 3: Problem Statement
-- Visualization of cognitive boundaries
-- Knowledge integration challenges graphic
-- Insight volatility demonstration
-- Interpretative limitations example
-- Perspective constraints illustration
+- Visual infographic showing cognitive limitations:
+  - Cognitive boundaries (limited information processing)
+  - Knowledge integration challenges
+  - Insight volatility (fleeting ideas)
+  - Interpretative limitations with ambiguous information
+  - Perspective constraints due to individual experience
+  - Emotional interference in decision-making
+  - Adaptive resistance to changing environments
+  - Execution inconsistency (laziness at crucial moments)
 
 ### Slide 4: Solution Overview
-- PiEVerse Desktop platform visual
+- PiEVerse Desktop platform visual with unified interface
 - Human-AGI collaborative intelligence concept
 - Value proposition: "Reimagining how humanity engages with intelligence"
-- Brief statement on bridging human and machine understanding
+- Hub and spoke visualization showing connection between components
 
 ### Slide 5: Interactive AI Companion
-- Natural interface visualization
-- Multi-modal communication demonstration
-- GPT-4o Realtime voice capabilities
-- Continuous context awareness example
-- Adaptive learning mechanisms
+- Side-by-side comparison of AI engine options:
+  - Rule-based mode (simple, predefined responses)
+  - GPT-4o mini (Whisper STT + GPT-4o mini + native TTS)
+  - GPT-4o Realtime (WebRTC streaming voice-in/voice-out)
+  - GPT-4o Realtime Mini (cost-effective realtime model)
+- Screenshots of anime-style avatar with different expressions
+- Voice capability demonstration
 
 ### Slide 6: Knowledge Bridge
 - Complex information visualization techniques
@@ -106,84 +73,140 @@
 
 ### Slide 10: Competitive Landscape
 - 2x2 matrix positioning:
-  - X-axis: AI Sophistication
-  - Y-axis: Cognitive Enhancement Capabilities
+  - X-axis: AI Integration (Low to High)
+  - Y-axis: Database Support (Limited to Comprehensive)
 - Key competitors plotted:
-  - Note-taking apps (low/low)
-  - Traditional productivity tools (low/medium)
-  - Pure AI assistants (high/low)
-- Reason ONE AI differentiation callout
-- Competitive advantages bullet points
+  - Traditional AI Assistants (standard chatbots)
+  - Knowledge Management Tools (Notion, Evernote)
+  - Research Enhancement Software (Elicit, Connected Papers)
+  - General Productivity Software (Microsoft 365, Google Workspace)
+- PiEVerse differentiation in top-right quadrant
+- Competitive advantages highlighted
 
 ### Slide 11: Business Model
-- Pricing tiers visualization:
-  - Free
-  - Professional ($15/month)
-  - Enterprise ($49/user/month)
-- Feature breakdown by tier
-- Revenue projection graph
-- Expansion opportunities
+- Pricing tiers visualization with ascending steps:
+  - Free Tier: Basic features, rule-based assistant
+  - Professional Tier: $15/month with full AI capabilities
+  - Enterprise Tier: $49/user/month with team features
+- Feature breakdown by tier with icons
+- Additional revenue opportunities (marketplace, services)
 
 ### Slide 12: Go-to-Market Strategy
-- Launch timeline
-- Customer acquisition channels 
-- Community building approach
-- Partnerships strategy
-- Key metrics and targets
+- Developer community engagement approach
+- Digital marketing channels
+- Technology partnerships strategy
+- Customer acquisition funnel visualization
+- Conversion strategy from free to paid tiers
 
 ### Slide 13: Financial Projections
-- 5-year projection chart
-- Key financial metrics:
-  - User growth
-  - Revenue
-  - Expenses
-  - Break-even point
-- Unit economics
+- 5-year projection chart showing:
+  - User growth (free and paid)
+  - Revenue growth
+  - Break-even point milestone
+  - Key financial metrics
+- Clear annotation of growth trajectory and key inflection points
 
 ### Slide 14: Our Team
-- Founder/CEO photo and brief bio (Yunpeng Brian Pan)
-- Visual representation of AI team members:
-  - Claude AI (reasoning, analysis, strategy)
-  - ChatGPT (coding, technical documentation, research)
-- Illustration of collaborative workflow between human and AGI team members
-- Key benefits of this pioneering organizational structure
-- Living demonstration of our human-AGI partnership philosophy
+- Human-AGI fusion organization concept
+- Team profile displays:
+  - Yunpeng Brian Pan (Founder & CEO) - photo and brief bio
+  - Claude AI - reasoning, analysis, strategy specialist
+  - ChatGPT - coding, technical documentation, research specialist
+- Explanation of 24/7 operational capacity through human-AGI collaboration
+- Living demonstration of human-AGI partnership philosophy
 
-### Slide 15: Roadmap & Milestones
-- Timeline visualization
-- Key development milestones
-- Product enhancement schedule
-- Business goals by quarter
-- Long-term vision elements
+### Slide 15: Human-AGI Fusion Organization
+- Visual of 24/7 operational model
+- Contrast between traditional organization limitations and fusion approach
+- Human biological cycle optimization
+- AGI continuous operation capabilities
+- Handoff protocols visualization
+- Metrics on operational efficiency gains
 
-### Slide 16: Funding Ask
-- Amount seeking: $750K seed round
-- Use of funds breakdown:
-  - Product development
-  - Team expansion
-  - Marketing
-  - Operations
+### Slide 16: Reimagining Communication
+- Transformation from meetings to Intelligence Synthesis Sessions
+- Visualization of traditional vs. AGI-facilitated communication
+- Pre-session thought cultivation process
+- Multi-dimensional communication workflow
+- Dynamic consensus building mechanisms
+- Continuous intelligence evolution beyond session boundaries
+
+### Slide 17: Personal Confidant
+- Visual representation of emotional intelligence enhancement
+- Social dynamics analysis capabilities
+- Emotional pattern recognition
+- Non-judgmental safe space concept
+- Cultural context translation
+- Example dialogue showing interpersonal guidance
+
+### Slide 18: Intergenerational Legacy
+- Visualization of wisdom transfer across generations
+- Personal legacy creation process
+- Interactive ancestral wisdom concept
+- Contextual knowledge adaptation over time
+- Ethical and cultural continuity
+- Emotional connection preservation
+
+### Slide 19: Roadmap & Future Vision
+- Timeline visualization of product evolution
+- Near-term feature releases (6-12 months)
+- Mid-term expansion (12-24 months)
+- Long-term vision for Performance Optimization System:
+  - Biometric integration concept
+  - Cognitive performance analysis
+  - Personalized enhancement programs
+  - High-stakes decision support
+
+### Slide 20: Adaptive Decision-Making Enhancement
+- Visual comparison of emotional vs. enhanced decision paths
+- Chinese proverb: "abandoning what shouldn't be abandoned, persisting with what shouldn't be persisted with"
+- Core skills visualization (metacognition, cognitive flexibility, emotional regulation)
+- Real-time cognitive bias detection mechanism
+- Examples in high-pressure scenarios (trading, competitive sports)
+
+### Slide 21: Performance Optimization Case Studies
+- Stock Trading Enhancement visualization
+  - Real-time belief system calibration
+  - Emotional trigger identification
+  - Intervention at critical decision points
+  - Performance metrics before/after implementation
+- Pickleball Skill Development visualization
+  - Skill decomposition and progression pathways
+  - Pattern recognition training
+  - Performance psychology enhancement
+  - Structured improvement timeline
+
+### Slide 22: Funding Ask
+- $750K seed round clearly displayed
+- Use of funds breakdown with pie chart:
+  - Product development (33%)
+  - Team expansion (27%)
+  - Marketing (27%)
+  - Operations (13%)
 - Expected runway and goals before next round
+- Return on investment expectations
 
-### Slide 17: Why Now?
-- Market timing factors
-- Technology enablers
-- User behavior shifts
+### Slide 23: Why Now?
+- Market timing factors:
+  - $35B personal productivity market
+  - 255M knowledge workers worldwide
+  - Growing recognition of cognitive limitations
+  - Technological enablers (AI advances)
 - Competitive positioning window
 - Momentum indicators
 
-### Slide 18: Thank You / Q&A
+### Slide 24: Thank You / Q&A
 - Contact information
-- App/website URL
+- Website: reasonone.ai
 - Social channels
-- Call to action
-- Visually appealing closing image of product
+- Call to action for partnerships and investment
+- Visually appealing closing image showing human-AGI collaboration
 
 ## Design Notes:
-- Color scheme: Use the purple/blue gradient from your app UI
+- Color scheme: Purple (#6A3DE8) to blue (#453FD3) gradient, matching app colors
 - Font: Modern, clean sans-serif (Inter or similar)
-- Visual style: Minimalist with developer-focused elements
-- Charts: Clean, easy-to-read data visualizations
+- Visual style: Clean, minimalist with subtle anime-style elements
+- Charts: Professional data visualizations with limited color palette
 - Screenshots: High-resolution with highlighted features
-- Icons: Consistent style throughout, tech-focused
-- Animation: Subtle transitions between slides, one product demo animation
+- Icons: Consistent line-style icons throughout
+- Animation: Subtle transitions between slides, avatar animation on title slide
