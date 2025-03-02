@@ -7,6 +7,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { notifications } from '@mantine/notifications';
 import * as openerPlugin from '@tauri-apps/plugin-opener';
+import DetectedSpikeCard from './DetectedSpikeCard';
+
+// Debug mode toggle - set to true to enable debugging
+const DEBUG_ENABLED = false;
 
 // Types for trend data (existing)
 interface TrendResult {
@@ -67,6 +71,9 @@ const SignalsPanel = () => {
   const [error, setError] = useState<string | null>(null);
   const [relatedQueries, setRelatedQueries] = useState<string[]>([]);
   
+  // Add debugging for interval
+  const [intervalDebug, setIntervalDebug] = useState<string[]>([]);
+  
   // Spike prediction tab state (new)
   const [monitoredKeywords, setMonitoredKeywords] = useState<Record<string, string[]>>({});
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -76,7 +83,19 @@ const SignalsPanel = () => {
   const [selectedPrediction, setSelectedPrediction] = useState<TrendPrediction | null>(null);
   const [isMonitoring, setIsMonitoring] = useState<boolean>(false);
   const [threshold, setThreshold] = useState<number>(0.7);
-  const [interval, setInterval] = useState<number>(60);
+  
+  // Renamed to avoid conflict with global setInterval
+  const [intervalValue, setIntervalValue] = useState<number>(60);
+
+  // Debug-enabled setter for interval
+  const debugSetInterval = (newVal: number, source: string) => {
+    if (DEBUG_ENABLED) {
+      console.log(`Interval changed to ${newVal} from ${intervalValue} (source: ${source})`);
+      setIntervalDebug(prev => [...prev, `${new Date().toISOString()}: ${intervalValue} → ${newVal} (${source})`]);
+    }
+    setIntervalValue(newVal);
+  };
+  
   const [isPredicting, setIsPredicting] = useState<boolean>(false);
   const [predictionError, setPredictionError] = useState<string | null>(null);
   
@@ -92,7 +111,7 @@ const SignalsPanel = () => {
     let timer: NodeJS.Timeout;
     
     if (isMonitoring) {
-      timer = setInterval(() => {
+      timer = window.setInterval(() => {  // Use window.setInterval to avoid name conflicts
         fetchPredictions();
       }, 60000); // Check every minute
     }
@@ -311,13 +330,22 @@ const SignalsPanel = () => {
   
   const startMonitoring = async () => {
     try {
+      if (DEBUG_ENABLED) {
+        debugSetInterval(intervalValue, 'startMonitoring-before');
+      }
+      
       // First set the threshold and interval
       await invoke('set_trend_spike_threshold', { threshold });
-      await invoke('set_trend_spike_interval', { minutes: interval });
+      await invoke('set_trend_spike_interval', { minutes: intervalValue });
       
       // Then start monitoring
       const result = await invoke<boolean>('start_trend_spike_monitoring');
       setIsMonitoring(result);
+      
+      // Explicitly set the interval back to its current value for debugging
+      if (DEBUG_ENABLED) {
+        debugSetInterval(intervalValue, 'startMonitoring-after');
+      }
       
       notifications.show({
         title: 'Monitoring Started',
@@ -583,6 +611,16 @@ const SignalsPanel = () => {
 
           {/* New Spike Prediction Tab */}
           <Tabs.Panel value="prediction" pt="md">
+            {/* Display detected spike cards */}
+            {predictions
+              .filter((p) => p.probability >= 0.7) // adjust the threshold as needed
+              .map((p) => (
+                <DetectedSpikeCard
+                  key={p.keyword + (p.detected_at || '')}
+                  prediction={p}
+                  getProbabilityColor={getProbabilityColor}
+                />
+              ))}            
             <Grid>
               {/* Left panel - Predictions list */}
               <Grid.Col span={4}>
@@ -865,8 +903,8 @@ const SignalsPanel = () => {
                     
                     <NumberInput
                       label="Monitoring Interval (minutes)"
-                      value={interval}
-                      onChange={(val) => setInterval(val || 60)}
+                      value={intervalValue}
+                      onChange={(val) => debugSetInterval(val || 60, 'numberInput')}
                       min={15}
                       max={1440}
                       step={15}
@@ -959,6 +997,18 @@ const SignalsPanel = () => {
           </Tabs.Panel>
         </Tabs>
       </Card>
+      
+      {/* Debug panel - Only shows when DEBUG_ENABLED is true */}
+      {DEBUG_ENABLED && intervalDebug.length > 0 && (
+        <Card shadow="xs" p="md" withBorder mt="md">
+          <Text weight={500} mb="md">Interval Debug Log</Text>
+          <ScrollArea h={200}>
+            {intervalDebug.map((log, i) => (
+              <Text key={i} size="xs">{log}</Text>
+            ))}
+          </ScrollArea>
+        </Card>
+      )}
     </div>
   );
 };

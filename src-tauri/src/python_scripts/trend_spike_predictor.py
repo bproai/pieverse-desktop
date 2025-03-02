@@ -434,15 +434,15 @@ class TrendSpikePredictor:
         
         # TEMPORARY TEST: For "deepseek", filter data to simulate being at Jan 24, 2025
         # This includes less of the early signal (up to value 5.0) but not the major spike
-        if len(historical_data) > 0 and keyword.lower() == 'deepseek':
-            cutoff_date = '2025-01-24'  # Include data showing early rise from 1.0 to 5.0
-            historical_data = historical_data[historical_data['timestamp'] <= cutoff_date]
-            print(f"TESTING PREDICTIVE POWER: Limited data to before {cutoff_date}")
-            print(f"Data points available: {len(historical_data)}")
+        # if len(historical_data) > 0 and keyword.lower() == 'deepseek':
+        #     cutoff_date = '2025-01-24'  # Include data showing early rise from 1.0 to 5.0
+        #     historical_data = historical_data[historical_data['timestamp'] <= cutoff_date]
+        #     print(f"TESTING PREDICTIVE POWER: Limited data to before {cutoff_date}")
+        #     print(f"Data points available: {len(historical_data)}")
             
-            # Print the last 15 data points to see the trend
-            last_points = historical_data.tail(15).to_string()
-            print(f"Last 15 data points:\n{last_points}")
+        #     # Print the last 15 data points to see the trend
+        #     last_points = historical_data.tail(15).to_string()
+        #     print(f"Last 15 data points:\n{last_points}")
         
         # Check if we have enough data
         if len(historical_data) < 30:
@@ -871,11 +871,6 @@ def main():
                 "status": "error",
                 "message": f"Error processing prediction: {str(e)}"
             }))
-
-
-
-
-    
 
     elif command == "monitor":
         if len(sys.argv) < 5:
