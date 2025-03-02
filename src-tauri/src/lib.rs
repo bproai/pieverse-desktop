@@ -2,6 +2,8 @@
 mod services;
 mod tray;
 
+use tauri::Manager; // Add this import for the state() method
+
 use services::{
     mongodb::{
         MongoDBState,
@@ -93,10 +95,22 @@ pub fn run() {
     let trend_spike_service = Arc::new(TrendSpikeService::new());
     init_default_keywords(&trend_spike_service);
 
+    // Clone for use in the setup closure so that the original value remains available.
+    let trend_spike_service_for_setup = trend_spike_service.clone();
+
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(move |app| {
             // Setup tray icon handlers
             tray::setup_tray_handler(&app.handle());
+            
+            // Store resource directory path in the trend spike service.
+            // Note the use of `.ok()` to convert the Result to an Option.
+            if let Some(resource_dir) = app.handle().path().resource_dir().ok() {
+                if let Ok(mut paths) = trend_spike_service_for_setup.script_paths.lock() {
+                    paths.insert("resource_dir".to_string(), resource_dir.to_string_lossy().to_string());
+                }
+            }
+            
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -109,7 +123,7 @@ pub fn run() {
         .manage(PythonService::new())
         .manage(SqliteService::new())
         .manage(ApiServerState::default())
-        .manage(trend_spike_service.clone()) // Add trend spike service to managed state
+        .manage(trend_spike_service) // use the original value here
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -171,3 +185,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

@@ -3,13 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::process::Command;
 use std::path::Path;
-// Remove unused import: use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
-// Only import what we use
-use chrono::Utc;
 use tokio::task;
-// Remove unused import: use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use dirs;
 
@@ -81,6 +77,7 @@ pub struct TrendSpikeService {
     pub threshold: Mutex<f64>,
     pub predictions: Mutex<Vec<TrendPrediction>>,
     pub monitor_interval: Mutex<u64>, // Minutes between monitoring runs
+    pub script_paths: Mutex<HashMap<String, String>>, // NEW: Store paths for script resolution
 }
 
 impl TrendSpikeService {
@@ -104,7 +101,47 @@ impl TrendSpikeService {
             threshold: Mutex::new(0.7),
             predictions: Mutex::new(Vec::new()),
             monitor_interval: Mutex::new(60), // Default to 60 minutes
+            script_paths: Mutex::new(HashMap::new()), // Initialize empty paths map
         }
+    }
+    
+    // Helper method to find Python scripts
+    fn find_python_script(&self, script_name: &str) -> Option<String> {
+        // First, check if we have resource directory stored
+        let paths = self.script_paths.lock().unwrap();
+        
+        if let Some(resource_dir) = paths.get("resource_dir") {
+            if !resource_dir.is_empty() {
+                // Try different locations within the resource directory
+                let resource_paths = [
+                    format!("{}/{}", resource_dir, script_name),
+                    format!("{}/src/python_scripts/{}", resource_dir, script_name),
+                    format!("{}/python_scripts/{}", resource_dir, script_name),
+                ];
+                
+                for path in &resource_paths {
+                    if Path::new(path).exists() {
+                        return Some(path.clone());
+                    }
+                }
+            }
+        }
+        
+        // Fall back to regular development paths
+        let dev_paths = [
+            format!("python_scripts/{}", script_name),
+            format!("src/python_scripts/{}", script_name),
+            format!("src-tauri/python_scripts/{}", script_name),
+            format!("src-tauri/src/python_scripts/{}", script_name),
+        ];
+        
+        for path in &dev_paths {
+            if Path::new(path).exists() {
+                return Some(path.clone());
+            }
+        }
+        
+        None
     }
     
     // Add a keyword to monitor for a specific category
@@ -266,23 +303,8 @@ impl TrendSpikeService {
     pub async fn get_signal_sources(&self, keyword: String) -> Result<serde_json::Value, String> {
         let db_path = self.db_path.lock().unwrap().clone();
         
-        // Find the Python script - Use owned data instead of references
-        let script_paths = vec![
-            "python_scripts/trend_spike_predictor.py".to_string(),
-            "src/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/src/python_scripts/trend_spike_predictor.py".to_string(),
-        ];
-        
-        let mut script_path_str = None;
-        for path_str in &script_paths {
-            if Path::new(path_str).exists() {
-                script_path_str = Some(path_str.clone());
-                break;
-            }
-        }
-        
-        let script_path_str = match script_path_str {
+        // Find the Python script - use helper method
+        let script_path_str = match self.find_python_script("trend_spike_predictor.py") {
             Some(path) => path,
             None => {
                 eprintln!("Python script not found at expected locations");
@@ -291,7 +313,18 @@ impl TrendSpikeService {
         };
         
         // Determine Python command (python3 or python)
-        let python_cmd = if cfg!(windows) { "python".to_string() } else { "/usr/local/bin/python3".to_string() };
+        let python_cmd = if cfg!(windows) { 
+            "python".to_string() 
+        } else { 
+            // Try multiple possible Python locations, prioritizing /usr/local/bin/python3
+            if Path::new("/usr/local/bin/python3").exists() {
+                "/usr/local/bin/python3".to_string()
+            } else if Path::new("/usr/bin/python3").exists() {
+                "/usr/bin/python3".to_string()
+            } else {
+                "python3".to_string() // Fall back to PATH lookup
+            }
+        };
         
         // Use cloned values for task
         let keyword_owned = keyword.clone();
@@ -330,23 +363,8 @@ impl TrendSpikeService {
         let db_path = self.db_path.lock().unwrap().clone();
         let threshold = *self.threshold.lock().unwrap();
         
-        // Find the Python script - Use owned values
-        let script_paths = vec![
-            "python_scripts/trend_spike_predictor.py".to_string(),
-            "src/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/src/python_scripts/trend_spike_predictor.py".to_string(),
-        ];
-        
-        let mut script_path_str = None;
-        for path_str in &script_paths {
-            if Path::new(path_str).exists() {
-                script_path_str = Some(path_str.clone());
-                break;
-            }
-        }
-        
-        let script_path_str = match script_path_str {
+        // Find the Python script using the helper method
+        let script_path_str = match self.find_python_script("trend_spike_predictor.py") {
             Some(path) => path,
             None => {
                 eprintln!("Python script not found at expected locations");
@@ -355,7 +373,18 @@ impl TrendSpikeService {
         };
         
         // Determine Python command (python3 or python)
-        let python_cmd = if cfg!(windows) { "python".to_string() } else { "/usr/local/bin/python3".to_string() };
+        let python_cmd = if cfg!(windows) { 
+            "python".to_string() 
+        } else { 
+            // Try multiple possible Python locations, prioritizing /usr/local/bin/python3
+            if Path::new("/usr/local/bin/python3").exists() {
+                "/usr/local/bin/python3".to_string()
+            } else if Path::new("/usr/bin/python3").exists() {
+                "/usr/bin/python3".to_string()
+            } else {
+                "python3".to_string() // Fall back to PATH lookup
+            }
+        };
         
         // Clone for task
         let keyword_owned = keyword.clone();
@@ -395,23 +424,8 @@ impl TrendSpikeService {
     pub async fn get_saved_predictions(&self, limit: usize, include_past: bool) -> Result<Vec<TrendPrediction>, String> {
         let db_path = self.db_path.lock().unwrap().clone();
         
-        // Find the Python script - Use owned values
-        let script_paths = vec![
-            "python_scripts/trend_spike_predictor.py".to_string(),
-            "src/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/python_scripts/trend_spike_predictor.py".to_string(),
-            "src-tauri/src/python_scripts/trend_spike_predictor.py".to_string(),
-        ];
-        
-        let mut script_path_str = None;
-        for path_str in &script_paths {
-            if Path::new(path_str).exists() {
-                script_path_str = Some(path_str.clone());
-                break;
-            }
-        }
-        
-        let script_path_str = match script_path_str {
+        // Find the Python script using the helper method
+        let script_path_str = match self.find_python_script("trend_spike_predictor.py") {
             Some(path) => path,
             None => {
                 eprintln!("Python script not found at expected locations");
@@ -420,7 +434,18 @@ impl TrendSpikeService {
         };
         
         // Determine Python command (python3 or python)
-        let python_cmd = if cfg!(windows) { "python".to_string() } else { "/usr/local/bin/python3".to_string() };
+        let python_cmd = if cfg!(windows) { 
+            "python".to_string() 
+        } else { 
+            // Try multiple possible Python locations, prioritizing /usr/local/bin/python3
+            if Path::new("/usr/local/bin/python3").exists() {
+                "/usr/local/bin/python3".to_string()
+            } else if Path::new("/usr/bin/python3").exists() {
+                "/usr/bin/python3".to_string()
+            } else {
+                "python3".to_string() // Fall back to PATH lookup
+            }
+        };
         
         let limit_str = limit.to_string();
         let include_past_str = include_past.to_string();
@@ -464,23 +489,8 @@ async fn monitor_keywords(
     threshold: f64,
     category: Option<&str>
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    // Get the location of the Python script - Use owned values
-    let script_paths = vec![
-        "python_scripts/trend_spike_predictor.py".to_string(),
-        "src/python_scripts/trend_spike_predictor.py".to_string(),
-        "src-tauri/python_scripts/trend_spike_predictor.py".to_string(),
-        "src-tauri/src/python_scripts/trend_spike_predictor.py".to_string(),
-    ];
-    
-    let mut script_path_str = None;
-    for path_str in &script_paths {
-        if Path::new(path_str).exists() {
-            script_path_str = Some(path_str.clone());
-            break;
-        }
-    }
-    
-    let script_path_str = match script_path_str {
+    // Get the location of the Python script using the helper method
+    let script_path_str = match service.find_python_script("trend_spike_predictor.py") {
         Some(path) => path,
         None => {
             eprintln!("Python script not found at expected locations");
@@ -493,7 +503,18 @@ async fn monitor_keywords(
     let threshold_str = threshold.to_string();
     
     // Determine Python command (python3 or python)
-    let python_cmd = if cfg!(windows) { "python".to_string() } else { "/usr/local/bin/python3".to_string() };
+    let python_cmd = if cfg!(windows) { 
+        "python".to_string() 
+    } else { 
+        // Try multiple possible Python locations, prioritizing /usr/local/bin/python3
+        if Path::new("/usr/local/bin/python3").exists() {
+            "/usr/local/bin/python3".to_string()
+        } else if Path::new("/usr/bin/python3").exists() {
+            "/usr/bin/python3".to_string()
+        } else {
+            "python3".to_string() // Fall back to PATH lookup
+        }
+    };
     
     // Clone category if it exists
     let category_string = category.map(|c| c.to_string());

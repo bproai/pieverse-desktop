@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::process::Command;
 use std::path::Path;
-use std::env;
 use chrono::Datelike; // Add this import for the year() method
+use tauri::Manager; // Add this import for the path() method
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrendResult {
@@ -124,146 +124,99 @@ fn generate_dummy_data(keywords: &[String], time_range: &str, region: Option<&St
     }
 }
 
-pub async fn fetch_trends(keywords: Vec<String>, time_range: &str, region: Option<String>) -> Result<TrendResponse, Box<dyn Error>> {
-    // Get the current directory, where the script should be located
-    let cwd = env::current_dir()?;
-    
-    // Print the current directory for debugging
-    println!("Current directory: {:?}", cwd);
-    
-    // Fix the path - remove the duplicate src-tauri
-    let script_path = cwd.join("src/python_scripts/google_trends.py");
-    
-    // Print the script path for debugging
-    println!("Looking for script at: {:?}", script_path);
-    
-    // Check if the script exists
-    if !Path::new(&script_path).exists() {
-        println!("Python script not found at {:?}, using dummy data", script_path);
-        
-        // Try alternative paths
-        let alt_paths = [
-            cwd.join("../python_scripts/google_trends.py"),
-            cwd.join("src-tauri/python_scripts/google_trends.py"),
-            cwd.join("../src-tauri/python_scripts/google_trends.py"),
-            cwd.parent().unwrap_or(&cwd).join("python_scripts/google_trends.py")
+// Helper function to find Python script using app handle
+fn find_python_script(app: &tauri::AppHandle, script_name: &str) -> Option<String> {
+    // Try to find the script in the resource directory first (for production builds)
+    if let Some(resource_dir) = app.path().resource_dir().ok() {
+        let resource_paths = [
+            resource_dir.join(script_name),
+            resource_dir.join("src/python_scripts").join(script_name),
+            resource_dir.join("python_scripts").join(script_name),
         ];
         
-        // Check each alternative path
-        for alt_path in alt_paths.iter() {
-            println!("Trying alternative path: {:?}", alt_path);
-            if Path::new(&alt_path).exists() {
-                println!("Found script at alternative path: {:?}", alt_path);
-                
-                // Build arguments for the Python script
-                let keywords_str = keywords.join(",");
-                let region_str = region.as_ref().map_or("".to_string(), |r| r.clone());
-                
-                // Determine Python command (python3 or python)
-                let python_cmd = if cfg!(windows) { "python" } else { "/usr/local/bin/python3" };
-                
-                // Run Python script with the appropriate arguments
-                let output = Command::new(python_cmd)
-                    .arg(&alt_path)
-                    .arg(&keywords_str)
-                    .arg(time_range)
-                    .arg(&region_str)
-                    .output()?;
-                
-                if !output.status.success() {
-                    let error_message = String::from_utf8_lossy(&output.stderr);
-                    println!("Python script failed: {}", error_message);
+        for path in resource_paths.iter() {
+            if path.exists() {
+                return Some(path.to_string_lossy().to_string());
+            }
+        }
+    }
+    
+    // Fall back to development paths
+    let dev_paths = [
+        format!("python_scripts/{}", script_name),
+        format!("src/python_scripts/{}", script_name),
+        format!("src-tauri/python_scripts/{}", script_name),
+        format!("src-tauri/src/python_scripts/{}", script_name),
+    ];
+    
+    for path in &dev_paths {
+        if Path::new(path).exists() {
+            return Some(path.clone());
+        }
+    }
+    
+    None
+}
+
+pub async fn fetch_trends(keywords: Vec<String>, time_range: &str, region: Option<String>, script_path: Option<String>) -> Result<TrendResponse, Box<dyn Error>> {
+    // If we have a script path, use it
+    if let Some(script_path) = script_path {
+        println!("Using script at: {}", script_path);
+        
+        // Build arguments for the Python script
+        let keywords_str = keywords.join(",");
+        let region_str = region.as_ref().map_or("".to_string(), |r| r.clone());
+        
+        // Determine Python command (python3 or python)
+        let python_cmd = if cfg!(windows) { "python" } else { "/usr/local/bin/python3" };
+        
+        // Run Python script with the appropriate arguments
+        let output = Command::new(python_cmd)
+            .arg(&script_path)
+            .arg(&keywords_str)
+            .arg(time_range)
+            .arg(&region_str)
+            .output()?;
+        
+        if !output.status.success() {
+            let error_message = String::from_utf8_lossy(&output.stderr);
+            println!("Python script failed: {}", error_message);
+            return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
+        }
+        
+        // Parse the output
+        let response = String::from_utf8_lossy(&output.stdout);
+        match serde_json::from_str::<PyTrendsResponse>(&response) {
+            Ok(py_response) => {
+                if py_response.status == "error" {
+                    println!("Python script returned error: {:?}", py_response.message);
                     return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
                 }
                 
-                // Parse the output
-                let response = String::from_utf8_lossy(&output.stdout);
-                match serde_json::from_str::<PyTrendsResponse>(&response) {
-                    Ok(py_response) => {
-                        if py_response.status == "error" {
-                            println!("Python script returned error: {:?}", py_response.message);
-                            return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
-                        }
-                        
-                        // Get related queries from the response
-                        let related_queries = py_response.related_queries.unwrap_or_default();
-                        
-                        // Store the related queries in memory for later use
-                        if !related_queries.is_empty() && !keywords.is_empty() {
-                            LAST_RELATED_QUERIES.lock().unwrap().insert(keywords[0].clone(), related_queries);
-                        }
-                        
-                        return Ok(TrendResponse {
-                            results: py_response.results.unwrap_or_default(),
-                            status: py_response.status,
-                            message: py_response.message,
-                        });
-                    },
-                    Err(e) => {
-                        println!("Failed to parse Python response: {}", e);
-                        return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
-                    }
+                // Get related queries from the response
+                let related_queries = py_response.related_queries.unwrap_or_default();
+                
+                // Store the related queries in memory for later use
+                if !related_queries.is_empty() && !keywords.is_empty() {
+                    LAST_RELATED_QUERIES.lock().unwrap().insert(keywords[0].clone(), related_queries);
                 }
-            }
-        }
-        
-        return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
-    }
-    
-    // Script exists at the primary path, proceed with execution
-    
-    // Build arguments for the Python script
-    let keywords_str = keywords.join(",");
-    // Use as_ref() to borrow the contents of the Option without moving it
-    let region_str = region.as_ref().map_or("".to_string(), |r| r.clone());
-    
-    // Determine Python command (python3 or python)
-    let python_cmd = if cfg!(windows) { "python" } else { "/usr/local/bin/python3" };
-    
-    // Run Python script with the appropriate arguments
-    let output = Command::new(python_cmd)
-        .arg(&script_path)
-        .arg(&keywords_str)
-        .arg(time_range)
-        .arg(&region_str)
-        .output()?;
-    
-    if !output.status.success() {
-        let error_message = String::from_utf8_lossy(&output.stderr);
-        println!("Python script failed: {}", error_message);
-        return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
-    }
-    
-    // Parse the output
-    let response = String::from_utf8_lossy(&output.stdout);
-    match serde_json::from_str::<PyTrendsResponse>(&response) {
-        Ok(py_response) => {
-            if py_response.status == "error" {
-                println!("Python script returned error: {:?}", py_response.message);
+                
+                return Ok(TrendResponse {
+                    results: py_response.results.unwrap_or_default(),
+                    status: py_response.status,
+                    message: py_response.message,
+                });
+            },
+            Err(e) => {
+                println!("Failed to parse Python response: {}", e);
                 return Ok(generate_dummy_data(&keywords, time_range, region.as_ref()));
             }
-            
-            // Get related queries from the response
-            let related_queries = py_response.related_queries.unwrap_or_default();
-            
-            // Store the related queries in memory for later use
-            if !related_queries.is_empty() && !keywords.is_empty() {
-                // Note: In a real implementation, you might want to store this in a proper cache
-                // For now, we'll just store the most recent result in memory
-                LAST_RELATED_QUERIES.lock().unwrap().insert(keywords[0].clone(), related_queries);
-            }
-            
-            Ok(TrendResponse {
-                results: py_response.results.unwrap_or_default(),
-                status: py_response.status,
-                message: py_response.message,
-            })
-        },
-        Err(e) => {
-            println!("Failed to parse Python response: {}", e);
-            Ok(generate_dummy_data(&keywords, time_range, region.as_ref()))
         }
     }
+    
+    // If script path not provided or script not found, use dummy data
+    println!("Python script not found, using dummy data");
+    Ok(generate_dummy_data(&keywords, time_range, region.as_ref()))
 }
 
 // A simple in-memory cache for related queries
@@ -276,13 +229,21 @@ static LAST_RELATED_QUERIES: Lazy<Mutex<HashMap<String, Vec<String>>>> =
 
 // Register this as a Tauri command
 #[tauri::command]
-pub async fn get_google_trends(keywords: Vec<String>, time_range: String, region: Option<String>) -> Result<TrendResponse, String> {
-    match fetch_trends(keywords.clone(), &time_range, region.clone()).await {
+pub async fn get_google_trends(
+    app: tauri::AppHandle, // Add app handle parameter to get access to resource paths
+    keywords: Vec<String>, 
+    time_range: String, 
+    region: Option<String>
+) -> Result<TrendResponse, String> {
+    // Find the Python script using the app handle
+    let script_path = find_python_script(&app, "google_trends.py");
+    
+    // Execute fetch_trends with the found script path
+    match fetch_trends(keywords.clone(), &time_range, region.clone(), script_path).await {
         Ok(data) => Ok(data),
         Err(e) => {
             println!("Error fetching Google Trends data: {}", e);
             // Return dummy data as fallback instead of error
-            // Use region.as_ref() to avoid moving
             Ok(generate_dummy_data(&vec!["deepseek".to_string()], &time_range, region.as_ref()))
         }
     }
