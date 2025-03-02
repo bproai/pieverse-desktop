@@ -27,6 +27,9 @@ class TrendSpikePredictor:
         # Max number of threads to use for related term fetching
         self.max_threads = 5
         
+        # Track the last time we did a full database cleanup
+        self.last_full_cleanup = datetime.now() - timedelta(days=2)  # Initialize to ensure first cleanup happens soon
+        
     def _ensure_db_setup(self):
         """Create the necessary database tables if they don't exist."""
         conn = sqlite3.connect(self.db_path)
@@ -41,6 +44,12 @@ class TrendSpikePredictor:
             region TEXT,
             created_at TEXT
         )
+        ''')
+        
+        # Add an index to speed up deduplication queries
+        conn.execute('''
+        CREATE INDEX IF NOT EXISTS idx_trend_data_lookup 
+        ON trend_data (keyword, timestamp, region)
         ''')
         
         # Table for storing predictions and alerts
@@ -113,9 +122,139 @@ class TrendSpikePredictor:
         
         return f"{start_str} {end_str}"
     
+    def check_and_perform_maintenance(self):
+        """
+        Check if it's time to perform database maintenance tasks
+        and run them if necessary.
+        """
+        now = datetime.now()
+        
+        # If it's been more than 24 hours since the last full cleanup
+        if (now - self.last_full_cleanup).total_seconds() > 86400:  # 24 hours in seconds
+            print("[MAINTENANCE] Starting scheduled database maintenance...", file=sys.stderr)
+            print(f"[MAINTENANCE] Last maintenance: {self.last_full_cleanup.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
+            
+            # Run a full cleanup of the trend_data table
+            deleted_count = self._cleanup_trend_data()
+            
+            # Only vacuum if we deleted records
+            if deleted_count > 0:
+                try:
+                    print("[MAINTENANCE] Running VACUUM to reclaim database space...", file=sys.stderr)
+                    conn = sqlite3.connect(self.db_path)
+                    conn.execute("VACUUM")
+                    conn.close()
+                    print("[MAINTENANCE] VACUUM completed successfully", file=sys.stderr)
+                except Exception as e:
+                    print(f"[MAINTENANCE] Error during database vacuum: {e}", file=sys.stderr)
+                    traceback.print_exc(file=sys.stderr)
+            
+            # Update the last cleanup time
+            self.last_full_cleanup = now
+            print(f"[MAINTENANCE] All maintenance tasks completed at {now.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
+    
+    def _cleanup_trend_data(self, keywords=None, time_limit_days=None):
+        """
+        Clean up duplicate records in the trend_data table, keeping only the most recent
+        entry for each unique (keyword, timestamp, region) combination.
+        
+        Parameters:
+        keywords (list): Optional list of keywords to limit the cleanup to.
+        time_limit_days (int): Optional number of days to limit the cleanup to (recent data).
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            
+            # Log the start of deduplication with details
+            print(f"[DEDUP] Starting deduplication process...", file=sys.stderr)
+            if keywords:
+                print(f"[DEDUP] Targeting keywords: {', '.join(keywords)}", file=sys.stderr)
+            if time_limit_days:
+                print(f"[DEDUP] Time limit: last {time_limit_days} days", file=sys.stderr)
+            
+            # First, get a count of duplicates to report before and after stats
+            count_query = """
+            SELECT COUNT(*) as total, 
+                   COUNT(*) - COUNT(DISTINCT keyword || timestamp || region) as duplicates
+            FROM trend_data
+            """
+            
+            where_components = []
+            params = []
+            
+            if keywords:
+                placeholders = ','.join(['?'] * len(keywords))
+                where_components.append(f"keyword IN ({placeholders})")
+                params.extend(keywords)
+            
+            if time_limit_days:
+                where_components.append("timestamp >= date('now', ?)")
+                params.append(f'-{time_limit_days} days')
+            
+            # Build the WHERE clause
+            where_clause = " WHERE " + " AND ".join(where_components) if where_components else ""
+            
+            # Add WHERE clause to count query if needed
+            if where_components:
+                count_query += where_clause
+                
+            cursor = conn.execute(count_query, params)
+            result = cursor.fetchone()
+            total_records = result[0]
+            duplicate_count = result[1]
+            
+            print(f"[DEDUP] Before cleanup: {total_records} total records, {duplicate_count} duplicates identified", file=sys.stderr)
+            
+            if duplicate_count == 0:
+                print(f"[DEDUP] No duplicates found, skipping cleanup", file=sys.stderr)
+                conn.close()
+                return 0
+                
+            # Delete duplicate records keeping only the latest one for each (keyword, timestamp, region)
+            # This uses a common SQLite pattern for deletion with a subquery
+            query = f"""
+            DELETE FROM trend_data 
+            WHERE id NOT IN (
+                SELECT MAX(id) 
+                FROM trend_data
+                {where_clause}
+                GROUP BY keyword, timestamp, region
+            )
+            {where_clause}
+            """
+            
+            # Execute with parameters duplicated for both parts of the query
+            conn.execute(query, params * 2 if where_components else [])
+            
+            # Get count of deleted rows
+            deleted_count = conn.total_changes
+            
+            conn.commit()
+            
+            # Get updated record count
+            cursor = conn.execute("SELECT COUNT(*) FROM trend_data" + (where_clause if where_components else ""), 
+                                 params if where_components else [])
+            new_total = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            print(f"[DEDUP] Cleanup complete: Removed {deleted_count} duplicate records", file=sys.stderr)
+            print(f"[DEDUP] After cleanup: {new_total} records remain" + 
+                  (f" for specified filter" if where_components else " in database"), file=sys.stderr)
+            
+            return deleted_count
+            
+        except Exception as e:
+            print(f"[DEDUP] Error during trend data cleanup: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            return 0
+    
     def fetch_and_store_trends(self, keywords, time_range="90d", region=None):
         """Fetch Google Trends data and store in the database."""
         try:
+            # Check if maintenance is needed
+            self.check_and_perform_maintenance()
+            
             # Get timeframe string
             timeframe = self._get_time_frame(time_range)
             
@@ -163,6 +302,23 @@ class TrendSpikePredictor:
                         })
                     
                     conn.commit()
+                    
+                    # Run cleanup for this keyword after inserting new data
+                    # Only clean up data within the time range we just fetched
+                    time_limit_days = 365  # Default to 1 year for "5y" timeframe
+                    if time_range == "1d":
+                        time_limit_days = 1
+                    elif time_range == "7d":
+                        time_limit_days = 7
+                    elif time_range == "30d":
+                        time_limit_days = 30
+                    elif time_range == "90d":
+                        time_limit_days = 90
+                    elif time_range == "12m":
+                        time_limit_days = 365
+                    
+                    print(f"[FETCH] Performing post-fetch cleanup for keyword '{keyword}' over {time_limit_days} days window", file=sys.stderr)    
+                    self._cleanup_trend_data([keyword], time_limit_days)
                     
                     # Fetch and store related terms that might be leading indicators
                     try:
@@ -348,7 +504,7 @@ class TrendSpikePredictor:
         conn.close()
         
         return data
-    
+ 
     def fetch_social_signals(self, keyword):
         """
         Fetch social media and news signals for a keyword.
@@ -420,7 +576,7 @@ class TrendSpikePredictor:
         conn.close()
         
         return data
-    
+
     # Modify to show the last 15 data points:
     def predict_spike(self, keyword, sensitivity=0.7, region=None):
         """
@@ -524,6 +680,7 @@ class TrendSpikePredictor:
         
         # 4. Use Prophet for forecasting
         prophet_signal = 0.0
+
         forecast_data = []
         predicted_spike_date = None
         
@@ -676,7 +833,7 @@ class TrendSpikePredictor:
                 'weight': 0.15
             }
         }
-        
+            
         return adjusted_probability, forecast_data, predicted_spike_date, signal_details    
 
     def save_prediction(self, keyword, probability, forecast, predicted_spike_date, signals):
@@ -694,12 +851,15 @@ class TrendSpikePredictor:
         
         conn.commit()
         conn.close()
-    
+
     def monitor_keywords(self, keywords, threshold=0.7, region=None):
         """
         Monitor a list of keywords for potential spikes.
         Returns keywords with spike probabilities above threshold.
         """
+        # Check if maintenance is needed
+        self.check_and_perform_maintenance()
+        
         results = []
         
         for keyword in keywords:
@@ -723,7 +883,7 @@ class TrendSpikePredictor:
                 })
         
         return results
-    
+
     def get_predictions(self, limit=10, include_past=False):
         """Get recent spike predictions from the database."""
         conn = sqlite3.connect(self.db_path)
@@ -756,7 +916,7 @@ class TrendSpikePredictor:
         
         conn.close()
         return predictions
-    
+
     def mark_prediction_read(self, prediction_id):
         """Mark a prediction as read."""
         conn = sqlite3.connect(self.db_path)
@@ -764,7 +924,7 @@ class TrendSpikePredictor:
         conn.commit()
         conn.close()
         return True
-    
+
     def update_prediction_status(self, prediction_id, status):
         """Update the status of a prediction (confirmed or false_positive)."""
         if status not in ['confirmed', 'false_positive']:
@@ -775,7 +935,7 @@ class TrendSpikePredictor:
         conn.commit()
         conn.close()
         return True
-    
+
     def get_signal_sources(self, keyword):
         """Get a list of signal sources for a given keyword that might help predict spikes."""
         # Leading indicators (related terms)
@@ -801,6 +961,7 @@ def main():
         print("  monitor <keywords_comma_separated> <threshold> [region]")
         print("  predictions [limit] [include_past]")
         print("  sources <keyword>")
+        print("  cleanup [keywords_comma_separated] [days_limit]")
         return
     
     db_path = sys.argv[1]
@@ -899,6 +1060,20 @@ def main():
         keyword = sys.argv[3]
         sources = predictor.get_signal_sources(keyword)
         print(json.dumps(sources))
+    
+    elif command == "cleanup":
+        # Optional parameters
+        keywords = sys.argv[3].split(',') if len(sys.argv) > 3 and sys.argv[3] != "" else None
+        days_limit = int(sys.argv[4]) if len(sys.argv) > 4 else None
+        
+        # Run the cleanup and report results
+        deleted_count = predictor._cleanup_trend_data(keywords, days_limit)
+        print(json.dumps({
+            "status": "success",
+            "deleted_records": deleted_count,
+            "keywords": keywords,
+            "days_limit": days_limit
+        }))
     
     else:
         print(f"Unknown command: {command}")
