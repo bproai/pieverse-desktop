@@ -1,63 +1,64 @@
 # PiEVerse Desktop
 
-PiEVerse Desktop is a versatile developer toolkit that combines database management, AI assistance, and development tools in one powerful Tauri-based desktop application.
+<div align="center">
+  <img src="./src/assets/logo.svg" alt="PiEVerse Logo" width="120" />
+  <h3>A Versatile Developer Toolkit & AI Assistant</h3>
+  <p>Combining database management, AI assistance, and development tools in one powerful desktop application</p>
+</div>
 
-<img src="./src/assets/logo.svg" alt="PiEVerse Logo" width="120" />
+## ✨ Overview
 
-## Overview
+PiEVerse Desktop brings together essential development tools, database management interfaces, and an AI assistant in a modern Tauri (Rust + React) desktop application. The app features a friendly anime-style avatar assistant with speech recognition capabilities, support for multiple database types, a Python sandbox environment, trend analysis, and a comprehensive prompt management system.
 
-PiEVerse Desktop brings together essential development tools, database management interfaces, and an AI assistant in a modern Tauri (Rust + React) desktop application. The app features a friendly anime-style avatar assistant with speech recognition capabilities, support for multiple database types, a Python sandbox environment, and a comprehensive prompt management system.
+## 🚀 Features
 
-## Table of Contents
-- [Features](#features)
-- [Installation](#installation)
-- [Development](#development)
-- [Architecture](#architecture)
-- [API Reference](#api-reference)
-- [License](#license)
+### 🤖 Interactive AI Assistant Avatar
+- Floating, draggable anime-style avatar that provides AI assistance
+- Multiple facial expression animations (happy, thoughtful, excited, neutral)
+- Multiple AI engine options:
+  - **Rule-based mode**: Simple, predefined responses for basic queries
+  - **GPT-4o mini**: Uses Whisper for STT, GPT-4o mini for text generation, and system's native TTS 
+  - **GPT-4o Realtime**: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
+  - **GPT-4o Realtime Mini**: Cost-effective version of the Realtime model with same voice capabilities
+- Different UI workflows based on selected AI engine
+- Record/playback capability for non-realtime modes
 
-## Features
-
-### AI Prompt Management
+### 📝 AI Prompt Management
 - Create, edit, delete AI prompts and instructions
 - Categorize prompts (Writing & Analysis, Finance & Markets, Code & Development)
 - Bulk import and export of prompts
 - Toggle between SQLite and MySQL storage backends
 - Activation/deactivation of individual prompts
 
-### Interactive AI Assistant Avatar
-- Floating, draggable anime-style avatar that provides AI assistance
-- Multiple facial expression animations (happy, thoughtful, excited, neutral)
-- Multiple AI engine options:
-  - Rule-based mode: Simple, predefined responses for basic queries
-  - GPT-4o mini: Uses Whisper for STT, GPT-4o mini for text generation, and system's native TTS 
-  - GPT-4o Realtime: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
-  - GPT-4o Realtime Mini: Cost-effective version of the Realtime model with same voice capabilities
-- Different UI workflows based on selected AI engine
-- Record/playback capability for non-realtime modes
+### 📊 Trend Analysis & Signal Detection
+- Google Trends data visualization and analysis
+- Trend spike prediction and monitoring
+- Signal breakdown with leading indicators
+- Automated monitoring with customizable thresholds
+- Export trend data to CSV format
 
-### Python Sandbox
+### 🐍 Python Sandbox
 - Integrated Python environment for quick scripting and testing
 - Monaco-based code editor with syntax highlighting and autocompletion
 - Execute Python code and view results directly in the app
 - Pre-loaded libraries including pandas and numpy
 - Reset environment functionality
 
-### API Settings
-- Configure and manage a local API server
-- Customize port settings
-- Start/stop service controls
-- RESTful API for prompt management 
-- CORS support for cross-origin requests
-
-### Database Management
+### 🔄 Database Management
 - MySQL connection and query execution
 - MongoDB integration
 - SQLite local database support
 - Transfer data between MySQL and SQLite
 - Intuitive SQL query interface with results display
 
-## Installation
+### 🌐 API Settings
+- Configure and manage a local API server
+- Customize port settings
+- Start/stop service controls
+- RESTful API for prompt management 
+- CORS support for cross-origin requests
+
+## 📦 Installation
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install) 1.75 or higher
@@ -86,7 +87,7 @@ The compiled application will be available in the `src-tauri/target/release` dir
 ### Pre-built Binaries
 Download the latest release for your platform from the [Releases page](https://github.com/yourusername/pieverse-desktop/releases).
 
-## Development
+## 💻 Development
 
 ### Setup Development Environment
 1. Clone the repository
@@ -104,14 +105,35 @@ Download the latest release for your platform from the [Releases page](https://g
 ```
 pieverse-desktop/
 ├── src/ - React frontend code
+│   ├── App.tsx - Main application component
 │   ├── components/ - React components
-│   │   ├── Avatar/ - AI assistant avatar
+│   │   ├── Avatar.tsx - AI assistant avatar
+│   │   ├── BrandLogo.tsx - Application logo component
 │   │   ├── APISettings/ - API server settings
+│   │   │   ├── APISettingsPanel.tsx - API configuration UI
+│   │   │   └── index.tsx - Exports
 │   │   ├── MongoDB/ - MongoDB interface
+│   │   │   ├── MongoDBPanel.tsx - MongoDB UI
+│   │   │   └── index.ts - Exports
 │   │   ├── MySQL/ - MySQL interface
+│   │   │   ├── MySQLPanel.tsx - MySQL UI
+│   │   │   ├── MySQLService.ts - MySQL service connector
+│   │   │   ├── types.ts - Type definitions
+│   │   │   └── index.ts - Exports
 │   │   ├── Python/ - Python sandbox
+│   │   │   └── PythonPanel.tsx - Code editor interface
+│   │   ├── Signals/ - Trend analysis and monitoring
+│   │   │   ├── SignalsPanel.tsx - Google Trends visualization
+│   │   │   ├── DetectedSpikeCard.tsx - Trend spike UI card
+│   │   │   └── index.ts - Exports
 │   │   └── Prompts/ - AI prompt management
-│   └── services/ - Frontend services
+│   │       ├── PromptsManager.tsx - Prompt CRUD interface
+│   │       └── index.ts - Exports
+│   ├── services/ - Frontend services
+│   │   ├── SQLitePromptService.ts - SQLite prompt operations
+│   │   └── MySQLPromptService.ts - MySQL prompt operations
+│   ├── assets/ - Static assets and resources
+│   └── styles/ - CSS and style files
 ├── src-tauri/ - Rust backend code
 │   ├── src/
 │   │   ├── services/ - Backend services
@@ -119,17 +141,32 @@ pieverse-desktop/
 │   │   │   ├── mongodb.rs - MongoDB connector
 │   │   │   ├── mysql.rs - MySQL connector
 │   │   │   ├── python.rs - Python interpreter
+│   │   │   ├── screenshot.rs - Screenshot functionality
+│   │   │   ├── google_trends.rs - Google Trends integration
+│   │   │   ├── trend_spike_service.rs - Trend analysis 
 │   │   │   ├── sqlite.rs - SQLite database
 │   │   │   ├── sqlite_prompts.rs - Prompt management
-│   │   │   └── whisper.rs - OpenAI API integration
+│   │   │   ├── whisper.rs - OpenAI API integration
+│   │   │   ├── brand_sound.rs - Audio management
+│   │   │   ├── avatar_window.rs - Floating avatar window
+│   │   │   └── tray.rs - System tray implementation
+│   │   ├── python_scripts/ - Python backend scripts
+│   │   │   ├── trend_spike_predictor.py - Trend prediction
+│   │   │   ├── google_trends.py - Google Trends API
+│   │   │   ├── fetch_data.py - Data retrieval utilities
+│   │   │   └── requirements.txt - Python dependencies
 │   │   ├── lib.rs - Main library
 │   │   └── main.rs - Entry point
+│   ├── tauri.conf.json - Tauri configuration
 │   └── Cargo.toml - Rust dependencies
 ├── package.json - Node.js dependencies
+├── tailwind.config.js - TailwindCSS configuration
+├── postcss.config.js - PostCSS configuration
+├── tsconfig.json - TypeScript configuration 
 └── vite.config.ts - Vite configuration
 ```
 
-## Architecture
+## 🏗️ Architecture
 
 PiEVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which combines Rust for the backend and React for the frontend.
 
@@ -138,6 +175,7 @@ PiEVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which
 - Mantine UI components
 - Monaco Editor for code editing
 - TailwindCSS for styling
+- Recharts for data visualization
 
 ### Backend
 - Rust with Tauri for cross-platform desktop runtime
@@ -181,14 +219,14 @@ The avatar assistant leverages multiple AI models with different interaction pat
    - Ideal for extended conversation sessions
    - Requires OpenAI API key with lower usage costs
 
-4. **OpenAI Whisper API Integration**
-   - Advanced speech-to-text capabilities
-   - Multiple audio format support
-   - High accuracy transcription
-   - Handles different accents and speaking styles
-   - Requires OpenAI API key
+### Data Analysis
+- Google Trends integration for market data
+- Prophet forecasting model for trend prediction
+- Machine learning-based spike detection
+- Real-time trend monitoring with customizable thresholds
+- Signal breakdown and analysis
 
-## API Reference
+## 🌐 API Reference
 
 ### HTTP API
 When enabled, the API server provides the following endpoints:
@@ -209,11 +247,16 @@ The application exposes several Tauri commands for plugin and extension develope
 - **SQLite**: `sqlite_init`, `sqlite_execute_query`
 - **API Server**: `start_api_server`, `stop_api_server`
 - **OpenAI**: `transcribe_audio`, `openai_4o_mini`
+- **Google Trends**: `get_google_trends`, `get_related_queries`, `export_trends_data`
+- **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`
+- **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`
 
-## License
+## 📄 License
 
 [MIT License](LICENSE)
 
 ---
 
-Built with ❤️ using [Tauri](https://tauri.app/) and [React](https://react.dev/)
+<div align="center">
+  <p>Built with ❤️ using <a href="https://tauri.app/">Tauri</a> and <a href="https://react.dev/">React</a></p>
+</div>
