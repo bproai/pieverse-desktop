@@ -15,3 +15,6 @@ pub mod python;
 // Google Trends services
 pub mod google_trends;
 pub mod trend_spike_service;
+
+// Screenshot service
+pub mod screenshot;

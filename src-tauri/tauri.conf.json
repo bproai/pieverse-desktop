@@ -38,7 +38,7 @@
   },
   "plugins": {
     "fs": {
-      "scope": ["$AUDIO/*", "$AUDIO_DIR/*", "$RESOURCE/*"]
+      "scope": ["$AUDIO/*", "$AUDIO_DIR/*", "$RESOURCE/*", "$PICTURE/*", "$PICTURE_DIR/*"]
     },
     "protocol": {
       "asset": true,

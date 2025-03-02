@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, TextInput, Select, Button, Group, Text, Stack, Badge, Alert, Tabs, Grid, Progress, Table, ActionIcon, Menu, NumberInput, ScrollArea, Switch, Divider } from '@mantine/core';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { TrendingUp, Download, AlertTriangle, BellRing, Settings, Plus, Trash, Play, Pause, RefreshCw, ChevronRight, Calendar, Info } from 'lucide-react';
+import { TrendingUp, Download, AlertTriangle, BellRing, Settings, Plus, Trash, Play, Pause, RefreshCw, ChevronRight, Calendar, Info, Camera } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { notifications } from '@mantine/notifications';
+import * as openerPlugin from '@tauri-apps/plugin-opener';
 
 // Types for trend data (existing)
 interface TrendResult {
@@ -101,6 +102,58 @@ const SignalsPanel = () => {
     };
   }, [isMonitoring]);
   
+  // Updated screenshot function with better feedback
+  const takeScreenshot = async () => {
+    // First show a notification that we're taking a screenshot
+    notifications.show({
+      title: 'Taking Screenshot...',
+      message: 'Capturing application window',
+      color: 'blue',
+      loading: true,
+      autoClose: false,
+      id: 'screenshot-progress'
+    });
+
+    try {
+      // Call the Tauri backend to take a screenshot and copy to clipboard
+      const result = await invoke<boolean>('take_screenshot_to_clipboard');
+      
+      // Close the progress notification
+      notifications.hide('screenshot-progress');
+      
+      if (result) {
+        // Show success notification
+        notifications.show({
+          title: 'Screenshot Captured',
+          message: 'App screenshot copied to clipboard',
+          color: 'green'
+        });
+      } else {
+        setError('Failed to copy screenshot to clipboard');
+        
+        // Show error notification
+        notifications.show({
+          title: 'Screenshot Failed',
+          message: 'Unable to capture screenshot. Check console for details.',
+          color: 'red'
+        });
+      }
+    } catch (err) {
+      // Close the progress notification
+      notifications.hide('screenshot-progress');
+      
+      console.error('Screenshot error:', err);
+      setError(`Failed to take screenshot: ${err}`);
+      
+      // Show error notification
+      notifications.show({
+        title: 'Screenshot Failed',
+        message: `Error: ${err}`,
+        color: 'red'
+      });
+    }
+  };
+
   // Standard trend fetching (existing)
   const fetchTrends = async () => {
     if (!keywords.trim()) {
@@ -410,9 +463,19 @@ const SignalsPanel = () => {
               <TrendingUp size={20} />
               <Text weight={500} size="lg">Google Trends Signals</Text>
             </Group>
-            <Badge color="blue" variant="light">
-              Beta
-            </Badge>
+            <Group>
+              <ActionIcon
+                color="blue"
+                variant="subtle"
+                onClick={takeScreenshot}
+                title="Take a screenshot and copy to clipboard"
+              >
+                <Camera size={18} />
+              </ActionIcon>
+              <Badge color="blue" variant="light">
+                Beta
+              </Badge>
+            </Group>
           </Group>
         </Card.Section>
 
