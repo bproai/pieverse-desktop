@@ -25,6 +25,9 @@ const Avatar = () => {
   });
   const [showApiModal, setShowApiModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [clipboardImage, setClipboardImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // Media recording and audio playback states
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -44,6 +47,8 @@ const Avatar = () => {
     x: typeof window !== 'undefined' ? window.innerWidth - 250 : 0, 
     y: typeof window !== 'undefined' ? window.innerHeight - 250 : 0 
   });
+
+  const formRef = useRef<HTMLFormElement>(null);
 
     // Add these state variables near the top of your Avatar component
   const [modelType, setModelType] = useState('regular'); // 'regular', 'openai', or 'realtime'
@@ -543,6 +548,28 @@ const Avatar = () => {
     }
   };
 
+  const clearClipboardImage = () => {
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    setClipboardImage(null);
+    setImagePreviewUrl('');
+  };
+  
+  const imageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // Extract the base64 portion from the data URL
+        const base64String = reader.result as string;
+        const base64Data = base64String.split(',')[1];
+        resolve(base64Data);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const stopPlayback = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -575,14 +602,18 @@ const Avatar = () => {
   };
 
   // ============== NEW HELPER: CALL OPENAI 4o-mini ==============
-  const callOpenAIMini = async (prompt: string, key: string) => {
+  const callOpenAIMini = async (prompt: string, key: string, imageBase64?: string) => {
     try {
       // Using Tauri's core.invoke to call our Rust backend function
       console.log("Calling OpenAI 4o-mini with prompt length:", prompt.length);
+      console.log("Image included in request:", !!imageBase64);
+      
       const response = await core.invoke('openai_4o_mini', { 
         prompt, 
-        apiKey: key 
+        apiKey: key,
+        imageBase64: imageBase64 || null  // Pass the image if we have one
       });
+      
       console.log("OpenAI 4o-mini response received");
       return response;
     } catch (error) {
@@ -661,7 +692,9 @@ const Avatar = () => {
   // ============== Modified: handleInputSubmit is now ASYNC ==============
   const handleInputSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (userInput.trim() === '') return;
+    
+    // Don't proceed if there's no text AND no image
+    if (userInput.trim() === '' && !clipboardImage) return;
     
     // If in realtime mode, use the realtime handler
     if (modelType === "realtime" || modelType === "realtime-mini") {
@@ -669,27 +702,79 @@ const Avatar = () => {
       return;
     }
     
-    // Otherwise use the regular handler
-    const result = await processIntent(userInput);
-    setIntentResponse(result.response);
-  
-    switch (result.intent) {
-      case 'greeting':
-      case 'gratitude':
-        setExpression('happy');
-        break;
-      case 'farewell':
-        setExpression('thoughtful');
-        break;
-      case 'unknown':
-        setExpression('thoughtful');
-        break;
-      default:
+    // If using OpenAI 4o-mini
+    if (modelType === "openai") {
+      const key = ensureApiKey();
+      if (!key) return;
+      
+      // Show processing state
+      setIntentResponse(clipboardImage ? "Processing your image..." : "Processing your request...");
+      setExpression('thoughtful');
+      setIsProcessingImage(true);
+      
+      try {
+        let imageBase64 = null;
+        
+        // Convert image to base64 if available
+        if (clipboardImage) {
+          imageBase64 = await imageToBase64(clipboardImage);
+          
+          // Save the image to the user's pictures folder
+          try {
+            await core.invoke('save_clipboard_image', { 
+              imageBase64 
+            });
+            console.log("Clipboard image saved to Pictures folder");
+          } catch (error) {
+            console.warn("Failed to save clipboard image:", error);
+            // Continue anyway as this is non-critical
+          }
+        }
+        
+        // Call OpenAI with the text and image
+        const response = await callOpenAIMini(userInput, key, imageBase64);
+        
+        // Set the response and update UI
+        setIntentResponse(response as string);
         setExpression('excited');
+        
+        // Only trigger local TTS if not in realtime mode
+        speakResponse(response as string);
+        
+        // Clean up
+        clearClipboardImage();
+        setUserInput('');
+        
+      } catch (error: any) {
+        console.error('Error processing request:', error);
+        setIntentResponse(`Sorry, there was an error: ${error.message || error}`);
+        setExpression('thoughtful');
+      } finally {
+        setIsProcessingImage(false);
+      }
+    } else {
+      // Regular intent processing (rule-based)
+      const result = await processIntent(userInput);
+      setIntentResponse(result.response);
+    
+      switch (result.intent) {
+        case 'greeting':
+        case 'gratitude':
+          setExpression('happy');
+          break;
+        case 'farewell':
+          setExpression('thoughtful');
+          break;
+        case 'unknown':
+          setExpression('thoughtful');
+          break;
+        default:
+          setExpression('excited');
+      }
+      
+      speakResponse(result.response);
+      setUserInput('');
     }
-    // Only trigger local TTS if not in realtime mode
-    speakResponse(result.response);
-    setUserInput('');
   };
 
   const handleClick = () => {
@@ -982,6 +1067,61 @@ const Avatar = () => {
   }, []);
 
   useEffect(() => {
+    const handlePaste = async (event: ClipboardEvent) => {
+      // Only process paste events when in OpenAI mode and the help panel is open
+      if (!showHelp || modelType !== 'openai') return;
+      
+      // Check if the clipboard contains image data
+      const items = event.clipboardData?.items;
+      if (!items) return;
+      
+      // Look for image content
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          // Get the image as a File object
+          const file = items[i].getAsFile();
+          if (!file) continue;
+          
+          // Store the file for processing
+          setClipboardImage(file);
+          
+          // Create a preview URL
+          const imageUrl = URL.createObjectURL(file);
+          setImagePreviewUrl(imageUrl);
+          
+          // Focus the input field for the user to add text description
+          setTimeout(() => {
+            if (formRef.current) {
+              const input = formRef.current.querySelector('input');
+              if (input) input.focus();
+            }
+          }, 100);
+          
+          // Prevent the default paste behavior
+          event.preventDefault();
+          break;
+        }
+      }
+    };
+    
+    // Add the paste event listener to the document
+    document.addEventListener('paste', handlePaste);
+    
+    // Remove the listener when the component unmounts
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [showHelp, modelType]); // Depend on these values to re-attach when needed
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const blinkInterval = setInterval(() => {
       setBlinkState(true);
       setTimeout(() => setBlinkState(false), 200);
@@ -1263,6 +1403,12 @@ const Avatar = () => {
                 ) {
                   stopRealtimeSession();
                 }
+                
+                // Clean up any clipboard image if switching away from 4o-mini
+                if (modelType === "openai" && newType !== "openai") {
+                  clearClipboardImage();
+                }
+                
                 setModelType(newType);
                 // For backward compatibility with existing code.
                 setUseOpenAIModel(newType === "openai" || newType === "realtime" || newType === "realtime-mini");
@@ -1313,18 +1459,42 @@ const Avatar = () => {
               </div>
             )}
 
-            <form onSubmit={handleInputSubmit} className="intent-form">
+            <form onSubmit={handleInputSubmit} className="intent-form" ref={formRef}>
+              {imagePreviewUrl && (
+                <div className="image-preview-container">
+                  <img 
+                    src={imagePreviewUrl} 
+                    alt="Clipboard image" 
+                    className="clipboard-image-preview" 
+                  />
+                  <button 
+                    type="button"
+                    className="remove-image-button"
+                    onClick={clearClipboardImage}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
               <input
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                placeholder="Type your question here..."
+                placeholder={clipboardImage ? "Describe this image..." : "Type your question here..."}
                 className="intent-input"
+                disabled={isProcessingImage}
               />
+              
               <div className="button-group">
-                <button type="submit" className="submit-button">
-                  Send
+                <button 
+                  type="submit" 
+                  className={`submit-button ${clipboardImage ? 'has-image' : ''}`}
+                  disabled={isProcessingImage}
+                >
+                  {isProcessingImage ? 'Processing...' : 'Send'}
                 </button>
+                
                 <button 
                   type="button" 
                   className={`voice-button ${isListening ? "listening" : ""}`}
@@ -1335,13 +1505,13 @@ const Avatar = () => {
                       requestMicrophonePermission();
                     }
                   }}
-                  disabled={intentResponse === "Preparing microphone..."}
+                  disabled={isProcessingImage || intentResponse === "Preparing microphone..."}
                 >
                   {(modelType === "realtime" || modelType === "realtime-mini")
                     ? (isRealtimeActive ? "Toggle Mic" : "Start Realtime") 
                     : (isListening ? "Listening..." : "Speak")}
                 </button>
-
+                
                 <button 
                   type="button" 
                   className="close-button"
@@ -1353,11 +1523,21 @@ const Avatar = () => {
                     }
                     setRecordedAudioData(null);
                     setAudioChunks([]);
+                    clearClipboardImage();
                   }}
                 >
                   Close
                 </button>
               </div>
+              
+              {/* Image help text - only show in OpenAI 4o-mini mode */}
+              {modelType === "openai" && (
+                <div className="image-help-text">
+                  {clipboardImage 
+                    ? "Image from clipboard is ready to send" 
+                    : "Press Ctrl+V to paste an image from your clipboard"}
+                </div>
+              )}
             </form>
           </div>
         </div>

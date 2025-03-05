@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; media-src 'self' microphone: https: mediadevices: blob: asset:; connect-src 'self' https://www.google.com https://*.googleapis.com https://speech.googleapis.com wss://*.speech.googleapis.com https: mediadevices:; img-src 'self' data: asset: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval';"
+      "csp": "default-src 'self'; media-src 'self' microphone: https: mediadevices: blob: asset:; connect-src 'self' https://www.google.com https://*.googleapis.com https://speech.googleapis.com wss://*.speech.googleapis.com https: mediadevices:; img-src 'self' data: asset: https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval';"      
     },
     "trayIcon": {
       "iconPath": "icons/256x256.png",

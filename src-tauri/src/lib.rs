@@ -87,8 +87,11 @@ use services::trend_spike_service::{
 use std::sync::Arc;
 
 // Import the screenshot functions
-use services::screenshot::{take_screenshot, take_screenshot_to_clipboard};
-
+use services::screenshot::{
+    take_screenshot, 
+    take_screenshot_to_clipboard,
+    save_clipboard_image  // Add this line
+};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Create and initialize the trend spike service
@@ -180,7 +183,8 @@ pub fn run() {
             get_trend_spike_sources,
             // Screenshot commands
             take_screenshot,
-            take_screenshot_to_clipboard
+            take_screenshot_to_clipboard,
+            save_clipboard_image  // Add this line
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

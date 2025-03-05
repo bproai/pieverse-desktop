@@ -3,6 +3,7 @@ use tokio::fs;
 use base64::Engine;
 use reqwest::multipart::{Form, Part};
 use std::time::Instant;
+use serde_json::{json, Value};
 
 // Helper function to print a boxed message for important logs
 #[allow(dead_code)]
@@ -189,12 +190,6 @@ struct ChatMessage {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ChatRequest {
-    model: String,
-    messages: Vec<ChatMessage>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 struct ChatChoice {
     message: ChatMessage,
 }
@@ -204,10 +199,16 @@ struct ChatResponse {
     choices: Vec<ChatChoice>,
 }
 
+// Updated to support image data
 #[tauri::command]
-pub async fn openai_4o_mini(prompt: String, api_key: String) -> Result<String, String> {
+pub async fn openai_4o_mini(prompt: String, api_key: String, image_base64: Option<String>) -> Result<String, String> {
     print_section("OPENAI 4O-MINI REQUEST");
     println!("Processing prompt: {} characters", prompt.len());
+    
+    if let Some(ref img) = image_base64 {
+        println!("Image data included: {} bytes", img.len());
+    }
+    
     let start_time = Instant::now();
     
     // Validate API key
@@ -215,17 +216,50 @@ pub async fn openai_4o_mini(prompt: String, api_key: String) -> Result<String, S
         return Err("API key is required".into());
     }
     
-    // Create the request body
-    let messages = vec![
-        ChatMessage {
-            role: "user".to_string(),
-            content: prompt,
+    // Create the request payload based on whether we have an image
+    let request_payload = match image_base64 {
+        Some(img_data) => {
+            // Create message with both text and image content
+            let content_items = vec![
+                // Image content
+                json!({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": format!("data:image/png;base64,{}", img_data)
+                    }
+                }),
+                // Text content
+                json!({
+                    "type": "text",
+                    "text": prompt
+                })
+            ];
+            
+            // Full request payload with mixed content
+            json!({
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": content_items
+                    }
+                ],
+                "max_tokens": 1000
+            })
+        },
+        None => {
+            // Text-only request (original format)
+            json!({
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "max_tokens": 1000
+            })
         }
-    ];
-    
-    let request_body = ChatRequest {
-        model: "gpt-4o-mini".to_string(), // Using the 4o-mini model
-        messages,
     };
     
     // Send the request to OpenAI API
@@ -233,7 +267,7 @@ pub async fn openai_4o_mini(prompt: String, api_key: String) -> Result<String, S
     match client.post("https://api.openai.com/v1/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
-        .json(&request_body)
+        .json(&request_payload)
         .send()
         .await {
             Ok(response) => {
@@ -241,21 +275,26 @@ pub async fn openai_4o_mini(prompt: String, api_key: String) -> Result<String, S
                 let status = response.status();
                 if status.is_success() {
                     // Parse successful response
-                    match response.json::<ChatResponse>().await {
-                        Ok(chat_response) => {
-                            if !chat_response.choices.is_empty() {
-                                let answer = &chat_response.choices[0].message.content;
-                                let duration = start_time.elapsed();
-                                
-                                print_section("OPENAI 4O-MINI RESPONSE");
-                                print_json("response_length", &answer.len().to_string());
-                                print_json("duration", &format!("{:?}", duration));
-                                println!(); // Add a newline for better readability
-                                
-                                return Ok(answer.clone());
-                            } else {
-                                return Err("No response choices returned".into());
+                    match response.json::<Value>().await {
+                        Ok(json_response) => {
+                            // Extract the completion text from the response
+                            if let Some(choices) = json_response.get("choices").and_then(|c| c.as_array()) {
+                                if !choices.is_empty() {
+                                    if let Some(message) = choices[0].get("message") {
+                                        if let Some(content) = message.get("content").and_then(|c| c.as_str()) {
+                                            let duration = start_time.elapsed();
+                                            
+                                            print_section("OPENAI 4O-MINI RESPONSE");
+                                            print_json("response_length", &content.len().to_string());
+                                            print_json("duration", &format!("{:?}", duration));
+                                            println!(); // Add a newline for better readability
+                                            
+                                            return Ok(content.to_string());
+                                        }
+                                    }
+                                }
                             }
+                            return Err("Failed to extract response content".into());
                         },
                         Err(e) => {
                             let error = format!("Failed to parse API response: {}", e);
