@@ -13,6 +13,8 @@ const Avatar = () => {
   const [isListening, setIsListening] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [intentResponse, setIntentResponse] = useState('');
+  // Add near your other useState hooks
+  const [responseComplete, setResponseComplete] = useState(false);
 
   // NEW: Toggle for using the OpenAI model vs. rule-based
   const [useOpenAIModel, setUseOpenAIModel] = useState(false);
@@ -58,8 +60,41 @@ const Avatar = () => {
     };
   }, []);
 
-  // Add these WebRTC functions
+  const logResponseData = (message) => {
+    console.log("Response data type:", message.type);
+    
+    if (message.response && message.response.output) {
+      const outputs = message.response.output;
+      console.log("Output count:", outputs.length);
+      
+      outputs.forEach((output, i) => {
+        console.log(`Output ${i} type:`, output.type);
+        if (output.type === "text") {
+          console.log(`Output ${i} text:`, output.text);
+        }
+      });
+    } else {
+      console.log("No response output found");
+    }
+  };
 
+  // Add this helper function for updating expression
+  const updateExpressionFromText = (text) => {
+    if (!text) return;
+    
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('hello') || lowerText.includes('hi') || 
+        lowerText.includes('hey') || lowerText.includes('thank') || 
+        lowerText.includes('welcome') || lowerText.includes('pleasure')) {
+      setExpression('happy');
+    } else if (lowerText.includes('bye') || lowerText.includes('goodbye')) {
+      setExpression('thoughtful');
+    } else {
+      setExpression('excited');
+    }
+  };
+
+  // Add these WebRTC functions
   const startRealtimeSession = async () => {
     try {
       const key = ensureApiKey();
@@ -67,26 +102,33 @@ const Avatar = () => {
         setIntentResponse("API key is required for real-time mode.");
         return;
       }
-
+  
       setIntentResponse("Starting real-time session...");
       setExpression('excited');
-
+  
       // Create a new WebRTC peer connection
       const pc = new RTCPeerConnection();
       setPeerConnection(pc);
-
+  
       // Set up audio element for the model's response
       if (!rtcAudioElement.current) {
         rtcAudioElement.current = document.createElement('audio');
         rtcAudioElement.current.autoplay = true;
+        document.body.appendChild(rtcAudioElement.current); // Ensure it's in the DOM
       }
-
+  
       // Handle incoming audio stream
       pc.ontrack = (event) => {
         console.log("Received audio track from OpenAI");
-        rtcAudioElement.current.srcObject = event.streams[0];
+        if (rtcAudioElement.current) {
+          rtcAudioElement.current.srcObject = event.streams[0];
+          // Try to play the audio as soon as we get it
+          rtcAudioElement.current.play().catch(err => {
+            console.error("Error playing audio:", err);
+          });
+        }
       };
-
+  
       // Get microphone access
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
@@ -94,11 +136,11 @@ const Avatar = () => {
       micStream.getAudioTracks().forEach(track => {
         pc.addTrack(track, micStream);
       });
-
+  
       // Create data channel for sending/receiving messages
       const dc = pc.createDataChannel("openai-events");
       setDataChannel(dc);
-
+  
       // Handle data channel events
       dc.onopen = () => {
         console.log("Data channel opened");
@@ -107,26 +149,82 @@ const Avatar = () => {
           setIsRealtimeActive(true);
           setIntentResponse("Real-time session started! You can speak or type normally.");
           setExpression('happy');
+          // Send a session update to request streaming audio output
+          const sessionUpdate = {
+            type: "session.update",
+            event_id: crypto.randomUUID(),
+            session: {
+              output_audio_format: "pcm16",
+              voice: "alloy",              
+            }
+          };
+          dc.send(JSON.stringify(sessionUpdate));          
         }, 500);
       };
       
-
       dc.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
+          console.log("Received message type:", message.type);
           console.log("Received message:", message);
           
+          console.log("Full message:", JSON.stringify(message, null, 2));
+          
           // Handle different message types
-          if (message.type === "response.done" && message.response?.output) {
-            // Extract text response
-            const textOutputs = message.response.output.filter(o => o.type === "text");
-            if (textOutputs.length > 0) {
-              setIntentResponse(textOutputs[0].text);
-              // No need to speak text as we're using the audio stream
+          if (message.type === "response.chunk") {
+            // Process response chunks
+            if (message.response && message.response.output) {
+              const textChunks = message.response.output.filter(o => o.type === "text");
+              
+              if (textChunks && textChunks.length > 0) {
+                const chunkText = textChunks[0].text || "";
+                console.log("**TEXT CHUNK RECEIVED**:", chunkText);
+                
+                // Set state with a callback to log both before and after
+                console.log("BEFORE setState - intentResponse:", intentResponse);
+                setIntentResponse(prev => {
+                  console.log("INSIDE setState - previous value:", prev);
+                  const newValue = prev.startsWith("You: ") ? chunkText : prev + chunkText;
+                  console.log("INSIDE setState - new value:", newValue);
+                  return newValue;
+                });
+                console.log("AFTER setState call - intentResponse:", intentResponse);
+                
+                // Force a check after a short delay
+                setTimeout(() => {
+                  console.log("DELAYED check - intentResponse:", intentResponse);
+                  const element = document.querySelector('.intent-response');
+                  console.log("DELAYED check - element exists:", !!element);
+                  if (element) console.log("DELAYED check - element text:", element.textContent);
+                }, 100);
+              }
             }
+          } else if (message.type === "response.complete") {
+            // Handle completion of response
+            setResponseComplete(true);
+            console.log("Response complete");
+          } else if (message.type === "error") {
+            // Handle error messages
+            console.error("Error from server:", message.error);
+            setError(message.error || "Unknown error occurred");
+          } else if (message.type === "status") {
+            // Handle status updates
+            console.log("Status update:", message.status);
+            setConnectionStatus(message.status);
+          } else if (message.type === "media") {
+            // Handle media messages (like audio)
+            if (message.media && message.media.type === "audio") {
+              processAudioData(message.media.data);
+            }
+          } else if (message.type === "response.audio_transcript.delta") {
+            const deltaText = message.delta || "";
+            // Append the delta text to intentResponse
+            console.log("Appended transcript delta:", deltaText);
+            setIntentResponse((prev) => prev + deltaText);
           }
         } catch (error) {
           console.error("Error processing message:", error);
+          console.dir(event); // This prints the object without stringifying          
         }
       };
 
@@ -135,17 +233,17 @@ const Avatar = () => {
         setIntentResponse("Connection error occurred. Try again.");
         setExpression('thoughtful');
       };
-
+  
       dc.onclose = () => {
         console.log("Data channel closed");
         setIsRealtimeActive(false);
         setExpression('neutral');
       };
-
+  
       // Create an offer to start the connection
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
+  
       // Send the offer to OpenAI
       const baseUrl = "https://api.openai.com/v1/realtime";
       const model =
@@ -181,17 +279,21 @@ const Avatar = () => {
           }
         }, 1000);
         
+        return true; // Return true to indicate success
+        
       } catch (error) {
         console.error("Error connecting to OpenAI:", error);
         setIntentResponse(`Connection failed: ${error.message}`);
         setExpression('thoughtful');
         stopRealtimeSession();
+        return false; // Return false to indicate failure
       }
     } catch (error) {
       console.error("Error setting up WebRTC:", error);
       setIntentResponse(`WebRTC setup failed: ${error.message}`);
       setExpression('thoughtful');
       stopRealtimeSession();
+      return false; // Return false to indicate failure
     }
   };
 
@@ -217,9 +319,14 @@ const Avatar = () => {
 
   const sendRealtimeMessage = (text) => {
     if (!dataChannel || dataChannel.readyState !== "open") {
-      // setIntentResponse("Real-time connection not ready. Try again.");
       return;
     }
+    
+    // Clear previous response text if not showing the user's message
+    // if (!intentResponse.startsWith("You:")) {
+    //   setIntentResponse(""); // Clear previous response
+    // }
+    setIntentResponse('');
     
     // Format message according to OpenAI's real-time API expectations
     const message = {
@@ -239,10 +346,16 @@ const Avatar = () => {
     
     dataChannel.send(JSON.stringify(message));
     
-    // Request a response
+    // Request a response with both text and audio modalities
     const responseRequest = {
       type: "response.create",
       event_id: crypto.randomUUID(),
+      response: {
+        modalities: ["text", "audio"],
+        output_audio_format: "pcm16",
+        voice: "alloy"
+        // stream: true  // Only add this parameter, keep everything else the same
+      }
     };
     
     dataChannel.send(JSON.stringify(responseRequest));
@@ -310,10 +423,35 @@ const Avatar = () => {
     e.preventDefault();
     if (userInput.trim() === '') return;
     
+    // Show the user's message immediately
+    setIntentResponse("");
+    
+    // Check if realtime session is active
+    if (!isRealtimeActive) {
+      setExpression('excited');
+      
+      // Start realtime session and then send the message after it's established
+      startRealtimeSession().then(() => {
+        // Wait a bit for the connection to fully establish
+        setTimeout(() => {
+          if (dataChannel && dataChannel.readyState === "open") {
+            // We already displayed "You: [message]", so just send it
+            sendRealtimeMessage(userInput);
+            setUserInput('');
+          } else {
+            setIntentResponse("Couldn't establish realtime connection. Try again.");
+            setExpression('thoughtful');
+          }
+        }, 1500);
+      });
+      
+      return;
+    }
+    
+    // If session is already active, send the message directly
     sendRealtimeMessage(userInput);
-    setIntentResponse(`You: ${userInput}`);
     setUserInput('');
-  }; 
+  };
   
   // --- Custom Modal for API Key ---
   // Modified ensureApiKey: show modal if no key exists.
@@ -524,9 +662,17 @@ const Avatar = () => {
   const handleInputSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (userInput.trim() === '') return;
+    
+    // If in realtime mode, use the realtime handler
+    if (modelType === "realtime" || modelType === "realtime-mini") {
+      handleRealtimeInputSubmit(e);
+      return;
+    }
+    
+    // Otherwise use the regular handler
     const result = await processIntent(userInput);
     setIntentResponse(result.response);
-
+  
     switch (result.intent) {
       case 'greeting':
       case 'gratitude':
@@ -541,6 +687,7 @@ const Avatar = () => {
       default:
         setExpression('excited');
     }
+    // Only trigger local TTS if not in realtime mode
     speakResponse(result.response);
     setUserInput('');
   };
@@ -797,6 +944,17 @@ const Avatar = () => {
       setIsListening(false);
     }
   };
+
+  useEffect(() => {
+    // Run this effect whenever intentResponse changes
+    const responseElement = document.querySelector('.intent-response');
+    if (responseElement) {
+      console.log("Response element found, intentResponse:", intentResponse);
+      console.log("Element styles:", window.getComputedStyle(responseElement));
+    } else {
+      console.log("Response element not found, intentResponse:", intentResponse);
+    }
+  }, [intentResponse]);
 
   useEffect(() => {
     return () => {
@@ -1107,7 +1265,7 @@ const Avatar = () => {
                 }
                 setModelType(newType);
                 // For backward compatibility with existing code.
-                setUseOpenAIModel(newType === "openai");
+                setUseOpenAIModel(newType === "openai" || newType === "realtime" || newType === "realtime-mini");
               }}
               style={{
                 padding: "6px 10px",
