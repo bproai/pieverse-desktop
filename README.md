@@ -1,14 +1,14 @@
-# PiEVerse Desktop
+# PieVerse Desktop
 
 <div align="center">
-  <img src="./src/assets/logo.svg" alt="PiEVerse Logo" width="120" />
+  <img src="./src/assets/logo.svg" alt="PieVerse Logo" width="120" />
   <h3>A Versatile Developer Toolkit & AI Assistant</h3>
   <p>Combining database management, AI assistance, and development tools in one powerful desktop application</p>
 </div>
 
 ## ✨ Overview
 
-PiEVerse Desktop brings together essential development tools, database management interfaces, and an AI assistant in a modern Tauri (Rust + React) desktop application. The app features a friendly anime-style avatar assistant with speech recognition capabilities, support for multiple database types, a Python sandbox environment, trend analysis, and a comprehensive prompt management system.
+PieVerse Desktop brings together essential development tools, database management interfaces, and an AI assistant in a modern Tauri (Rust + React) desktop application. The app features a friendly anime-style avatar assistant with speech recognition capabilities, support for multiple database types, a Python sandbox environment, trend analysis, and a comprehensive prompt management system.
 
 ## 🚀 Features
 
@@ -168,7 +168,7 @@ pieverse-desktop/
 
 ## 🏗️ Architecture
 
-PiEVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which combines Rust for the backend and React for the frontend.
+PieVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which combines Rust for the backend and React for the frontend.
 
 ### Frontend
 - React 19 with TypeScript

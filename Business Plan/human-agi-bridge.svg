@@ -81,7 +81,7 @@
   
   <!-- Bridge label -->
   <rect x="450" y="240" width="100" height="30" rx="15" ry="15" fill="rgba(106, 61, 232, 0.2)"/>
-  <text x="500" y="260" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">PiEVerse</text>
+  <text x="500" y="260" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">PieVerse</text>
   
   <!-- Bidirectional arrows to show collaboration -->
   <path d="M380,270 L400,270 L400,260 L420,280 L400,300 L400,290 L380,290 Z" fill="#333"/>

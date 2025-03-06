@@ -171,9 +171,9 @@ const Avatar = () => {
         try {
           const message = JSON.parse(event.data);
           console.log("Received message type:", message.type);
-          console.log("Received message:", message);
+          // console.log("Received message:", message);
           
-          console.log("Full message:", JSON.stringify(message, null, 2));
+          // console.log("Full message:", JSON.stringify(message, null, 2));
           
           // Handle different message types
           if (message.type === "response.chunk") {
@@ -226,6 +226,8 @@ const Avatar = () => {
             // Append the delta text to intentResponse
             console.log("Appended transcript delta:", deltaText);
             setIntentResponse((prev) => prev + deltaText);
+          } else if (message.type === "response.created") {
+            setIntentResponse('');
           }
         } catch (error) {
           console.error("Error processing message:", error);

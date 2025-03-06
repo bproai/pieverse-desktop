@@ -3,7 +3,7 @@
   <rect width="1000" height="600" fill="#f8f9fa" rx="10" ry="10"/>
   
   <!-- Header -->
-  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">PiEVerse as Personal Confidant</text>
+  <text x="500" y="50" font-family="Inter, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#333">PieVerse as Personal Confidant</text>
   <text x="500" y="80" font-family="Inter, sans-serif" font-size="18" font-style="italic" text-anchor="middle" fill="#666">"当局者迷，旁观者清" - Those involved are confused, while bystanders see clearly</text>
   
   <!-- Two main sections -->
@@ -30,9 +30,9 @@
   <!-- Question marks -->
   <text x="160" y="180" font-family="Inter, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#FF5733">?</text>
   
-  <!-- PiEVerse as confidant -->
+  <!-- PieVerse as confidant -->
   <circle cx="380" cy="250" r="60" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="2"/>
-  <text x="380" y="240" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#6A3DE8">PiEVerse</text>
+  <text x="380" y="240" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#6A3DE8">PieVerse</text>
   <text x="380" y="260" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#6A3DE8">Confidant</text>
   
   <!-- Connection lines -->
@@ -74,22 +74,22 @@
   <text x="580" y="220" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">I feel like my colleague is upset with me,</text>
   <text x="580" y="235" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#666">but I'm not sure what I did wrong.</text>
   
-  <!-- PiEVerse message 1 -->
+  <!-- PieVerse message 1 -->
   <rect x="650" y="250" width="250" height="70" rx="10" ry="10" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
-  <text x="670" y="270" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#6A3DE8">PiEVerse</text>
+  <text x="670" y="270" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#6A3DE8">PieVerse</text>
   <text x="670" y="290" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">I notice you mentioned last week that you</text>
   <text x="670" y="305" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">took credit for a team project during the</text>
   <text x="670" y="320" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">meeting. Could that be related?</text>
   
-  <!-- PiEVerse message 2 -->
+  <!-- PieVerse message 2 -->
   <rect x="650" y="330" width="250" height="60" rx="10" ry="10" fill="rgba(106, 61, 232, 0.1)" stroke="#6A3DE8" stroke-width="1"/>
-  <text x="670" y="350" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#6A3DE8">PiEVerse</text>
+  <text x="670" y="350" font-family="Inter, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#6A3DE8">PieVerse</text>
   <text x="670" y="370" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">Let me help you see this from your</text>
   <text x="670" y="385" font-family="Inter, sans-serif" font-size="12" text-anchor="start" fill="#333">colleague's perspective...</text>
   
   <!-- Bottom section: Benefits -->
   <rect x="50" y="450" width="900" height="130" rx="10" ry="10" fill="rgba(106, 61, 232, 0.05)" stroke="#6A3DE8" stroke-width="1"/>
-  <text x="500" y="475" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Benefits of PiEVerse as Personal Confidant</text>
+  <text x="500" y="475" font-family="Inter, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Benefits of PieVerse as Personal Confidant</text>
   
   <!-- Four benefit boxes -->
   <rect x="80" y="495" width="190" height="65" rx="10" ry="10" fill="#ffffff" stroke="#6A3DE8" stroke-width="1"/>

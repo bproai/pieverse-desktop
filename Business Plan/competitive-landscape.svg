@@ -53,14 +53,14 @@
   <circle cx="520" cy="380" r="30" fill="rgba(255, 159, 64, 0.2)" stroke="rgba(255, 159, 64, 1)" stroke-width="2"/>
   <text x="520" y="385" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333">Jupyter</text>
   
-  <!-- PiEVerse - high database, high AI -->
+  <!-- PieVerse - high database, high AI -->
   <circle cx="720" cy="150" r="50" fill="rgba(106, 61, 232, 0.3)" stroke="rgba(106, 61, 232, 1)" stroke-width="3"/>
-  <text x="720" y="155" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333" font-weight="bold">PiEVerse</text>
+  <text x="720" y="155" font-family="Inter, sans-serif" font-size="14" text-anchor="middle" fill="#333" font-weight="bold">PieVerse</text>
   
-  <!-- Callout for PiEVerse -->
+  <!-- Callout for PieVerse -->
   <path d="M720,150 L820,80" stroke="rgba(106, 61, 232, 1)" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
   <rect x="820" y="50" width="150" height="60" rx="10" ry="10" fill="rgba(106, 61, 232, 0.1)" stroke="rgba(106, 61, 232, 1)" stroke-width="2"/>
-  <text x="895" y="75" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333" font-weight="bold">PiEVerse Advantage</text>
+  <text x="895" y="75" font-family="Inter, sans-serif" font-size="12" text-anchor="middle" fill="#333" font-weight="bold">PieVerse Advantage</text>
   <text x="895" y="95" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">Unique combination of AI</text>
   <text x="895" y="110" font-family="Inter, sans-serif" font-size="10" text-anchor="middle" fill="#333">and database capabilities</text>
 </svg>

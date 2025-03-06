@@ -353,7 +353,7 @@ const BrandLogo: React.FC<BrandLogoProps> = ({ isDark }) => {
         <img
           ref={imgRef}
           src={isPlaying ? brandGif : staticLogo}
-          alt="PiEVerse Logo"
+          alt="PieVerse Logo"
           className={`
             absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
             h-full w-auto min-w-full min-h-full object-cover

@@ -1,7 +1,7 @@
-// src/components/PiEVerseLogo.tsx
+// src/components/PieVerseLogo.tsx
 import React from 'react';
 
-export const PiEVerseLogo = ({ size = 32 }: { size?: number }) => (
+export const PieVerseLogo = ({ size = 32 }: { size?: number }) => (
  <svg 
    width={size} 
    height={size} 
@@ -32,4 +32,4 @@ export const PiEVerseLogo = ({ size = 32 }: { size?: number }) => (
  </svg>
 );
 
-export default PiEVerseLogo;
+export default PieVerseLogo;

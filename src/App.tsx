@@ -31,7 +31,7 @@ function App() {
             <div className="flex items-center space-x-4">
               <BrandLogo isDark={isDark} />
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                PiEVerse Desktop
+                PieVerse Desktop
               </h1>
             </div>
             <ActionIcon
