@@ -1535,7 +1535,10 @@ const Avatar = () => {
                 <div className="image-help-text">
                   {clipboardImage 
                     ? "Image from clipboard is ready to send" 
-                    : "Press Ctrl+V to paste an image from your clipboard"}
+                    : navigator.platform.indexOf('Mac') >= 0
+                      ? "Press ⌘V to paste an image from your clipboard"
+                      : "Press Ctrl+V to paste an image from your clipboard"
+                  }
                 </div>
               )}
             </form>
