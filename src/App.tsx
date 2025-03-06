@@ -11,15 +11,25 @@ import { APISettings } from './components/APISettings';
 import { SignalsPanel } from './components/Signals';
 import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
+import { core } from '@tauri-apps/api';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
   const [promptsBackend, setPromptsBackend] = React.useState<'mysql' | 'sqlite'>('sqlite');
   const theme = useMantineTheme();
 
-  const toggleColorScheme = () => {
-    setIsDark(!isDark);
+  const toggleColorScheme = async () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
     document.body.classList.toggle('dark-mode');
+    
+    try {
+      // Use the core.invoke method for Tauri 2.0
+      await core.invoke('update_system_appearance', { dark: newIsDark });
+      console.log('System appearance updated successfully');
+    } catch (err) {
+      console.error('Failed to update system appearance:', err);
+    }
   };
 
   return (

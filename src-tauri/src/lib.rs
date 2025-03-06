@@ -1,4 +1,7 @@
 // src-tauri/src/lib.rs
+#[macro_use]
+extern crate objc;
+
 mod services;
 mod tray;
 
@@ -184,9 +187,60 @@ pub fn run() {
             // Screenshot commands
             take_screenshot,
             take_screenshot_to_clipboard,
-            save_clipboard_image  // Add this line
+            save_clipboard_image,
+            update_system_appearance
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
+#[tauri::command]
+fn update_system_appearance(dark: bool) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  {
+    // First, try with Cocoa API
+    unsafe {
+      use cocoa::appkit::NSApp;
+      use cocoa::base::{id, nil};
+      use cocoa::foundation::NSString;
+      use objc::{class, msg_send, sel, sel_impl};
+      
+      let app: id = NSApp();
+      
+      let appearance_name = if dark { "NSAppearanceNameDarkAqua" } else { "NSAppearanceNameAqua" };
+      println!("Updating appearance to: {}", appearance_name);
+      
+      let ns_string_class = class!(NSString);
+      let ns_appearance_name: id = msg_send![ns_string_class, stringWithUTF8String:appearance_name.as_ptr()];
+      
+      let nsappearance_class = class!(NSAppearance);
+      let appearance: id = msg_send![nsappearance_class, appearanceNamed:ns_appearance_name];
+      
+      let _: () = msg_send![app, setAppearance:appearance];
+      
+      let windows: id = msg_send![app, windows];
+      let count: usize = msg_send![windows, count];
+      
+      println!("Found {} windows to update", count);
+      for i in 0..count {
+        let window: id = msg_send![windows, objectAtIndex:i];
+        let _: () = msg_send![window, setAppearance:appearance];
+        println!("Updated window at index {}", i);
+      }
+    }
+    
+    // Then also try with AppleScript as a backup approach
+    // This will affect the entire system appearance which will include our window
+    use std::process::Command;
+    
+    let script = format!("tell application \"System Events\" to tell appearance preferences to set dark mode to {}", 
+                        if dark { "true" } else { "false" });
+    
+    match Command::new("osascript").arg("-e").arg(script).output() {
+      Ok(_) => println!("System appearance updated via AppleScript"),
+      Err(e) => println!("Failed to update system appearance via AppleScript: {}", e)
+    }
+  }
+  
+  Ok(())
+}
