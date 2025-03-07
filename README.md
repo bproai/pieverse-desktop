@@ -251,6 +251,11 @@ The application exposes several Tauri commands for plugin and extension develope
 - **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`
 - **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`
 
+## 📂 Database Location (Development Mode)
+During development, the SQLite database is created in the relative path: .local/share/pieverse/prompts.db
+
+This folder is located relative to the directory from which you start the Tauri app (usually your project's root). On Unix-like systems, hidden directories (those beginning with a dot) might not be visible by default. Use commands like `ls -la` to list hidden files, or enable hidden files in your file explorer.
+
 ## 📄 License
 
 [MIT License](LICENSE)

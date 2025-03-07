@@ -14,6 +14,7 @@ use tokio::sync::{Mutex, watch};
 use tower_http::cors::CorsLayer;
 use crate::services::sqlite::SqliteService;
 use crate::services::sqlite_prompts::Prompt;
+use serde::{Deserialize, Serialize};
 
 // Changed to single error type since ServerError is never used
 #[derive(Debug)]
@@ -75,6 +76,8 @@ impl ApiServer {
             .route("/api/prompts/:id", delete(Self::delete_prompt))
             .route("/api/status", get(Self::get_status))
             .route("/api/health", get(Self::health_check))
+            .route("/api/qa", post(Self::store_qa_data))
+            .route("/api/qa", get(Self::get_qa_data))
             .with_state(self.sqlite.clone())
             .layer(cors);
 
@@ -236,6 +239,194 @@ impl ApiServer {
             Err(e) => Err(ApiError(e.to_string()))
         }
     }
+
+    async fn store_qa_data(
+        State(sqlite): State<Arc<Mutex<SqliteService>>>,
+        Json(data): Json<QAData>
+    ) -> Result<Json<Value>, ApiError> {
+        // Log inbound data in development mode
+        #[cfg(debug_assertions)]
+        println!("Dev Log: Inbound QA upload received: {:?}", data);
+    
+        let sqlite_guard = sqlite.lock().await;
+        
+        // Create QA tables if they don't exist
+        sqlite_guard.execute_query(
+            "CREATE TABLE IF NOT EXISTS qa_questions (
+                id TEXT PRIMARY KEY,
+                platform TEXT NOT NULL,
+                question TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                answered INTEGER DEFAULT 0
+            )"
+        ).map_err(|e| ApiError(e.to_string()))?;
+        
+        sqlite_guard.execute_query(
+            "CREATE TABLE IF NOT EXISTS qa_answers (
+                id TEXT PRIMARY KEY,
+                question_id TEXT NOT NULL,
+                message_id TEXT,
+                platform TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                model TEXT,
+                timestamp TEXT NOT NULL,
+                turn_number INTEGER,
+                metadata TEXT,
+                FOREIGN KEY (question_id) REFERENCES qa_questions (id)
+            )"
+        ).map_err(|e| ApiError(e.to_string()))?;
+        
+        // Process questions
+        for question in &data.questions {
+            let query = format!(
+                "INSERT OR REPLACE INTO qa_questions (id, platform, question, timestamp, answered)
+                 VALUES ('{}', '{}', '{}', '{}', {})",
+                question.id,
+                question.platform.replace('\'', "''"),
+                question.question.replace('\'', "''"),
+                question.timestamp,
+                if question.answered { 1 } else { 0 }
+            );
+            
+            sqlite_guard.execute_query(&query)
+                .map_err(|e| ApiError(e.to_string()))?;
+        }
+        
+        // Process answers
+        for answer in &data.answers {
+            let answer_id = answer.id.clone().unwrap_or_else(|| {
+                format!("a_{}", chrono::Utc::now().timestamp_millis())
+            });
+            
+            let query = format!(
+                "INSERT OR REPLACE INTO qa_answers (id, question_id, message_id, platform, answer, model, timestamp, turn_number, metadata)
+                 VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', {}, {})",
+                answer_id,
+                answer.question_id,
+                answer.message_id.as_ref().map_or("NULL".to_string(), |v| format!("'{}'", v)),
+                answer.platform.replace('\'', "''"),
+                answer.answer.replace('\'', "''"),
+                answer.model.replace('\'', "''"),
+                answer.timestamp,
+                answer.turn_number.map_or("NULL".to_string(), |v| v.to_string()),
+                answer.metadata.as_ref().map_or("NULL".to_string(), |v| format!("'{}'", v.replace('\'', "''")))
+            );
+            
+            sqlite_guard.execute_query(&query)
+                .map_err(|e| ApiError(e.to_string()))?;
+            
+            // Update the question's answered status
+            let update_query = format!(
+                "UPDATE qa_questions SET answered = 1 WHERE id = '{}'",
+                answer.question_id
+            );
+            
+            sqlite_guard.execute_query(&update_query)
+                .map_err(|e| ApiError(e.to_string()))?;
+        }
+        
+        Ok(Json(serde_json::json!({
+            "status": "success",
+            "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
+        })))
+    }
+    
+    
+    async fn get_qa_data(
+        State(sqlite): State<Arc<Mutex<SqliteService>>>,
+        query_params: axum::extract::Query<std::collections::HashMap<String, String>>
+    ) -> Result<Json<Value>, ApiError> {
+        let platform = query_params.get("platform");
+        let limit = query_params.get("limit").map(|s| s.parse::<i64>().unwrap_or(10)).unwrap_or(10);
+        let offset = query_params.get("offset").map(|s| s.parse::<i64>().unwrap_or(0)).unwrap_or(0);
+        let search = query_params.get("search");
+        
+        let sqlite_guard = sqlite.lock().await;
+        
+        // Construct the query
+        let mut query_conditions = Vec::new();
+        let mut query_params = Vec::new();
+        
+        if let Some(platform_value) = platform {
+            if platform_value != "all" {
+                query_conditions.push("q.platform = ?");
+                query_params.push(platform_value.clone());
+            }
+        }
+        
+        if let Some(search_value) = search {
+            if !search_value.is_empty() {
+                query_conditions.push("(q.question LIKE ? OR a.answer LIKE ?)");
+                let search_pattern = format!("%{}%", search_value);
+                query_params.push(search_pattern.clone());
+                query_params.push(search_pattern);
+            }
+        }
+        
+        let where_clause = if !query_conditions.is_empty() {
+            format!("WHERE {}", query_conditions.join(" AND "))
+        } else {
+            String::new()
+        };
+        
+        let query = format!(
+            "SELECT 
+                q.id AS question_id,
+                q.platform,
+                q.question,
+                q.timestamp AS question_timestamp,
+                q.answered,
+                a.id AS answer_id,
+                a.message_id,
+                a.answer,
+                a.model,
+                a.timestamp AS answer_timestamp,
+                a.turn_number,
+                a.metadata
+            FROM qa_questions q
+            LEFT JOIN qa_answers a ON q.id = a.question_id
+            {}
+            ORDER BY q.timestamp DESC
+            LIMIT {} OFFSET {}",
+            where_clause,
+            limit,
+            offset
+        );
+        
+        let result = sqlite_guard.execute_query(&query)
+            .map_err(|e| ApiError(e.to_string()))?;
+        
+        // Count total
+        let count_query = format!(
+            "SELECT COUNT(DISTINCT q.id) AS total
+            FROM qa_questions q
+            LEFT JOIN qa_answers a ON q.id = a.question_id
+            {}",
+            where_clause
+        );
+        
+        let count_result = sqlite_guard.execute_query(&count_query)
+            .map_err(|e| ApiError(e.to_string()))?;
+        
+        let total = if !count_result.is_empty() {
+            count_result[0].get("total")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        
+        Ok(Json(serde_json::json!({
+            "status": "success",
+            "data": {
+                "total": total,
+                "offset": offset,
+                "limit": limit,
+                "rows": result
+            }
+        })))
+    }
+
 }
 
 #[tauri::command]
@@ -278,4 +469,33 @@ pub async fn stop_api_server(
     } else {
         Ok(())
     }
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuestionData {
+    pub id: String,
+    pub platform: String,
+    pub question: String,
+    pub timestamp: String,
+    pub answered: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AnswerData {
+    pub id: Option<String>,
+    pub question_id: String,
+    pub message_id: Option<String>,
+    pub platform: String,
+    pub answer: String,
+    pub model: String,
+    pub timestamp: String,
+    pub turn_number: Option<i32>,
+    pub metadata: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QAData {
+    pub questions: Vec<QuestionData>,
+    pub answers: Vec<AnswerData>,
 }
