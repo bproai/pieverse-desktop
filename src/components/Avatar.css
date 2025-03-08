@@ -684,8 +684,8 @@
 
 .corner-close-button {
   position: absolute;
-  top: 2px;         
-  right: 2px;       
+  top: 4px;         
+  right: 4px;       
   width: 14px;
   height: 14px;
   border-radius: 50%;
