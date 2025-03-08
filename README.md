@@ -37,6 +37,7 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 - Toggle between SQLite and MySQL storage backends.
 - Activation/deactivation of individual prompts.
 - Seamless integration with cloud and local storage options.
+- RESTful API endpoints for prompt CRUD operations.
 
 ### 📊 Trend Analysis & Signal Detection
 - Real-time financial data visualization and analysis with Google Trends integration.
@@ -45,6 +46,7 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 - Signal breakdown with leading indicators.
 - Automated monitoring with customizable thresholds.
 - Export trend data to CSV format.
+- Machine learning-based spike prediction with configurable sensitivity.
 
 ### 🐍 Python Sandbox
 - Integrated Python environment for quick scripting and testing.
@@ -52,11 +54,13 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 - Execute Python code and view results directly in the app.
 - Pre-loaded libraries including pandas and numpy.
 - Reset environment functionality.
+- Integration with Rust backend via PyO3.
 
 ### 🔄 Seamless Integration & Dynamic UI
 - A highly adaptive, voice AI-assisted frontend that personalizes your interface in real time.
 - Dynamic UI components that adjust based on your feedback and preferences.
 - Robust API settings, ensuring secure connectivity with various data sources and services.
+- Cross-origin resource sharing (CORS) support for external applications.
 
 ### 📂 Database & Data Management
 - Integrated SQLite for local data storage along with support for MySQL and MongoDB.
@@ -64,12 +68,21 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 - Transfer data between MySQL and SQLite.
 - Intuitive SQL query interface with results display.
 - Designed to keep your data secure, accessible, and in a system-approved location.
+- Support for Q&A data storage and retrieval.
 
 ### 🌐 API & External Connectivity
 - A RESTful API that supports prompt management and external integrations.
 - Configurable settings to tailor API functionality to your needs.
 - Cross-origin resource sharing (CORS) support and secure connectivity options.
 - Start/stop service controls.
+- Health check endpoints.
+
+### 📸 Screenshot & Media Utilities
+- Cross-platform screenshot capabilities.
+- Support for capturing the current window or full screen.
+- Clipboard integration for quick sharing.
+- File-based saving with organized folder structure.
+- Audio recording capabilities for AI interactions.
 
 ## 🎥 Demo and Showcase
 
@@ -130,10 +143,10 @@ pieverse-desktop/
 ├── src-tauri/ - Rust backend code
 │   ├── src/ - Backend services and modules
 │   │   ├── services/ - Backend services
-│   │   │   ├── api_server.rs - HTTP API server
+│   │   │   ├── api_server.rs - HTTP API server using Axum
 │   │   │   ├── mongodb.rs - MongoDB connector
 │   │   │   ├── mysql.rs - MySQL connector
-│   │   │   ├── python.rs - Python interpreter
+│   │   │   ├── python.rs - Python interpreter via PyO3
 │   │   │   ├── screenshot.rs - Screenshot functionality
 │   │   │   ├── google_trends.rs - Google Trends integration
 │   │   │   ├── trend_spike_service.rs - Trend analysis 
@@ -170,7 +183,9 @@ PieVerse Desktop is built using the [Tauri](https://tauri.app/) framework, combi
 - Powered by Rust with Tauri for cross-platform performance.
 - Utilizes SQLite for local storage, with MySQL and MongoDB connectivity options.
 - Exposes a RESTful API built on Axum, ensuring secure and efficient data management.
-- Integrates Python for advanced data processing and trend analysis.
+- Integrates Python for advanced data processing and trend analysis via PyO3.
+- Cross-platform media handling (screenshots, audio recording).
+- Thread-safe services with Mutex-protected shared state.
 
 ### AI Technology
 The avatar assistant leverages multiple AI models to adapt to your needs:
@@ -214,6 +229,7 @@ The avatar assistant leverages multiple AI models to adapt to your needs:
 - Real-time trend monitoring with customizable thresholds.
 - Signal breakdown and analysis.
 - Interactive dashboards for market data visualization.
+- Support for multi-category keyword tracking.
 
 ## 🌐 API Reference
 
@@ -226,19 +242,28 @@ When enabled, the API server provides the following endpoints:
 - `POST /api/prompts` - Create a new prompt
 - `PUT /api/prompts/:id` - Update an existing prompt
 - `DELETE /api/prompts/:id` - Delete a prompt
+- `POST /api/qa` - Store Q&A data
+- `GET /api/qa` - Get Q&A data with filtering options
 
 ### Tauri Commands
 The application exposes several Tauri commands for plugin and extension developers:
 
+#### Database Operations
 - **MongoDB**: `start_mongodb`, `stop_mongodb`, `list_mongodb_databases`, etc.
 - **MySQL**: `mysql_connect`, `mysql_execute_query`, `mysql_test_connection`, etc.
-- **Python**: `python_init`, `python_execute`, `python_reset`
-- **SQLite**: `sqlite_init`, `sqlite_execute_query`
+- **SQLite**: `sqlite_init`, `sqlite_execute_query`, etc.
+- **SQLite Prompts**: `sqlite_get_prompts`, `sqlite_create_prompt`, etc.
+
+#### AI & Utility Functions
 - **API Server**: `start_api_server`, `stop_api_server`
-- **OpenAI**: `transcribe_audio`, `openai_4o_mini`
+- **OpenAI**: `transcribe_audio`, `openai_4o_mini`, `save_audio_recording`, `play_last_recording`
+- **Python**: `python_init`, `python_execute`, `python_reset`
+- **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`, `save_clipboard_image`
+- **Brand Sound**: `get_brand_sound_path`, `check_brand_sound_exists`
+
+#### Trend Analysis
 - **Google Trends**: `get_google_trends`, `get_related_queries`, `export_trends_data`
-- **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`
-- **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`
+- **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`, `stop_trend_spike_monitoring`, `get_trend_spike_sources`, etc.
 
 ## 📂 Database Location
 
