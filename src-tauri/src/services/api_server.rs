@@ -279,17 +279,18 @@ impl ApiServer {
         for question in &data.questions {
             #[cfg(debug_assertions)]
             println!("Dev Log: Processing question: {:?}", question);
-            let query = format!(
+            
+            sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_questions (id, platform, question, timestamp, answered)
-                 VALUES ('{}', '{}', '{}', '{}', {})",
-                question.id,
-                question.platform.replace('\'', "''"),
-                question.question.replace('\'', "''"),
-                question.timestamp,
-                if question.answered { 1 } else { 0 }
-            );
-            sqlite_guard.execute_query(&query)
-                .map_err(|e| ApiError(e.to_string()))?;
+                VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    question.id,
+                    question.platform,
+                    question.question,
+                    question.timestamp,
+                    if question.answered { 1 } else { 0 }
+                ],
+            ).map_err(|e| ApiError(e.to_string()))?;
         }
         
         // Process each answer
@@ -358,6 +359,19 @@ impl ApiServer {
         #[cfg(debug_assertions)]
         println!("Dev Log: Finished processing QA data. Stored {} questions and {} answers",
                  data.questions.len(), data.answers.len());
+        
+        // Clean up older unanswered questions
+        sqlite_guard.execute_parameterized(
+            "DELETE FROM qa_questions 
+            WHERE answered = 0
+            AND timestamp < (
+                SELECT MAX(timestamp) FROM qa_questions
+            )",
+            params![],
+        ).map_err(|e| ApiError(e.to_string()))?;
+
+        #[cfg(debug_assertions)]
+        println!("Dev Log: Older unanswered questions cleaned up");
     
         Ok(Json(serde_json::json!({
             "status": "success",
