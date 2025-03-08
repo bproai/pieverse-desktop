@@ -2,61 +2,78 @@
 
 <div align="center">
   <img src="./src/assets/logo.svg" alt="PieVerse Logo" width="120" />
-  <h3>A Versatile Developer Toolkit & AI Assistant</h3>
-  <p>Combining database management, AI assistance, and development tools in one powerful desktop application</p>
+  <h3>A Versatile AI Assistant & Creative Workspace</h3>
+  <p>Empowering you with a dynamic, AI-powered personal assistant that enhances productivity, creativity, and collaboration in everyday life.</p>
 </div>
 
 ## ✨ Overview
 
-PieVerse Desktop brings together essential development tools, database management interfaces, and an AI assistant in a modern Tauri (Rust + React) desktop application. The app features a friendly anime-style avatar assistant with speech recognition capabilities, support for multiple database types, a Python sandbox environment, trend analysis, and a comprehensive prompt management system.
+PieVerse Desktop is more than just a toolkit—it's your personal AI companion and creative partner. Built with cutting-edge AI technology, PieVerse adapts to your unique needs, whether you're in a business meeting, solving complex problems, or exploring creative pursuits. The application combines intelligent assistance, dynamic UI customization, and innovative creative tools to help you unlock new possibilities.
 
 ## 🚀 Features
 
-### 🤖 Interactive AI Assistant Avatar
-- Floating, draggable anime-style avatar that provides AI assistance
-- Multiple facial expression animations (happy, thoughtful, excited, neutral)
-- Multiple AI engine options:
+### 🤖 AI Assistant Avatar
+- A friendly, anime-style avatar that acts as your personal AI assistant.
+- Advanced speech recognition and natural language processing for smooth, intuitive conversations.
+- Multiple AI engine options for different interaction styles:
   - **Rule-based mode**: Simple, predefined responses for basic queries
   - **GPT-4o mini**: Uses Whisper for STT, GPT-4o mini for text generation, and system's native TTS 
   - **GPT-4o Realtime**: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
   - **GPT-4o Realtime Mini**: Cost-effective version of the Realtime model with same voice capabilities
-- Different UI workflows based on selected AI engine
-- Record/playback capability for non-realtime modes
+- Digital double functionality: the avatar can represent you in meetings, social settings, and more.
+- Different UI workflows based on selected AI engine.
+- Record/playback capability for non-realtime modes.
+
+### 🎨 Creative Workspace
+- An interactive environment for brainstorming, drafting, and refining creative projects.
+- Collaborate with your AI assistant on novels, play scripts, drawings, music, or any artistic endeavor.
+- Adaptive tools and inspiring prompts lower the barrier to hyper-creative expression.
+- A platform that champions "meta creation" and "meta invention"—where your imagination is the only limit.
 
 ### 📝 AI Prompt Management
-- Create, edit, delete AI prompts and instructions
-- Categorize prompts (Writing & Analysis, Finance & Markets, Code & Development)
-- Bulk import and export of prompts
-- Toggle between SQLite and MySQL storage backends
-- Activation/deactivation of individual prompts
+- Create, edit, and organize prompts tailored to your needs.
+- Categorize prompts for diverse use cases such as creative writing, business analysis, and personal productivity.
+- Bulk import and export of prompts.
+- Toggle between SQLite and MySQL storage backends.
+- Activation/deactivation of individual prompts.
+- Seamless integration with cloud and local storage options.
 
 ### 📊 Trend Analysis & Signal Detection
-- Google Trends data visualization and analysis
-- Trend spike prediction and monitoring
-- Signal breakdown with leading indicators
-- Automated monitoring with customizable thresholds
-- Export trend data to CSV format
+- Real-time financial data visualization and analysis with Google Trends integration.
+- Advanced algorithms for trend spike detection and forecasting.
+- Customizable dashboards and interactive charts that keep you informed of market shifts.
+- Signal breakdown with leading indicators.
+- Automated monitoring with customizable thresholds.
+- Export trend data to CSV format.
 
 ### 🐍 Python Sandbox
-- Integrated Python environment for quick scripting and testing
-- Monaco-based code editor with syntax highlighting and autocompletion
-- Execute Python code and view results directly in the app
-- Pre-loaded libraries including pandas and numpy
-- Reset environment functionality
+- Integrated Python environment for quick scripting and testing.
+- Monaco-based code editor with syntax highlighting and autocompletion.
+- Execute Python code and view results directly in the app.
+- Pre-loaded libraries including pandas and numpy.
+- Reset environment functionality.
 
-### 🔄 Database Management
-- MySQL connection and query execution
-- MongoDB integration
-- SQLite local database support
-- Transfer data between MySQL and SQLite
-- Intuitive SQL query interface with results display
+### 🔄 Seamless Integration & Dynamic UI
+- A highly adaptive, voice AI-assisted frontend that personalizes your interface in real time.
+- Dynamic UI components that adjust based on your feedback and preferences.
+- Robust API settings, ensuring secure connectivity with various data sources and services.
 
-### 🌐 API Settings
-- Configure and manage a local API server
-- Customize port settings
-- Start/stop service controls
-- RESTful API for prompt management 
-- CORS support for cross-origin requests
+### 📂 Database & Data Management
+- Integrated SQLite for local data storage along with support for MySQL and MongoDB.
+- Intuitive data migration and management tools for a streamlined experience.
+- Transfer data between MySQL and SQLite.
+- Intuitive SQL query interface with results display.
+- Designed to keep your data secure, accessible, and in a system-approved location.
+
+### 🌐 API & External Connectivity
+- A RESTful API that supports prompt management and external integrations.
+- Configurable settings to tailor API functionality to your needs.
+- Cross-origin resource sharing (CORS) support and secure connectivity options.
+- Start/stop service controls.
+
+## 🎥 Demo and Showcase
+
+We are preparing live and recorded demos to showcase how PieVerse enables you to conduct business meetings, solve complex problems, and engage in inspiring, open-ended discussions. These demos will highlight the app's elegance, smooth performance, efficiency, and the playful dexterity in juggling multiple tasks—all powered by a dynamic, AI-driven interface.
 
 ## 📦 Installation
 
@@ -106,36 +123,12 @@ Download the latest release for your platform from the [Releases page](https://g
 pieverse-desktop/
 ├── src/ - React frontend code
 │   ├── App.tsx - Main application component
-│   ├── components/ - React components
-│   │   ├── Avatar.tsx - AI assistant avatar
-│   │   ├── BrandLogo.tsx - Application logo component
-│   │   ├── APISettings/ - API server settings
-│   │   │   ├── APISettingsPanel.tsx - API configuration UI
-│   │   │   └── index.tsx - Exports
-│   │   ├── MongoDB/ - MongoDB interface
-│   │   │   ├── MongoDBPanel.tsx - MongoDB UI
-│   │   │   └── index.ts - Exports
-│   │   ├── MySQL/ - MySQL interface
-│   │   │   ├── MySQLPanel.tsx - MySQL UI
-│   │   │   ├── MySQLService.ts - MySQL service connector
-│   │   │   ├── types.ts - Type definitions
-│   │   │   └── index.ts - Exports
-│   │   ├── Python/ - Python sandbox
-│   │   │   └── PythonPanel.tsx - Code editor interface
-│   │   ├── Signals/ - Trend analysis and monitoring
-│   │   │   ├── SignalsPanel.tsx - Google Trends visualization
-│   │   │   ├── DetectedSpikeCard.tsx - Trend spike UI card
-│   │   │   └── index.ts - Exports
-│   │   └── Prompts/ - AI prompt management
-│   │       ├── PromptsManager.tsx - Prompt CRUD interface
-│   │       └── index.ts - Exports
+│   ├── components/ - React components (Avatar, Creative Workspace, etc.)
 │   ├── services/ - Frontend services
-│   │   ├── SQLitePromptService.ts - SQLite prompt operations
-│   │   └── MySQLPromptService.ts - MySQL prompt operations
 │   ├── assets/ - Static assets and resources
 │   └── styles/ - CSS and style files
 ├── src-tauri/ - Rust backend code
-│   ├── src/
+│   ├── src/ - Backend services and modules
 │   │   ├── services/ - Backend services
 │   │   │   ├── api_server.rs - HTTP API server
 │   │   │   ├── mongodb.rs - MongoDB connector
@@ -150,11 +143,7 @@ pieverse-desktop/
 │   │   │   ├── brand_sound.rs - Audio management
 │   │   │   ├── avatar_window.rs - Floating avatar window
 │   │   │   └── tray.rs - System tray implementation
-│   │   ├── python_scripts/ - Python backend scripts
-│   │   │   ├── trend_spike_predictor.py - Trend prediction
-│   │   │   ├── google_trends.py - Google Trends API
-│   │   │   ├── fetch_data.py - Data retrieval utilities
-│   │   │   └── requirements.txt - Python dependencies
+│   │   ├── python_scripts/ - Python integration scripts
 │   │   ├── lib.rs - Main library
 │   │   └── main.rs - Entry point
 │   ├── tauri.conf.json - Tauri configuration
@@ -168,24 +157,23 @@ pieverse-desktop/
 
 ## 🏗️ Architecture
 
-PieVerse Desktop is built using the [Tauri](https://tauri.app/) framework, which combines Rust for the backend and React for the frontend.
+PieVerse Desktop is built using the [Tauri](https://tauri.app/) framework, combining a robust Rust backend with a dynamic React frontend.
 
 ### Frontend
-- React 19 with TypeScript
-- Mantine UI components
-- Monaco Editor for code editing
-- TailwindCSS for styling
-- Recharts for data visualization
+- Built with React 19 and TypeScript.
+- Uses Mantine UI components and TailwindCSS for modern, responsive design.
+- Features an intuitive creative workspace and dynamic, AI-powered interface adjustments.
+- Monaco Editor for code editing.
+- Recharts for data visualization.
 
 ### Backend
-- Rust with Tauri for cross-platform desktop runtime
-- SQLite for local data storage
-- Python integration via PyO3
-- MySQL and MongoDB connectors
-- Axum for the REST API server
+- Powered by Rust with Tauri for cross-platform performance.
+- Utilizes SQLite for local storage, with MySQL and MongoDB connectivity options.
+- Exposes a RESTful API built on Axum, ensuring secure and efficient data management.
+- Integrates Python for advanced data processing and trend analysis.
 
 ### AI Technology
-The avatar assistant leverages multiple AI models with different interaction patterns:
+The avatar assistant leverages multiple AI models to adapt to your needs:
 
 1. **Rule-based Engine**
    - Simple, predefined patterns for common queries
@@ -220,11 +208,12 @@ The avatar assistant leverages multiple AI models with different interaction pat
    - Requires OpenAI API key with lower usage costs
 
 ### Data Analysis
-- Google Trends integration for market data
-- Prophet forecasting model for trend prediction
-- Machine learning-based spike detection
-- Real-time trend monitoring with customizable thresholds
-- Signal breakdown and analysis
+- Google Trends integration for market data.
+- Prophet forecasting model for trend prediction.
+- Machine learning-based spike detection.
+- Real-time trend monitoring with customizable thresholds.
+- Signal breakdown and analysis.
+- Interactive dashboards for market data visualization.
 
 ## 🌐 API Reference
 
@@ -252,8 +241,9 @@ The application exposes several Tauri commands for plugin and extension develope
 - **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`
 
 ## 📂 Database Location
+
 ### Development Mode
-During development, the SQLite database is created in the relative path: .local/share/pieverse/prompts.db
+During development, the SQLite database is created in the relative path: `.local/share/pieverse/prompts.db`
 
 This folder is located relative to the directory from which you start the Tauri app (usually your project's root). On Unix-like systems, hidden directories (those beginning with a dot) might not be visible by default. Use commands like `ls -la` to list hidden files, or enable hidden files in your file explorer.
 
@@ -268,7 +258,6 @@ In production, the SQLite database is stored in the system's local data director
   `~/.local/share/pieverse/prompts.db`
 
 This approach uses the operating system's designated local data directory (retrieved via functions like `dirs::data_local_dir()`), ensuring that your application's data is stored in a consistent, system-approved location.
-
 
 ## 📄 License
 
