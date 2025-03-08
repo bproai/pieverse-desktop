@@ -15,6 +15,7 @@ use tower_http::cors::CorsLayer;
 use crate::services::sqlite::SqliteService;
 use crate::services::sqlite_prompts::Prompt;
 use serde::{Deserialize, Serialize};
+use rusqlite::params;
 
 // Changed to single error type since ServerError is never used
 #[derive(Debug)]
@@ -251,33 +252,33 @@ impl ApiServer {
         let sqlite_guard = sqlite.lock().await;
         
         // Create QA tables if they don't exist
-        sqlite_guard.execute_query(
-            "CREATE TABLE IF NOT EXISTS qa_questions (
-                id TEXT PRIMARY KEY,
-                platform TEXT NOT NULL,
-                question TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                answered INTEGER DEFAULT 0
-            )"
-        ).map_err(|e| ApiError(e.to_string()))?;
+        let create_questions = "CREATE TABLE IF NOT EXISTS qa_questions (
+                    id TEXT PRIMARY KEY,
+                    platform TEXT NOT NULL,
+                    question TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    answered INTEGER DEFAULT 0
+                )";
+        let create_answers = "CREATE TABLE IF NOT EXISTS qa_answers (
+                    id TEXT PRIMARY KEY,
+                    question_id TEXT NOT NULL,
+                    message_id TEXT,
+                    platform TEXT NOT NULL,
+                    answer TEXT NOT NULL,
+                    model TEXT,
+                    timestamp TEXT NOT NULL,
+                    turn_number INTEGER,
+                    metadata TEXT
+                )";
+        sqlite_guard.execute_query(create_questions)
+            .map_err(|e| ApiError(e.to_string()))?;
+        sqlite_guard.execute_query(create_answers)
+            .map_err(|e| ApiError(e.to_string()))?;
         
-        sqlite_guard.execute_query(
-            "CREATE TABLE IF NOT EXISTS qa_answers (
-                id TEXT PRIMARY KEY,
-                question_id TEXT NOT NULL,
-                message_id TEXT,
-                platform TEXT NOT NULL,
-                answer TEXT NOT NULL,
-                model TEXT,
-                timestamp TEXT NOT NULL,
-                turn_number INTEGER,
-                metadata TEXT,
-                FOREIGN KEY (question_id) REFERENCES qa_questions (id)
-            )"
-        ).map_err(|e| ApiError(e.to_string()))?;
-        
-        // Process questions
+        // Process each question
         for question in &data.questions {
+            #[cfg(debug_assertions)]
+            println!("Dev Log: Processing question: {:?}", question);
             let query = format!(
                 "INSERT OR REPLACE INTO qa_questions (id, platform, question, timestamp, answered)
                  VALUES ('{}', '{}', '{}', '{}', {})",
@@ -287,33 +288,53 @@ impl ApiServer {
                 question.timestamp,
                 if question.answered { 1 } else { 0 }
             );
-            
             sqlite_guard.execute_query(&query)
                 .map_err(|e| ApiError(e.to_string()))?;
         }
         
-        // Process answers
+        // Process each answer
         for answer in &data.answers {
+            #[cfg(debug_assertions)]
+            println!("Dev Log: Processing answer: {:?}", answer);
+            
             let answer_id = answer.id.clone().unwrap_or_else(|| {
                 format!("a_{}", chrono::Utc::now().timestamp_millis())
             });
             
-            let query = format!(
-                "INSERT OR REPLACE INTO qa_answers (id, question_id, message_id, platform, answer, model, timestamp, turn_number, metadata)
-                 VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', {}, {})",
-                answer_id,
-                answer.question_id,
-                answer.message_id.as_ref().map_or("NULL".to_string(), |v| format!("'{}'", v)),
-                answer.platform.replace('\'', "''"),
-                answer.answer.replace('\'', "''"),
-                answer.model.replace('\'', "''"),
-                answer.timestamp,
-                answer.turn_number.map_or("NULL".to_string(), |v| v.to_string()),
-                answer.metadata.as_ref().map_or("NULL".to_string(), |v| format!("'{}'", v.replace('\'', "''")))
-            );
+            #[cfg(debug_assertions)]
+            println!("Dev Log: Executing parameterized query for answer_id: {}", answer_id);
             
-            sqlite_guard.execute_query(&query)
-                .map_err(|e| ApiError(e.to_string()))?;
+            // Execute the parameterized query
+            match sqlite_guard.execute_parameterized(
+                "INSERT OR REPLACE INTO qa_answers 
+                 (id, question_id, message_id, platform, answer, model, timestamp, turn_number, metadata)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    answer_id,
+                    answer.question_id,
+                    answer.message_id.as_ref().map(|v| v.as_str()),
+                    answer.platform,
+                    answer.answer,
+                    answer.model,
+                    answer.timestamp,
+                    answer.turn_number,
+                    answer.metadata.as_ref().map(|v| v.as_str()),
+                ],
+            ) {
+                Ok(_) => {
+                    #[cfg(debug_assertions)]
+                    println!("Dev Log: Successfully inserted/replaced answer with ID: {}", answer_id);
+                },
+                Err(e) => {
+                    #[cfg(debug_assertions)]
+                    println!("Dev Log: Error inserting/replacing answer: {}", e);
+                    return Err(ApiError(e.to_string()));
+                }
+            }
+            
+            // More debug info for update
+            #[cfg(debug_assertions)]
+            println!("Dev Log: Updating question answered status for question_id: {}", answer.question_id);
             
             // Update the question's answered status
             let update_query = format!(
@@ -321,15 +342,28 @@ impl ApiServer {
                 answer.question_id
             );
             
-            sqlite_guard.execute_query(&update_query)
-                .map_err(|e| ApiError(e.to_string()))?;
+            match sqlite_guard.execute_query(&update_query) {
+                Ok(_) => {
+                    #[cfg(debug_assertions)]
+                    println!("Dev Log: Successfully updated question answered status");
+                },
+                Err(e) => {
+                    #[cfg(debug_assertions)]
+                    println!("Dev Log: Error updating question answered status: {}", e);
+                    return Err(ApiError(e.to_string()));
+                }
+            }
         }
         
+        #[cfg(debug_assertions)]
+        println!("Dev Log: Finished processing QA data. Stored {} questions and {} answers",
+                 data.questions.len(), data.answers.len());
+    
         Ok(Json(serde_json::json!({
             "status": "success",
             "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
         })))
-    }
+    }    
     
     
     async fn get_qa_data(

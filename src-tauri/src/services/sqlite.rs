@@ -111,6 +111,21 @@ impl SqliteService {
         rows.collect::<Result<Vec<_>, _>>()
             .map_err(|e| SqliteError::DatabaseError(e.to_string()))
     }
+
+    pub fn execute_parameterized<P>(&self, query: &str, params: P) -> Result<(), SqliteError> 
+    where 
+        P: rusqlite::Params
+    {
+        let conn_guard = self.connection.lock().unwrap();
+        let conn = conn_guard.as_ref()
+            .ok_or_else(|| SqliteError::DatabaseError("Database not initialized".to_string()))?;
+    
+        conn.execute(query, params)
+            .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
+        
+        Ok(())
+    }    
+    
 }
 
 #[tauri::command]
