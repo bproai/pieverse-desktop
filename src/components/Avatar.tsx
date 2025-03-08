@@ -106,6 +106,37 @@ const Avatar = () => {
     setContextMenu({ ...contextMenu, visible: false });
   };
 
+
+  useEffect(() => {
+    // Function to handle keyboard events
+    const handleKeyDown = (e) => {
+      // Check if help panel is open
+      if (showHelp) {
+        // Close the panel when Escape key is pressed
+        if (e.key === 'Escape') {
+          setShowHelp(false);
+          
+          // Also clean up any ongoing processes
+          if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+            setAudioUrl(null);
+          }
+          setRecordedAudioData(null);
+          setAudioChunks([]);
+          clearClipboardImage();
+        }
+      }
+    };
+  
+    // Add the event listener
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up function to remove the event listener when component unmounts
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showHelp, audioUrl]); // Dependencies: showHelp and audioUrl state
+
   // Add and remove the click outside listener
   useEffect(() => {
     if (contextMenu.visible) {
@@ -1466,6 +1497,23 @@ const Avatar = () => {
             top: `${position.y + 20}px`
           }}
         >
+
+          <button 
+            className="corner-close-button"
+            onClick={() => {
+              setShowHelp(false);
+              if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+                setAudioUrl(null);
+              }
+              setRecordedAudioData(null);
+              setAudioChunks([]);
+              clearClipboardImage();
+            }}
+          >
+            ✕
+          </button>
+
           <div className="help-content">
             <h2>Hello!</h2>
             {intentResponse ? (
