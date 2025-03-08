@@ -1,6 +1,6 @@
 # TODO.md for PieVerse Desktop
 
-This document outlines tasks and improvements for PieVerse Desktop. Many core features are already implemented (see README), so the following items focus on refining functionality, enhancing the user experience, and expanding capabilities.
+This document outlines tasks, features, and improvements planned for PieVerse Desktop. Many core features are already implemented (see README), so the following items focus on refining functionality, enhancing the user experience, and expanding capabilities.
 
 ---
 
@@ -32,7 +32,7 @@ This document outlines tasks and improvements for PieVerse Desktop. Many core fe
 
 ### Python Sandbox
 - [ ] Upgrade the embedded code editor with enhanced autocompletion and linting features.
-- [ ] Preload additional libraries (e.g., scikit-learn, matplotlib) to expand the sandbox capabilities.
+- [ ] Preload additional popular libraries (e.g., scikit-learn, matplotlib) to expand the sandbox capabilities.
 - [ ] Improve error handling and recovery in the Python execution environment.
 - [ ] Optimize performance for executing user scripts.
 
@@ -47,6 +47,10 @@ This document outlines tasks and improvements for PieVerse Desktop. Many core fe
 - [ ] Add more customization options for API configuration (e.g., port, CORS settings).
 - [ ] Strengthen security measures and error handling within the API.
 - [ ] Explore integration with additional cloud services (e.g., AWS, Azure) for data export/import.
+
+### Content Moderation & Safeguards
+- [ ] **Implement Parental Controls and Customizable Safeguards:**  
+  Develop robust parental control features to restrict explicit content for younger users. Additionally, provide customizable settings that allow users to tailor content based on their personal beliefs and preferences, ensuring a safe and respectful experience for all audiences.
 
 ### User Interface & Experience
 - [ ] Refine overall UI/UX design to ensure consistency across platforms.
