@@ -147,6 +147,8 @@ pieverse-desktop/
 ├── BP/ - Business presentation assets (SVGs, pitch page, PowerPoint outlines)
 ├── Business Plan/ - Strategic business assets
 ├── docs/ - Documentation (User Guide, Contributing Guidelines, etc.)
+├── scripts/ - Utility scripts including changelog generation
+│   └── generate_changelog.py - Automatic changelog generator
 ├── package.json - Node.js dependencies
 └── ...
 ```
@@ -214,6 +216,17 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
   Integrated GPT-4o Realtime, improved avatar expressions, and expanded API functionality.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
+
+### Automatic Changelog Generation
+PieVerse includes a Python script for automatically generating a comprehensive changelog from Git history:
+
+```bash
+python scripts/generate_changelog.py
+```
+
+This script compares the first commit to the latest HEAD, generating a detailed diff that tracks all changes throughout the project's history. The resulting changelog.txt file provides developers with a complete overview of code evolution, which is especially useful during development sprints and before releases.
+
+For end users, we maintain a curated changelog that focuses on significant features and improvements.
 
 ## 📄 License
 [MIT License](LICENSE)
