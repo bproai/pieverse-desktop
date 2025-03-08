@@ -16,6 +16,13 @@ const Avatar = () => {
   // Add near your other useState hooks
   const [responseComplete, setResponseComplete] = useState(false);
 
+  // Add state for the copy feedback tooltip
+  const [showCopyFeedback, setShowCopyFeedback] = useState(false);
+  
+  // Add state for the context menu
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
+
+
   // NEW: Toggle for using the OpenAI model vs. rule-based
   const [useOpenAIModel, setUseOpenAIModel] = useState(false);
 
@@ -42,6 +49,9 @@ const Avatar = () => {
   const audioRef = useRef(null);
   const audioChunksRef = useRef([]);
 
+  // Add ref for the response text
+  const responseTextRef = useRef(null);
+    
   // Initialize position to bottom right corner
   const [position, setPosition] = useState({ 
     x: typeof window !== 'undefined' ? window.innerWidth - 250 : 0, 
@@ -64,6 +74,79 @@ const Avatar = () => {
       stopRealtimeSession();
     };
   }, []);
+
+  // Handle right-click context menu
+  const handleContextMenu = (e: React.MouseEvent) => {
+    // Prevent the default browser context menu
+    e.preventDefault();
+    
+    // Only show our custom context menu if there's content to select
+    if (intentResponse) {
+      // Get the bounding rectangle of the text container
+      const textRect = e.currentTarget.getBoundingClientRect();
+      
+      // Position the menu near the click point, but within the text element
+      let x = e.clientX; 
+      let y = e.clientY;
+      
+      // Keep the menu within the text element's horizontal boundaries
+      x = Math.min(x, textRect.right - 450); // Ensure menu fits horizontally
+      
+      // Set the context menu position
+      setContextMenu({
+        visible: true,
+        x: x,
+        y: y
+      });
+    }
+  };
+
+  // Handle clicking outside to close the menu
+  const handleClickOutside = () => {
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+
+  // Add and remove the click outside listener
+  useEffect(() => {
+    if (contextMenu.visible) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu.visible]);
+
+  // Handle the "Select All" menu option
+  const handleSelectAll = () => {
+    if (responseTextRef.current) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(responseTextRef.current);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // Close the context menu
+      setContextMenu({ ...contextMenu, visible: false });
+    }
+  };
+
+  // Handle the "Copy" menu option
+  const handleCopy = () => {
+    if (intentResponse) {
+      navigator.clipboard.writeText(intentResponse)
+        .then(() => {
+          setShowCopyFeedback(true);
+          setTimeout(() => setShowCopyFeedback(false), 2000);
+        })
+        .catch(err => {
+          console.error('Failed to copy text: ', err);
+        });
+      
+      // Close the context menu
+      setContextMenu({ ...contextMenu, visible: false });
+    }
+  };  
+
 
   const logResponseData = (message) => {
     console.log("Response data type:", message.type);
@@ -1386,7 +1469,35 @@ const Avatar = () => {
           <div className="help-content">
             <h2>Hello!</h2>
             {intentResponse ? (
-              <p className="intent-response">{intentResponse}</p>
+              <div className="response-container">
+                <p 
+                  ref={responseTextRef}
+                  className="intent-response" 
+                  onContextMenu={handleContextMenu}
+                >
+                  {intentResponse}
+                </p>
+                
+                {showCopyFeedback && (
+                  <div className="copy-feedback">Copied to clipboard!</div>
+                )}
+                
+                {/* Custom Context Menu */}
+                {contextMenu.visible && (
+                  <div 
+                    className="custom-context-menu"
+                    style={{
+                      position: 'fixed',
+                      top: `${contextMenu.y}px`,
+                      left: `${contextMenu.x}px`,
+                      zIndex: 10001
+                    }}
+                  >
+                    <button onClick={handleSelectAll}>Select All</button>
+                    <button onClick={handleCopy}>Copy</button>
+                  </div>
+                )}
+              </div>
             ) : (
               <p>How can I assist you today?</p>
             )}

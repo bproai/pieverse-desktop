@@ -558,3 +558,121 @@
 #model-select {
   margin-bottom: 15px;
 }
+
+
+
+.response-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Style for the intent-response to indicate it's selectable */
+.intent-response {
+  cursor: text;
+  user-select: text;
+  position: relative;
+}
+
+.custom-context-menu {
+  background: linear-gradient(145deg, rgba(141, 117, 246, 0.95), rgba(112, 104, 255, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 
+              inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  padding: 4px 0;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(5px);
+  transform: scale(0.98);
+  animation: menuAppear 0.15s ease-out forwards;
+  overflow: hidden;
+  /* Add this temporarily for debugging */
+  /* border: 3px solid red !important;
+  background: rgba(255, 0, 0, 0.3) !important; */
+}
+
+@keyframes menuAppear {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.custom-context-menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  color: white;
+  transition: all 0.2s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.custom-context-menu button:before {
+  content: "";
+  margin-right: 8px;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.custom-context-menu button:first-child:before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='8 3 18 3 18 13'%3E%3C/polyline%3E%3Cpolyline points='16 8 20 21 7 21 3 8'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.custom-context-menu button:last-child:before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
+}
+
+.custom-context-menu button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.custom-context-menu button:active {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(0.98);
+}
+
+/* Improved copy feedback tooltip */
+.copy-feedback {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(146, 119, 255, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  animation: fadeInOut 2s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.copy-feedback:after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: rgba(146, 119, 255, 0.9);
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
