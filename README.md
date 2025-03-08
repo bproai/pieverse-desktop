@@ -6,6 +6,22 @@
   <p>Empowering you with a dynamic, AI-powered personal assistant that enhances productivity, creativity, and collaboration in everyday life.</p>
 </div>
 
+## 📋 Table of Contents
+- [Overview](#-overview)
+- [Complete Digital Twin](#-the-complete-digital-twin---our-killer-app)
+- [Features](#-features)
+- [Demo and Showcase](#-demo-and-showcase)
+- [Quick Start Guide](#-quick-start-guide)
+- [Installation](#-installation)
+- [Development](#-development)
+- [Architecture](#-architecture)
+- [API Reference](#-api-reference)
+- [Database Location](#-database-location)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [Changelog](#-changelog)
+- [License](#-license)
+
 ## ✨ Overview
 
 PieVerse Desktop is more than just a toolkit—it's your personal AI companion and creative partner. Built with cutting-edge AI technology, PieVerse adapts to your unique needs, whether you're in a business meeting, solving complex problems, or exploring creative pursuits. The application combines intelligent assistance, dynamic UI customization, and innovative creative tools to help you unlock new possibilities.
@@ -34,7 +50,7 @@ PieVerse's revolutionary Complete Digital Twin transcends conventional AI assist
 
 This isn't just an app feature—it's a lifelong companion designed to elevate all dimensions of human potential.
 
----
+![Digital Twin Concept](./docs/images/digital-twin-concept.png)
 
 ## 🚀 Features
 
@@ -114,6 +130,20 @@ This isn't just an app feature—it's a lifelong companion designed to elevate a
 
 We are preparing live and recorded demos to showcase how PieVerse enables you to conduct business meetings, solve complex problems, and engage in inspiring, open-ended discussions. These demos will highlight the app's elegance, smooth performance, efficiency, and the playful dexterity in juggling multiple tasks—all powered by a dynamic, AI-driven interface.
 
+**Watch our latest demo: [PieVerse Complete Digital Twin Demo](https://youtu.be/pieverse-demo)**
+
+## 🚀 Quick Start Guide
+
+For those who want to get started quickly:
+
+1. **Download**: Get the [latest release](https://github.com/yourusername/pieverse-desktop/releases) for your platform
+2. **Install**: Run the installer and follow the on-screen instructions
+3. **Launch**: Open PieVerse Desktop
+4. **Setup API Keys**: Configure your OpenAI API key in Settings > API Configuration
+5. **Start Using**: Interact with your AI assistant using the floating avatar or explore the creative workspace
+
+For detailed instructions, see the [User Guide](./docs/USER_GUIDE.md).
+
 ## 📦 Installation
 
 ### Prerequisites
@@ -187,6 +217,10 @@ pieverse-desktop/
 │   │   └── main.rs - Entry point
 │   ├── tauri.conf.json - Tauri configuration
 │   └── Cargo.toml - Rust dependencies
+├── docs/ - Documentation
+│   ├── USER_GUIDE.md - End-user documentation
+│   ├── CONTRIBUTING.md - Contributor guidelines
+│   └── images/ - Documentation images
 ├── package.json - Node.js dependencies
 ├── tailwind.config.js - TailwindCSS configuration
 ├── postcss.config.js - PostCSS configuration
@@ -248,14 +282,24 @@ The avatar assistant leverages multiple AI models to adapt to your needs:
    - Ideal for extended conversation sessions
    - Requires OpenAI API key with lower usage costs
 
-### Data Analysis
-- Google Trends integration for market data.
-- Prophet forecasting model for trend prediction.
-- Machine learning-based spike detection.
-- Real-time trend monitoring with customizable thresholds.
-- Signal breakdown and analysis.
-- Interactive dashboards for market data visualization.
-- Support for multi-category keyword tracking.
+### System Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     React Frontend                       │
+├─────────────┬─────────────────┬──────────────┬──────────┤
+│  Avatar UI  │ Creative Space  │ Prompt Mgmt  │ Analysis │
+└─────┬───────┴────────┬────────┴──────┬───────┴─────┬────┘
+      │                │               │             │     
+      │                │               │             │     
+┌─────┴────────────────┴───────────────┴─────────────┴────┐
+│                     Tauri Bridge                         │
+└─────┬───────────────┬────────────────┬─────────────┬────┘
+      │               │                │             │     
+┌─────┴───────┐ ┌─────┴──────┐ ┌───────┴─────┐ ┌─────┴────┐
+│  AI Engine  │ │  Database  │ │ Python Env  │ │   API    │
+└─────────────┘ └────────────┘ └─────────────┘ └──────────┘
+```
 
 ## 🌐 API Reference
 
@@ -291,6 +335,8 @@ The application exposes several Tauri commands for plugin and extension develope
 - **Google Trends**: `get_google_trends`, `get_related_queries`, `export_trends_data`
 - **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`, `stop_trend_spike_monitoring`, `get_trend_spike_sources`, etc.
 
+For complete API documentation, see our [API Reference Guide](./docs/API_REFERENCE.md).
+
 ## 📂 Database Location
 
 ### Development Mode
@@ -310,6 +356,71 @@ In production, the SQLite database is stored in the system's local data director
 
 This approach uses the operating system's designated local data directory (retrieved via functions like `dirs::data_local_dir()`), ensuring that your application's data is stored in a consistent, system-approved location.
 
+## 🗺️ Roadmap
+
+Our development roadmap outlines the future direction of PieVerse Desktop:
+
+### Q2 2025
+- **Complete Digital Twin Beta Launch**: Initial release of the Core Digital Twin functionality
+- Enhanced avatar animations and expressions
+- Advanced prompt management with version control
+
+### Q3 2025
+- Integration with additional AI engines and models
+- Expanded digital twin capabilities for social contexts
+- Improved trend analysis with additional data sources
+
+### Q4 2025
+- **Digital Twin Robotics Integration Testing**: Begin experimentation with robotics interfaces
+- Enhanced legacy preservation functionality
+- Multi-language support for global accessibility
+
+See our full [Roadmap](./docs/ROADMAP.md) for more details about upcoming features and improvements.
+
+## 🤝 Contributing
+
+We welcome contributions from the community! If you'd like to contribute to PieVerse Desktop, please follow these steps:
+
+1. **Fork the repository**
+2. **Create a new branch**:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes**
+4. **Test your changes**:
+   ```bash
+   npm run test
+   ```
+5. **Submit a pull request**
+
+Please read our [Contributing Guidelines](./docs/CONTRIBUTING.md) for more detailed information.
+
+### Code Style
+We use ESLint for JavaScript/TypeScript and rustfmt for Rust code. Please make sure your code adheres to our style guidelines.
+
+### Report Issues
+If you encounter any bugs or have feature requests, please [submit an issue](https://github.com/yourusername/pieverse-desktop/issues) on our GitHub repository.
+
+## 📝 Changelog
+
+### v0.1.0 (2025-03-01)
+- Initial release of PieVerse Desktop
+- Basic AI assistant avatar functionality
+- SQLite database integration
+- Prompt management system
+
+### v0.2.0 (2025-03-15)
+- Added MySQL and MongoDB support
+- Implemented Python sandbox
+- Enhanced trend analysis capabilities
+
+### v0.3.0 (2025-04-01)
+- Added GPT-4o Realtime integration
+- Improved avatar expressions and animations
+- Expanded API server functionality
+
+See the full [Changelog](./docs/CHANGELOG.md) for a complete history of changes.
+
 ## 📄 License
 
 [MIT License](LICENSE)
@@ -318,4 +429,5 @@ This approach uses the operating system's designated local data directory (retri
 
 <div align="center">
   <p>Built with ❤️ using <a href="https://tauri.app/">Tauri</a> and <a href="https://react.dev/">React</a></p>
+  <p>Questions or feedback? <a href="mailto:support@pieverse.com">Contact us</a></p>
 </div>
