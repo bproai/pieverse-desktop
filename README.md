@@ -251,10 +251,24 @@ The application exposes several Tauri commands for plugin and extension develope
 - **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`
 - **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`
 
-## 📂 Database Location (Development Mode)
+## 📂 Database Location
+### Development Mode
 During development, the SQLite database is created in the relative path: .local/share/pieverse/prompts.db
 
 This folder is located relative to the directory from which you start the Tauri app (usually your project's root). On Unix-like systems, hidden directories (those beginning with a dot) might not be visible by default. Use commands like `ls -la` to list hidden files, or enable hidden files in your file explorer.
+
+### Production Mode
+In production, the SQLite database is stored in the system's local data directory. Typically, this is:
+
+- **macOS:**  
+  `~/Library/Application Support/pieverse/prompts.db`
+- **Windows:**  
+  `C:\Users\<username>\AppData\Local\pieverse\prompts.db`
+- **Linux:**  
+  `~/.local/share/pieverse/prompts.db`
+
+This approach uses the operating system's designated local data directory (retrieved via functions like `dirs::data_local_dir()`), ensuring that your application's data is stored in a consistent, system-approved location.
+
 
 ## 📄 License
 
