@@ -7,149 +7,104 @@
 </div>
 
 ## 📋 Table of Contents
-- [Overview](#-overview)
-- [Complete Digital Twin](#-the-complete-digital-twin---our-killer-app)
-- [Features](#-features)
-- [Demo and Showcase](#-demo-and-showcase)
-- [Quick Start Guide](#-quick-start-guide)
-- [Installation](#-installation)
-- [Development](#-development)
-- [Architecture](#-architecture)
-- [API Reference](#-api-reference)
-- [Database Location](#-database-location)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [Changelog](#-changelog)
-- [License](#-license)
+- [Overview](#overview)
+- [Complete Digital Twin](#complete-digital-twin---our-killer-app)
+- [Features](#features)
+- [Demo and Showcase](#demo-and-showcase)
+- [Quick Start Guide](#quick-start-guide)
+- [Installation](#installation)
+- [Development](#development)
+- [Architecture](#architecture)
+- [API Reference](#api-reference)
+- [Database Location](#database-location)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
+- [License](#license)
 
 ## ✨ Overview
-
 PieVerse Desktop is more than just a toolkit—it's your personal AI companion and creative partner. Built with cutting-edge AI technology, PieVerse adapts to your unique needs, whether you're in a business meeting, solving complex problems, or exploring creative pursuits. The application combines intelligent assistance, dynamic UI customization, and innovative creative tools to help you unlock new possibilities.
 
-## 🌟 The Complete Digital Twin - Our Killer App
+## 🌟 Complete Digital Twin - Our Killer App
+Beyond a digital assistant, the Complete Digital Twin serves as:
+- **🧠 Intellectual Growth Partner:** Proactively challenges your thinking, suggests learning paths, and tailors teaching methods to your cognitive style.
+- **💖 Emotional Confidant:** Offers a safe space to process emotions and reflect on personal relationships.
+- **⚖️ Moral Compass:** Clarifies ethical frameworks and provides balanced, value-aligned perspectives.
+- **🌱 Personal Development Guide:** Supports growth through reflective practices, discussions, and adaptive feedback.
+- **💪 Physical Wellness Steward:** Tracks health goals and motivates positive lifestyle adaptations.
+- **🧿 Legacy Preservation:** Captures your stories and wisdom, preserving your intellectual and spiritual legacy for future generations.
 
-<div align="center">
-  <h3>Beyond a Digital Assistant: Your Tutor, Mentor, Confidant, Companion, and Legacy Steward</h3>
-</div>
-
-PieVerse's revolutionary Complete Digital Twin transcends conventional AI assistants by serving as a comprehensive extension of yourself:
-
-- **🧠 Intellectual Growth Partner**: Not just answering questions, but proactively challenging your thinking, suggesting learning paths, and adapting teaching methods to your unique cognitive style.
-
-- **💖 Emotional Confidant**: A private space to process emotions, reflect on relationships, and receive personalized guidance based on your values and life experiences.
-
-- **⚖️ Moral Compass**: Helps clarify your ethical framework, challenges your reasoning, and offers perspectives that align with your deepest values.
-
-- **🌱 Personal Development Guide**: Supports your journey with practices, reflections, and discussions tailored to your beliefs and traditions.
-
-- **💪 Physical Wellness Steward**: Tracks progress, suggests adaptations, and provides motivational support for your health goals.
-
-- **🧿 Legacy Preservation**: Learns your stories, wisdom, and perspectives to preserve your intellectual and spiritual legacy for future generations.
-
-**Future Embodiment**: Designed with the near future in mind, the Complete Digital Twin is being architected to eventually inhabit highly dexterous robots, bringing the full range of its capabilities into the physical world.
-
-This isn't just an app feature—it's a lifelong companion designed to elevate all dimensions of human potential.
-
-![Digital Twin Concept](./docs/images/digital-twin-concept.png)
+*Future Embodiment:* Architected to eventually inhabit highly dexterous robotic systems, bringing these capabilities into the physical world.
 
 ## 🚀 Features
 
 ### 🤖 AI Assistant Avatar
-- A friendly, anime-style avatar that acts as your personal AI assistant.
-- Advanced speech recognition and natural language processing for smooth, intuitive conversations.
-- Multiple AI engine options for different interaction styles:
-  - **Rule-based mode**: Simple, predefined responses for basic queries
-  - **GPT-4o mini**: Uses Whisper for STT, GPT-4o mini for text generation, and system's native TTS 
-  - **GPT-4o Realtime**: WebRTC streaming with voice-in/voice-out and Voice Activity Detection
-  - **GPT-4o Realtime Mini**: Cost-effective version of the Realtime model with same voice capabilities
-- Digital double functionality: the avatar can represent you in meetings, social settings, and more.
-- Different UI workflows based on selected AI engine.
-- Record/playback capability for non-realtime modes.
+- Friendly, anime-style avatar with advanced speech recognition and natural language processing.
+- Multiple AI engine options:
+  - **Rule-based mode:** Predefined responses for basic queries.
+  - **GPT-4o mini:** Utilizes Whisper for STT, GPT-4o mini for text generation, and native TTS.
+  - **GPT-4o Realtime:** Enables true voice-to-voice conversation via WebRTC.
+  - **GPT-4o Realtime Mini:** Cost-effective, real-time conversational model.
+- Digital double functionality for representation in meetings, social settings, and more.
+- Support for different UI workflows and record/playback capabilities for non-realtime modes.
 
 ### 🎨 Creative Workspace
-- An interactive environment for brainstorming, drafting, and refining creative projects.
-- Collaborate with your AI assistant on novels, play scripts, drawings, music, or any artistic endeavor.
-- Adaptive tools and inspiring prompts lower the barrier to hyper-creative expression.
-- A platform that champions "meta creation" and "meta invention"—where your imagination is the only limit.
+- Interactive environment for brainstorming, drafting, and refining creative projects.
+- Adaptive tools and inspiring prompts to foster "meta creation" and "meta invention."
 
 ### 📝 AI Prompt Management
-- Create, edit, and organize prompts tailored to your needs.
-- Categorize prompts for diverse use cases such as creative writing, business analysis, and personal productivity.
-- Bulk import and export of prompts.
-- Toggle between SQLite and MySQL storage backends.
-- Activation/deactivation of individual prompts.
-- Seamless integration with cloud and local storage options.
-- RESTful API endpoints for prompt CRUD operations.
+- Create, edit, and organize prompts across diverse use cases.
+- Bulk import/export, version control, and advanced filtering.
+- Seamless integration with both cloud and local storage options.
 
 ### 📊 Trend Analysis & Signal Detection
-- Real-time financial data visualization and analysis with Google Trends integration.
-- Advanced algorithms for trend spike detection and forecasting.
-- Customizable dashboards and interactive charts that keep you informed of market shifts.
-- Signal breakdown with leading indicators.
-- Automated monitoring with customizable thresholds.
-- Export trend data to CSV format.
-- Machine learning-based spike prediction with configurable sensitivity.
+- Real-time financial data visualization with Google Trends integration.
+- Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
 
 ### 🐍 Python Sandbox
-- Integrated Python environment for quick scripting and testing.
-- Monaco-based code editor with syntax highlighting and autocompletion.
-- Execute Python code and view results directly in the app.
-- Pre-loaded libraries including pandas and numpy.
-- Reset environment functionality.
-- Integration with Rust backend via PyO3.
+- Integrated Python environment with Monaco Editor (syntax highlighting and autocompletion).
+- Preloaded libraries (pandas, numpy, etc.) and secure execution via Rust integration (PyO3).
 
 ### 🔄 Seamless Integration & Dynamic UI
-- A highly adaptive, voice AI-assisted frontend that personalizes your interface in real time.
-- Dynamic UI components that adjust based on your feedback and preferences.
-- Robust API settings, ensuring secure connectivity with various data sources and services.
-- Cross-origin resource sharing (CORS) support for external applications.
+- Adaptive, voice AI-assisted frontend that personalizes in real time.
+- Robust API settings ensuring secure connectivity with external data sources and services.
+- Cross-origin resource sharing (CORS) support.
 
 ### 📂 Database & Data Management
-- Integrated SQLite for local data storage along with support for MySQL and MongoDB.
-- Intuitive data migration and management tools for a streamlined experience.
-- Transfer data between MySQL and SQLite.
-- Intuitive SQL query interface with results display.
-- Designed to keep your data secure, accessible, and in a system-approved location.
-- Support for Q&A data storage and retrieval.
+- Integrated SQLite for local storage with optional MySQL and MongoDB support.
+- Intuitive data migration, a user-friendly SQL query interface, and secure data handling.
 
 ### 🌐 API & External Connectivity
-- A RESTful API that supports prompt management and external integrations.
-- Configurable settings to tailor API functionality to your needs.
-- Cross-origin resource sharing (CORS) support and secure connectivity options.
-- Start/stop service controls.
-- Health check endpoints.
+- RESTful API for prompt management and external integrations.
+- Customizable endpoints, CORS support, and health-check endpoints.
 
 ### 📸 Screenshot & Media Utilities
-- Cross-platform screenshot capabilities.
-- Support for capturing the current window or full screen.
-- Clipboard integration for quick sharing.
-- File-based saving with organized folder structure.
-- Audio recording capabilities for AI interactions.
+- Cross-platform screenshot and audio recording capabilities.
+- Clipboard integration and organized file-based saving.
 
 ## 🎥 Demo and Showcase
+We are preparing live and recorded demos that highlight:
+- Business meeting facilitation with the Digital Twin.
+- Interactive problem solving and creative collaboration.
+- A dynamic, AI-powered interface that exemplifies smooth performance and efficiency.
 
-We are preparing live and recorded demos to showcase how PieVerse enables you to conduct business meetings, solve complex problems, and engage in inspiring, open-ended discussions. These demos will highlight the app's elegance, smooth performance, efficiency, and the playful dexterity in juggling multiple tasks—all powered by a dynamic, AI-driven interface.
-
-**Watch our latest demo: [PieVerse Complete Digital Twin Demo](https://youtu.be/pieverse-demo)**
+Watch our latest demo: *PieVerse Complete Digital Twin Demo*
 
 ## 🚀 Quick Start Guide
-
-For those who want to get started quickly:
-
-1. **Download**: Get the [latest release](https://github.com/yourusername/pieverse-desktop/releases) for your platform
-2. **Install**: Run the installer and follow the on-screen instructions
-3. **Launch**: Open PieVerse Desktop
-4. **Setup API Keys**: Configure your OpenAI API key in Settings > API Configuration
-5. **Start Using**: Interact with your AI assistant using the floating avatar or explore the creative workspace
-
-For detailed instructions, see the [User Guide](./docs/USER_GUIDE.md).
+For users eager to jump in:
+1. **Download:** Get the latest release for your platform.
+2. **Install:** Run the installer and follow the on-screen instructions.
+3. **Launch:** Open PieVerse Desktop.
+4. **Setup:** Configure your OpenAI API key in *Settings > API Configuration*.
+5. **Start Using:** Engage with your AI assistant or explore the creative workspace.
+_For detailed instructions, please see the User Guide._
 
 ## 📦 Installation
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install) 1.75 or higher
 - [Node.js](https://nodejs.org/) 18 or higher
-- npm (comes with Node.js)
+- npm (bundled with Node.js)
 
 ### Build from Source
 1. Clone the repository:
@@ -157,31 +112,28 @@ For detailed instructions, see the [User Guide](./docs/USER_GUIDE.md).
    git clone https://github.com/yourusername/pieverse-desktop.git
    cd pieverse-desktop
    ```
-
-2. Install JavaScript dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-
 3. Build the application:
    ```bash
    npm run tauri build
    ```
 
-The compiled application will be available in the `src-tauri/target/release` directory.
+The compiled application will be located in src-tauri/target/release.
 
 ### Pre-built Binaries
-Download the latest release for your platform from the [Releases page](https://github.com/yourusername/pieverse-desktop/releases).
+Download the latest release from the [Releases page](https://github.com/yourusername/pieverse-desktop/releases).
 
 ## 💻 Development
 
 ### Setup Development Environment
-1. Clone the repository
+1. Clone the repository.
 2. Install dependencies:
    ```bash
    npm install
    ```
-
 3. Start the development server:
    ```bash
    npm run tauri dev
@@ -191,243 +143,81 @@ Download the latest release for your platform from the [Releases page](https://g
 ```
 pieverse-desktop/
 ├── src/ - React frontend code
-│   ├── App.tsx - Main application component
-│   ├── components/ - React components (Avatar, Creative Workspace, etc.)
-│   ├── services/ - Frontend services
-│   ├── assets/ - Static assets and resources
-│   └── styles/ - CSS and style files
 ├── src-tauri/ - Rust backend code
-│   ├── src/ - Backend services and modules
-│   │   ├── services/ - Backend services
-│   │   │   ├── api_server.rs - HTTP API server using Axum
-│   │   │   ├── mongodb.rs - MongoDB connector
-│   │   │   ├── mysql.rs - MySQL connector
-│   │   │   ├── python.rs - Python interpreter via PyO3
-│   │   │   ├── screenshot.rs - Screenshot functionality
-│   │   │   ├── google_trends.rs - Google Trends integration
-│   │   │   ├── trend_spike_service.rs - Trend analysis 
-│   │   │   ├── sqlite.rs - SQLite database
-│   │   │   ├── sqlite_prompts.rs - Prompt management
-│   │   │   ├── whisper.rs - OpenAI API integration
-│   │   │   ├── brand_sound.rs - Audio management
-│   │   │   ├── avatar_window.rs - Floating avatar window
-│   │   │   └── tray.rs - System tray implementation
-│   │   ├── python_scripts/ - Python integration scripts
-│   │   ├── lib.rs - Main library
-│   │   └── main.rs - Entry point
-│   ├── tauri.conf.json - Tauri configuration
-│   └── Cargo.toml - Rust dependencies
-├── docs/ - Documentation
-│   ├── USER_GUIDE.md - End-user documentation
-│   ├── CONTRIBUTING.md - Contributor guidelines
-│   └── images/ - Documentation images
+├── BP/ - Business presentation assets (SVGs, pitch page, PowerPoint outlines)
+├── Business Plan/ - Strategic business assets
+├── docs/ - Documentation (User Guide, Contributing Guidelines, etc.)
 ├── package.json - Node.js dependencies
-├── tailwind.config.js - TailwindCSS configuration
-├── postcss.config.js - PostCSS configuration
-├── tsconfig.json - TypeScript configuration 
-└── vite.config.ts - Vite configuration
+└── ...
 ```
 
 ## 🏗️ Architecture
+PieVerse Desktop is built using the Tauri framework, combining a robust Rust backend with a dynamic React frontend.
 
-PieVerse Desktop is built using the [Tauri](https://tauri.app/) framework, combining a robust Rust backend with a dynamic React frontend.
+### Frontend:
+Built with React and TypeScript, using Mantine UI and TailwindCSS, it offers a creative workspace and dynamic interface adjustments.
 
-### Frontend
-- Built with React 19 and TypeScript.
-- Uses Mantine UI components and TailwindCSS for modern, responsive design.
-- Features an intuitive creative workspace and dynamic, AI-powered interface adjustments.
-- Monaco Editor for code editing.
-- Recharts for data visualization.
+### Backend:
+Powered by Rust with Tauri, it uses SQLite for local storage, supports MySQL/MongoDB, and exposes a RESTful API via Axum.
 
-### Backend
-- Powered by Rust with Tauri for cross-platform performance.
-- Utilizes SQLite for local storage, with MySQL and MongoDB connectivity options.
-- Exposes a RESTful API built on Axum, ensuring secure and efficient data management.
-- Integrates Python for advanced data processing and trend analysis via PyO3.
-- Cross-platform media handling (screenshots, audio recording).
-- Thread-safe services with Mutex-protected shared state.
-
-### AI Technology
-The avatar assistant leverages multiple AI models to adapt to your needs:
-
-1. **Rule-based Engine**
-   - Simple, predefined patterns for common queries
-   - Zero latency responses
-   - No API key required
-   - Works offline for basic interactions
-
-2. **GPT-4o Mini Pipeline**
-   - Multi-step workflow (record > preview > send > receive > TTS)
-   - Uses OpenAI Whisper API for speech-to-text conversion
-   - Processes text with GPT-4o mini model
-   - Uses system's native speech synthesis for mechanical text-to-speech
-   - Requires manual recording and submission by user
-   - More control but less natural interaction flow
-   - Requires OpenAI API key
-
-3. **GPT-4o Realtime**
-   - True voice-to-voice conversation with single click activation
-   - WebRTC-based streaming for instant response
-   - Voice Activity Detection (VAD) for natural turn-taking
-   - Human-like voice responses
-   - Much more natural conversation experience
-   - Highest quality responses and best context retention
-   - Requires OpenAI API key with higher usage costs
-
-4. **GPT-4o Realtime Mini**
-   - More affordable version of the Realtime model
-   - Identical voice-to-voice WebRTC interface with VAD
-   - Same natural conversation experience as full Realtime version
-   - Good balance of quality and cost efficiency
-   - Ideal for extended conversation sessions
-   - Requires OpenAI API key with lower usage costs
-
-### System Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     React Frontend                       │
-├─────────────┬─────────────────┬──────────────┬──────────┤
-│  Avatar UI  │ Creative Space  │ Prompt Mgmt  │ Analysis │
-└─────┬───────┴────────┬────────┴──────┬───────┴─────┬────┘
-      │                │               │             │     
-      │                │               │             │     
-┌─────┴────────────────┴───────────────┴─────────────┴────┐
-│                     Tauri Bridge                         │
-└─────┬───────────────┬────────────────┬─────────────┬────┘
-      │               │                │             │     
-┌─────┴───────┐ ┌─────┴──────┐ ┌───────┴─────┐ ┌─────┴────┐
-│  AI Engine  │ │  Database  │ │ Python Env  │ │   API    │
-└─────────────┘ └────────────┘ └─────────────┘ └──────────┘
-```
+### AI Technology:
+Multiple AI models (Rule-based, GPT-4o mini, GPT-4o Realtime, and GPT-4o Realtime Mini) adapt to your needs for natural, interactive experiences.
 
 ## 🌐 API Reference
-
-### HTTP API
-When enabled, the API server provides the following endpoints:
-
-- `GET /api/status` - Check API server status
-- `GET /api/health` - Health check with database connectivity
-- `GET /api/prompts` - List all prompts
-- `POST /api/prompts` - Create a new prompt
-- `PUT /api/prompts/:id` - Update an existing prompt
-- `DELETE /api/prompts/:id` - Delete a prompt
-- `POST /api/qa` - Store Q&A data
-- `GET /api/qa` - Get Q&A data with filtering options
-
-### Tauri Commands
-The application exposes several Tauri commands for plugin and extension developers:
-
-#### Database Operations
-- **MongoDB**: `start_mongodb`, `stop_mongodb`, `list_mongodb_databases`, etc.
-- **MySQL**: `mysql_connect`, `mysql_execute_query`, `mysql_test_connection`, etc.
-- **SQLite**: `sqlite_init`, `sqlite_execute_query`, etc.
-- **SQLite Prompts**: `sqlite_get_prompts`, `sqlite_create_prompt`, etc.
-
-#### AI & Utility Functions
-- **API Server**: `start_api_server`, `stop_api_server`
-- **OpenAI**: `transcribe_audio`, `openai_4o_mini`, `save_audio_recording`, `play_last_recording`
-- **Python**: `python_init`, `python_execute`, `python_reset`
-- **Screenshots**: `take_screenshot`, `take_screenshot_to_clipboard`, `save_clipboard_image`
-- **Brand Sound**: `get_brand_sound_path`, `check_brand_sound_exists`
-
-#### Trend Analysis
-- **Google Trends**: `get_google_trends`, `get_related_queries`, `export_trends_data`
-- **Trend Analysis**: `get_trend_predictions`, `predict_trend_spike`, `start_trend_spike_monitoring`, `stop_trend_spike_monitoring`, `get_trend_spike_sources`, etc.
-
-For complete API documentation, see our [API Reference Guide](./docs/API_REFERENCE.md).
+The RESTful API supports endpoints for prompt management, Q&A data handling, and database operations. Refer to our API documentation for detailed information.
 
 ## 📂 Database Location
 
 ### Development Mode
-During development, the SQLite database is created in the relative path: `.local/share/pieverse/prompts.db`
-
-This folder is located relative to the directory from which you start the Tauri app (usually your project's root). On Unix-like systems, hidden directories (those beginning with a dot) might not be visible by default. Use commands like `ls -la` to list hidden files, or enable hidden files in your file explorer.
+The SQLite database is located at:
+```bash
+.local/share/pieverse/prompts.db
+```
 
 ### Production Mode
-In production, the SQLite database is stored in the system's local data directory. Typically, this is:
-
-- **macOS:**  
-  `~/Library/Application Support/pieverse/prompts.db`
-- **Windows:**  
-  `C:\Users\<username>\AppData\Local\pieverse\prompts.db`
-- **Linux:**  
-  `~/.local/share/pieverse/prompts.db`
-
-This approach uses the operating system's designated local data directory (retrieved via functions like `dirs::data_local_dir()`), ensuring that your application's data is stored in a consistent, system-approved location.
+The database is stored in the system's local data directory:
+- **macOS:** `~/Library/Application Support/pieverse/prompts.db`
+- **Windows:** `C:\Users\<username>\AppData\Local\pieverse\prompts.db`
+- **Linux:** `~/.local/share/pieverse/prompts.db`
 
 ## 🗺️ Roadmap
+Our roadmap outlines our future plans:
 
-Our development roadmap outlines the future direction of PieVerse Desktop:
+- **Q2 2025:** Complete Digital Twin Beta Launch, enhanced avatar animations, and advanced prompt management.
+- **Q3 2025:** Integration of additional AI models, expanded social capabilities for the Digital Twin, and improved trend analysis.
+- **Q4 2025:** Robotics integration testing, enhanced legacy preservation, and multi-language support.
 
-### Q2 2025
-- **Complete Digital Twin Beta Launch**: Initial release of the Core Digital Twin functionality
-- Enhanced avatar animations and expressions
-- Advanced prompt management with version control
-
-### Q3 2025
-- Integration with additional AI engines and models
-- Expanded digital twin capabilities for social contexts
-- Improved trend analysis with additional data sources
-
-### Q4 2025
-- **Digital Twin Robotics Integration Testing**: Begin experimentation with robotics interfaces
-- Enhanced legacy preservation functionality
-- Multi-language support for global accessibility
-
-See our full [Roadmap](./docs/ROADMAP.md) for more details about upcoming features and improvements.
+See our full [Roadmap](./docs/ROADMAP.md) for detailed milestones.
 
 ## 🤝 Contributing
+We welcome community contributions! To contribute:
 
-We welcome contributions from the community! If you'd like to contribute to PieVerse Desktop, please follow these steps:
-
-1. **Fork the repository**
-2. **Create a new branch**:
+1. Fork the repository.
+2. Create a feature branch:
    ```bash
    git checkout -b feature/your-feature-name
    ```
-3. **Make your changes**
-4. **Test your changes**:
+3. Make and test your changes:
    ```bash
    npm run test
    ```
-5. **Submit a pull request**
+4. Submit a pull request.
 
-Please read our [Contributing Guidelines](./docs/CONTRIBUTING.md) for more detailed information.
-
-### Code Style
-We use ESLint for JavaScript/TypeScript and rustfmt for Rust code. Please make sure your code adheres to our style guidelines.
-
-### Report Issues
-If you encounter any bugs or have feature requests, please [submit an issue](https://github.com/yourusername/pieverse-desktop/issues) on our GitHub repository.
+For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
 
 ## 📝 Changelog
+- **v0.1.0 (2025-03-01):**
+  Initial release – Basic AI assistant avatar, SQLite integration, and prompt management.
+- **v0.2.0 (2025-03-15):**
+  Added MySQL/MongoDB support, Python sandbox, and enhanced trend analysis.
+- **v0.3.0 (2025-04-01):**
+  Integrated GPT-4o Realtime, improved avatar expressions, and expanded API functionality.
 
-### v0.1.0 (2025-03-01)
-- Initial release of PieVerse Desktop
-- Basic AI assistant avatar functionality
-- SQLite database integration
-- Prompt management system
-
-### v0.2.0 (2025-03-15)
-- Added MySQL and MongoDB support
-- Implemented Python sandbox
-- Enhanced trend analysis capabilities
-
-### v0.3.0 (2025-04-01)
-- Added GPT-4o Realtime integration
-- Improved avatar expressions and animations
-- Expanded API server functionality
-
-See the full [Changelog](./docs/CHANGELOG.md) for a complete history of changes.
+See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 
 ## 📄 License
-
 [MIT License](LICENSE)
-
----
 
 <div align="center">
   <p>Built with ❤️ using <a href="https://tauri.app/">Tauri</a> and <a href="https://react.dev/">React</a></p>
-  <p>Questions or feedback? <a href="mailto:support@pieverse.com">Contact us</a></p>
 </div>
