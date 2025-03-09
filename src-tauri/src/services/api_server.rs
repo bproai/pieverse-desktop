@@ -372,6 +372,25 @@ impl ApiServer {
 
         #[cfg(debug_assertions)]
         println!("Dev Log: Older unanswered questions cleaned up");
+
+        // After storing all the answers, add this clean-up code:
+        // Clean up duplicate answers keeping only the most recent for each question_id
+        sqlite_guard.execute_parameterized(
+            "DELETE FROM qa_answers 
+            WHERE id NOT IN (
+                SELECT id FROM qa_answers a
+                INNER JOIN (
+                    SELECT question_id, MAX(timestamp) as latest_timestamp
+                    FROM qa_answers
+                    GROUP BY question_id
+                ) latest ON a.question_id = latest.question_id AND a.timestamp = latest.latest_timestamp
+            )",
+            params![],
+        ).map_err(|e| ApiError(e.to_string()))?;
+
+        #[cfg(debug_assertions)]
+        println!("Dev Log: Duplicate answers cleaned up - keeping only the latest per question");
+
     
         Ok(Json(serde_json::json!({
             "status": "success",

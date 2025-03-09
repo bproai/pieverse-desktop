@@ -1697,7 +1697,7 @@ const Avatar = () => {
                   {clipboardImage 
                     ? "Image from clipboard is ready to send" 
                     : navigator.platform.indexOf('Mac') >= 0
-                      ? "Press ⌘V to paste an image from your clipboard"
+                      ? "Press ⌘+V to paste an image from your clipboard"
                       : "Press Ctrl+V to paste an image from your clipboard"
                   }
                 </div>
