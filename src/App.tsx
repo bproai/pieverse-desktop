@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -9,6 +9,7 @@ import { PythonPanel } from './components/Python/PythonPanel';
 import { PromptsManager } from './components/Prompts';
 import { APISettings } from './components/APISettings';
 import { SignalsPanel } from './components/Signals';
+import { HtmlRendererPanel } from './components/HtmlRenderer';
 import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
 import { core } from '@tauri-apps/api';
@@ -75,6 +76,9 @@ function App() {
                 <Tabs.Tab value="signals" leftSection={<TrendingUp size={16} />}>
                   Signals
                 </Tabs.Tab>
+                <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
+                  HTML Renderer
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -99,6 +103,10 @@ function App() {
               
               <Tabs.Panel value="signals" className="p-4">
                 <SignalsPanel />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="htmlrenderer" className="p-4">
+                <HtmlRendererPanel isDark={isDark} />
               </Tabs.Panel>
             </Tabs>
           </main>
