@@ -1,0 +1,1 @@
+// Monaco Editor Worker Main - will be replaced during build
