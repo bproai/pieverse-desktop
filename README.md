@@ -212,7 +212,7 @@ The RESTful API supports endpoints for prompt management, Q&A data handling, and
 ### Development Mode
 The SQLite database is located at:
 ```bash
-.local/share/pieverse/prompts.db
+src-tauri/.local/share/pieverse/prompts.db
 ```
 
 ### Production Mode
