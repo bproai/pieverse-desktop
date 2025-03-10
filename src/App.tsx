@@ -82,7 +82,7 @@ function App() {
                   Signals
                 </Tabs.Tab>
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
-                  HTML Renderer
+                  Document Renderer
                 </Tabs.Tab>
               </Tabs.List>
 

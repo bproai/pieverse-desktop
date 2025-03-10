@@ -64,7 +64,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           mb="sm"
           style={{ color: isDark ? '#E9ECEF' : '#212529' }}
         >
-          HTML Renderer
+          Document Renderer
         </Text>
         
         <Group mb="md" align="center" spacing="sm">
