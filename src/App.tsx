@@ -12,7 +12,8 @@ import { SignalsPanel } from './components/Signals';
 import { HtmlRendererPanel } from './components/HtmlRenderer';
 import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
-import { core } from '@tauri-apps/api';
+// import { core } from '@tauri-apps/api';
+import { Window } from '@tauri-apps/api/window';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -26,7 +27,11 @@ function App() {
     
     try {
       // Use the core.invoke method for Tauri 2.0
-      await core.invoke('update_system_appearance', { dark: newIsDark });
+      // await core.invoke('update_system_appearance', { dark: newIsDark });
+      const currentWindow = Window.getCurrent();
+      await currentWindow.setTheme(newIsDark ? 'dark' : 'light');
+      
+
       console.log('System appearance updated successfully');
     } catch (err) {
       console.error('Failed to update system appearance:', err);
