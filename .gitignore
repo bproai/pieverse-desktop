@@ -67,3 +67,4 @@ yarn-error.log*
 # Monaco Editor files
 public/monaco-editor/
 src-tauri/src/python_scripts/db.sqlite
+src-tauri/.cargo/config.toml

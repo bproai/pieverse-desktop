@@ -108,8 +108,36 @@ _For detailed instructions, please see the User Guide._
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install) 1.75 or higher
+  ```bash
+  # Install Rust and Cargo (one-time setup)
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  
+  # Add Cargo to your path (add to your ~/.zshrc or ~/.bashrc for persistence)
+  source "$HOME/.cargo/env"
+  ```
+- [Python](https://www.python.org/downloads/) 3.9 or higher (Anaconda/Miniconda also supported)
 - [Node.js](https://nodejs.org/) 18 or higher
 - npm (bundled with Node.js)
+
+### Python Configuration
+PieVerse Desktop requires Python for its sandbox feature. You'll need to configure the build system to find your Python installation:
+
+1. Copy the config template: `cp .cargo/config.toml.template .cargo/config.toml`
+2. Find your Python library path:
+   ```bash
+   # For Anaconda/Miniconda
+   ls -la /path/to/anaconda/lib/libpython*
+   
+   # For system Python on macOS
+   ls -la /Library/Frameworks/Python.framework/Versions/*/lib/libpython*
+   
+   # For Homebrew Python
+   ls -la /opt/homebrew/opt/python@*/lib/libpython*
+   
+   # For Linux
+   ls -la /usr/lib/python*/config-*/libpython*.so
+   ```
+3. Update `.cargo/config.toml` with your Python library path and version (example paths are provided in the template)
 
 ### Build from Source
 1. Clone the repository:
