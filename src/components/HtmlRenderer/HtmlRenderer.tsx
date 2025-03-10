@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRenderer.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Textarea, Switch, Group, Button, Text, Select, Tabs, Code, Menu, ActionIcon, Tooltip } from '@mantine/core';
-import { Trash, Copy, Info, Menu as MenuIcon } from 'lucide-react';
+import { Trash, Copy, Info, Menu as MenuIcon, Settings } from 'lucide-react';
 import './HtmlRenderer.css';
 
 interface HtmlRendererProps {
@@ -352,6 +352,13 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                 className="mb-2"
                 autosize
                 ref={textareaRef}
+                styles={{
+                  input: {
+                    backgroundColor: darkMode ? '#25262b' : '#ffffff',
+                    color: darkMode ? '#c1c2c5' : '#212529',
+                    borderColor: darkMode ? '#373A40' : '#ced4da'
+                  }
+                }}
               />
               
               {htmlInput && (
@@ -376,14 +383,14 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               )}
               
               {showInstructions && (
-                <div className="mt-2 p-3 bg-blue-50 text-blue-700 rounded border border-blue-200">
-                    <Text size="sm" className="flex items-center">
+                <div className={`mt-2 p-3 rounded border ${darkMode ? 'bg-blue-900 text-blue-200 border-blue-700' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                  <Text size="sm" className="flex items-center">
                     <Info size={14} className="mr-2" />
                     <span>
-                        <strong>Tip:</strong> Right-click in the input area to paste content from clipboard. 
-                        Use the Clear button above or select all text (Ctrl+A or ⌘+A) then delete to remove content.
+                      <strong>Tip:</strong> Right-click in the input area to paste content from clipboard. 
+                      Use the Clear button above or select all text (Ctrl+A or ⌘+A) then delete to remove content.
                     </span>
-                    </Text>
+                  </Text>
                 </div>
               )}
             </div>
@@ -398,6 +405,16 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                   { value: 'text-format', label: 'Text with Newlines' },
                   { value: 'json', label: 'JSON with HTML/Text' }
                 ]}
+                styles={{
+                  input: {
+                    backgroundColor: darkMode ? '#25262b' : '#ffffff',
+                    color: darkMode ? '#c1c2c5' : '#212529',
+                    borderColor: darkMode ? '#373A40' : '#ced4da'
+                  },
+                  label: {
+                    color: darkMode ? '#c1c2c5' : '#212529'
+                  }
+                }}
               />
             </Group>
           </Tabs.Panel>
@@ -414,6 +431,11 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                 label="Show HTML source"
                 checked={showSource}
                 onChange={(e) => setShowSource(e.currentTarget.checked)}
+                styles={{
+                  label: {
+                    color: darkMode ? '#c1c2c5' : '#212529'
+                  }
+                }}
               />
               
               <Button 
@@ -430,20 +452,38 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               padding="lg"
               radius="md"
               withBorder
-              className={`render-preview-container transition-colors ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+              className="render-preview-container transition-colors"
+              style={{ 
+                backgroundColor: darkMode ? '#1A1B1E' : '#ffffff',
+                borderColor: darkMode ? '#373A40' : '#dee2e6'
+              }}
             >
-              <Text weight={600} size="sm" className="mb-2">
+              <Text weight={600} size="sm" className="mb-2" style={{ color: darkMode ? '#c1c2c5' : '#212529' }}>
                 Rendered Output:
               </Text>
-              <div className="p-4 border rounded">
+              <div className="p-4 border rounded" style={{ 
+                borderColor: darkMode ? '#373A40' : '#dee2e6',
+                backgroundColor: darkMode ? '#25262b' : '#ffffff' 
+              }}>
                 {renderContent()}
               </div>
             </Card>
           </Tabs.Panel>
           
           <Tabs.Panel value="settings" pt="xs">
-            <Card shadow="sm" padding="md" radius="md" withBorder>
-              <Text weight={600} size="md" mb="md">Renderer Settings</Text>
+            <Card 
+              shadow="sm" 
+              padding="md" 
+              radius="md" 
+              withBorder
+              style={{ 
+                backgroundColor: darkMode ? '#1A1B1E' : '#ffffff',
+                borderColor: darkMode ? '#373A40' : '#dee2e6'
+              }}
+            >
+              <Text weight={600} size="md" mb="md" style={{ color: darkMode ? '#c1c2c5' : '#212529' }}>
+                Renderer Settings
+              </Text>
               
               <div className="space-y-4">
                 <Switch
@@ -451,6 +491,14 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                   description="Display data-* attributes in HTML content"
                   checked={showDataAttributes}
                   onChange={(e) => setShowDataAttributes(e.currentTarget.checked)}
+                  styles={{
+                    label: {
+                      color: darkMode ? '#c1c2c5' : '#212529'
+                    },
+                    description: {
+                      color: darkMode ? '#909296' : '#6c757d'
+                    }
+                  }}
                 />
                 
                 <Switch
@@ -458,12 +506,22 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                   description="Convert multiple newlines into paragraph breaks"
                   checked={normalizeNewlines}
                   onChange={(e) => setNormalizeNewlines(e.currentTarget.checked)}
+                  styles={{
+                    label: {
+                      color: darkMode ? '#c1c2c5' : '#212529'
+                    },
+                    description: {
+                      color: darkMode ? '#909296' : '#6c757d'
+                    }
+                  }}
                 />
                 
                 <div className="mt-4">
-                  <Text size="sm" weight={500} mb="xs">Content Type Information</Text>
-                  <Text size="sm" color="dimmed">
-                    Current detected mode: <span className="font-semibold">{renderMode}</span>
+                  <Text size="sm" weight={500} mb="xs" style={{ color: darkMode ? '#c1c2c5' : '#212529' }}>
+                    Content Type Information
+                  </Text>
+                  <Text size="sm" style={{ color: darkMode ? '#909296' : '#6c757d' }}>
+                    Current detected mode: <span style={{ fontWeight: 600 }}>{renderMode}</span>
                     {renderMode === 'json' && jsonData && (
                       <>
                         <br />
