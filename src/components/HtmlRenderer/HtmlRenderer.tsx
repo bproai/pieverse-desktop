@@ -2,6 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Textarea, Switch, Group, Button, Text, Select, Tabs, Code, Menu, ActionIcon, Tooltip } from '@mantine/core';
 import { Trash, Copy, Info, Menu as MenuIcon, Settings } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './HtmlRenderer.css';
 
 interface HtmlRendererProps {
@@ -13,6 +17,7 @@ interface HtmlRendererProps {
 
 /**
  * Enhanced HTML Renderer with clear instructions and buttons
+ * Now with Markdown support
  */
 export const HtmlRenderer: React.FC<HtmlRendererProps> = ({ 
   content = '', 
@@ -22,7 +27,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
 }) => {
   const [htmlInput, setHtmlInput] = useState<string>(content);
   const [showDataAttributes, setShowDataAttributes] = useState<boolean>(false);
-  const [renderMode, setRenderMode] = useState<'html' | 'text-format' | 'json'>('html');
+  const [renderMode, setRenderMode] = useState<'html' | 'text-format' | 'json' | 'markdown'>('html');
   const [error, setError] = useState<string | null>(null);
   const [jsonData, setJsonData] = useState<any>(null);
   const [showSource, setShowSource] = useState<boolean>(false);
@@ -86,6 +91,12 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     // If it contains HTML tags, it's likely HTML
     if (/<[a-z][\s\S]*>/i.test(content)) {
       setRenderMode('html');
+      return;
+    }
+    
+    // If it contains Markdown patterns, suggest markdown mode
+    if (/#{1,6}\s|\*\*.*\*\*|\*.*\*|`.*`|!\[.*\]\(.*\)|\[.*\]\(.*\)|(?:^|\n)>|(?:^|\n)[-*+]\s|(?:^|\n)\d+\.\s/.test(content)) {
+      setRenderMode('markdown');
       return;
     }
     
@@ -232,6 +243,18 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     return '';
   };
 
+  // Process userStyle tags in the content
+  const processUserStyleTags = (content: string): string => {
+    // Replace <userStyle>...</userStyle> with spans
+    return content.replace(/<userStyle>(.*?)<\/userStyle>/g, 
+      (match, p1) => {
+        const styleValue = p1.trim();
+        const styleClass = styleValue.toLowerCase().replace(/\s+/g, '-');
+        return `<span class="user-style-tag user-style-${styleClass}">${styleValue}</span>`;
+      }
+    );
+  };
+
   // Render content based on the selected mode
   const renderContent = () => {
     try {
@@ -239,41 +262,125 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
         return <Text color="dimmed">No content to display</Text>;
       }
       
-      let processedContent = '';
-      
-      switch (renderMode) {
-        case 'html':
-          processedContent = processHtml(sanitizeHtml(htmlInput));
-          break;
-        
-        case 'text-format':
-          processedContent = formatTextWithNewlines(htmlInput);
-          break;
-        
-        case 'json':
-          processedContent = processJsonContent();
-          break;
-        
-        default:
-          processedContent = htmlInput;
-      }
-      
       if (showSource) {
+        // Show the source code regardless of mode
+        let sourceContent = '';
+        
+        switch (renderMode) {
+          case 'html':
+            sourceContent = processHtml(sanitizeHtml(htmlInput));
+            break;
+          
+          case 'text-format':
+            sourceContent = formatTextWithNewlines(htmlInput);
+            break;
+          
+          case 'json':
+            sourceContent = processJsonContent();
+            break;
+            
+          case 'markdown':
+            sourceContent = htmlInput;
+            break;
+          
+          default:
+            sourceContent = htmlInput;
+        }
+        
         return (
           <div className="source-view">
             <Code block className="html-source">
-              {processedContent}
+              {sourceContent}
             </Code>
           </div>
         );
       }
       
-      return (
-        <div 
-          className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
-          dangerouslySetInnerHTML={{ __html: processedContent }} 
-        />
-      );
+      // Render the content according to selected mode
+      switch (renderMode) {
+        case 'html':
+          return (
+            <div 
+              className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
+              dangerouslySetInnerHTML={{ __html: processHtml(sanitizeHtml(htmlInput)) }} 
+            />
+          );
+        
+        case 'text-format':
+          return (
+            <div 
+              className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
+              dangerouslySetInnerHTML={{ __html: formatTextWithNewlines(htmlInput) }} 
+            />
+          );
+        
+        case 'json':
+          return (
+            <div 
+              className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
+              dangerouslySetInnerHTML={{ __html: processJsonContent() }} 
+            />
+          );
+          
+        case 'markdown':
+          // Create a container that will auto-process <userStyle> tags
+          const processedHtml = processUserStyleTags(htmlInput);
+          
+          return (
+            <div className={`markdown-preview ${className} ${darkMode ? 'dark-mode' : ''}`}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({node, inline, className, children, ...props}) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={darkMode ? tomorrow : prism}
+                        language={match[1]}
+                        PreTag="div"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  // Allow HTML to pass through for our custom tags
+                  p({node, children, ...props}) {
+                    // Check if the content contains our userStyle span
+                    if (String(children).includes('<span class="user-style-tag')) {
+                      return (
+                        <p 
+                          {...props} 
+                          dangerouslySetInnerHTML={{ 
+                            __html: String(children).replace(
+                              /<span class="user-style-tag.*?<\/span>/g, 
+                              match => match
+                            )
+                          }} 
+                        />
+                      );
+                    }
+                    return <p {...props}>{children}</p>;
+                  }
+                }}
+              >
+                {htmlInput}
+              </ReactMarkdown>
+            </div>
+          );
+        
+        default:
+          return (
+            <div 
+              className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
+              dangerouslySetInnerHTML={{ __html: htmlInput }} 
+            />
+          );
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error rendering content';
       setError(errorMessage);
@@ -281,8 +388,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     }
   };
 
-  // Get rendered HTML for copying
-  const getRenderedHtml = (): string => {
+  // Get rendered content for copying
+  const getRenderedContent = (): string => {
     switch (renderMode) {
       case 'html':
         return processHtml(sanitizeHtml(htmlInput));
@@ -292,6 +399,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       
       case 'json':
         return processJsonContent();
+      
+      case 'markdown':
+        return htmlInput; // Return the original markdown
       
       default:
         return '';
@@ -310,9 +420,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   // Copy rendered HTML to clipboard
   const copyRenderedHtml = async () => {
     try {
-      await navigator.clipboard.writeText(getRenderedHtml());
+      await navigator.clipboard.writeText(getRenderedContent());
     } catch (err) {
-      console.error('Failed to copy rendered HTML:', err);
+      console.error('Failed to copy rendered content:', err);
     }
   };
 
@@ -344,7 +454,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               </div>
               
               <Textarea
-                placeholder="Paste your HTML, formatted text, or JSON..."
+                placeholder="Paste your HTML, Markdown, formatted text, or JSON..."
                 value={htmlInput}
                 onChange={(e) => handleInputChange(e.currentTarget.value)}
                 minRows={8}
@@ -356,7 +466,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                   input: {
                     backgroundColor: darkMode ? '#25262b' : '#ffffff',
                     color: darkMode ? '#c1c2c5' : '#212529',
-                    borderColor: darkMode ? '#373A40' : '#ced4da'
+                    borderColor: darkMode ? '#373A40' : '#ced4da',
+                    fontFamily: renderMode === 'markdown' ? 'monospace' : 'inherit' 
                   }
                 }}
               />
@@ -399,9 +510,10 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               <Select
                 label="Render Mode"
                 value={renderMode}
-                onChange={(value: 'html' | 'text-format' | 'json') => setRenderMode(value)}
+                onChange={(value: 'html' | 'text-format' | 'json' | 'markdown') => setRenderMode(value)}
                 data={[
                   { value: 'html', label: 'HTML' },
+                  { value: 'markdown', label: 'Markdown' },
                   { value: 'text-format', label: 'Text with Newlines' },
                   { value: 'json', label: 'JSON with HTML/Text' }
                 ]}
@@ -428,7 +540,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
             
             <Group position="apart" mb="md">
               <Switch
-                label="Show HTML source"
+                label={renderMode === 'markdown' ? "Show Markdown source" : "Show HTML source"}
                 checked={showSource}
                 onChange={(e) => setShowSource(e.currentTarget.checked)}
                 styles={{
@@ -443,7 +555,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                 variant="light" 
                 onClick={copyRenderedHtml}
               >
-                Copy Rendered HTML
+                Copy {renderMode === 'markdown' ? 'Rendered Content' : 'Rendered HTML'}
               </Button>
             </Group>
             
@@ -486,48 +598,58 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               </Text>
               
               <div className="space-y-4">
-                <Switch
-                  label="Show data attributes"
-                  description="Display data-* attributes in HTML content"
-                  checked={showDataAttributes}
-                  onChange={(e) => setShowDataAttributes(e.currentTarget.checked)}
-                  styles={{
-                    label: {
-                      color: darkMode ? '#c1c2c5' : '#212529'
-                    },
-                    description: {
-                      color: darkMode ? '#909296' : '#6c757d'
-                    }
-                  }}
-                />
+                {renderMode === 'html' && (
+                  <Switch
+                    label="Show data attributes"
+                    description="Display data-* attributes in HTML content"
+                    checked={showDataAttributes}
+                    onChange={(e) => setShowDataAttributes(e.currentTarget.checked)}
+                    styles={{
+                      label: {
+                        color: darkMode ? '#c1c2c5' : '#212529'
+                      },
+                      description: {
+                        color: darkMode ? '#909296' : '#6c757d'
+                      }
+                    }}
+                  />
+                )}
                 
-                <Switch
-                  label="Normalize newlines"
-                  description="Convert multiple newlines into paragraph breaks"
-                  checked={normalizeNewlines}
-                  onChange={(e) => setNormalizeNewlines(e.currentTarget.checked)}
-                  styles={{
-                    label: {
-                      color: darkMode ? '#c1c2c5' : '#212529'
-                    },
-                    description: {
-                      color: darkMode ? '#909296' : '#6c757d'
-                    }
-                  }}
-                />
+                {(renderMode === 'text-format' || renderMode === 'json') && (
+                  <Switch
+                    label="Normalize newlines"
+                    description="Convert multiple newlines into paragraph breaks"
+                    checked={normalizeNewlines}
+                    onChange={(e) => setNormalizeNewlines(e.currentTarget.checked)}
+                    styles={{
+                      label: {
+                        color: darkMode ? '#c1c2c5' : '#212529'
+                      },
+                      description: {
+                        color: darkMode ? '#909296' : '#6c757d'
+                      }
+                    }}
+                  />
+                )}
                 
                 <div className="mt-4">
                   <Text size="sm" weight={500} mb="xs" style={{ color: darkMode ? '#c1c2c5' : '#212529' }}>
                     Content Type Information
                   </Text>
                   <Text size="sm" style={{ color: darkMode ? '#909296' : '#6c757d' }}>
-                    Current detected mode: <span style={{ fontWeight: 600 }}>{renderMode}</span>
+                    Current render mode: <span style={{ fontWeight: 600 }}>{renderMode}</span>
                     {renderMode === 'json' && jsonData && (
                       <>
                         <br />
                         JSON contains: {jsonData.html ? 'HTML content' : ''} 
                         {jsonData.html && jsonData.plain_text ? ' and ' : ''}
                         {jsonData.plain_text ? 'Plain text content' : ''}
+                      </>
+                    )}
+                    {renderMode === 'markdown' && (
+                      <>
+                        <br />
+                        Supports GitHub Flavored Markdown and special &lt;userStyle&gt; tags.
                       </>
                     )}
                   </Text>

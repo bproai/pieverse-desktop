@@ -61,10 +61,17 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Real-time financial data visualization with Google Trends integration.
 - Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
 
-### 📄 HTML Renderer
-- Visualize HTML content with support for multiple formats (HTML, plain text, JSON).
-- Intelligent handling of newlines and data attributes with light/dark mode support.
-- Preview and edit HTML from various sources with easy file loading capabilities.
+### 📄 Document Renderer
+- Visualize and edit HTML and Markdown content with built-in support for multiple formats.
+- Features include:
+  - **HTML Rendering:** View HTML with proper styling and layout.
+  - **Markdown Support:** GitHub Flavored Markdown with syntax highlighting for code blocks.
+  - **Custom Tag Support:** Special handling for `<userStyle>` tags for enhanced formatting.
+  - **Multiple Content Types:** HTML, Markdown, plain text with newlines, and JSON.
+  - **Dark/Light Mode:** Full theme support with optimized syntax highlighting.
+  - **Syntax Detection:** Automatic content type detection for seamless workflow.
+- Intelligent handling of newlines and data attributes.
+- Preview and edit content from various sources with easy file loading capabilities.
 
 ### 🐍 Python Sandbox
 - Integrated Python environment with Monaco Editor (syntax highlighting and autocompletion).
@@ -248,6 +255,8 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
   Integrated GPT-4o Realtime, improved avatar expressions, and expanded API functionality.
 - **v0.3.1 (2025-04-08):**
   Added HTML Renderer for visualizing and editing HTML content in multiple formats.
+- **v0.3.2 (2025-04-15):**
+  Enhanced Document Renderer with Markdown support, syntax highlighting, and <span class="user-style-normal">special tag handling</span>.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 
