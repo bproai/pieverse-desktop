@@ -97,6 +97,8 @@ use services::screenshot::{
 };
 
 use services::chrome_debugger::fetch_chrome_targets;
+#[cfg(debug_assertions)]
+use services::chrome_debugger::open_chrome_in_terminal;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -192,7 +194,8 @@ pub fn run() {
             take_screenshot_to_clipboard,
             save_clipboard_image,
             update_system_appearance,
-            fetch_chrome_targets
+            fetch_chrome_targets,
+            open_chrome_in_terminal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -45,8 +45,6 @@ import { Copy } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 
 
-
-
 // Interfaces
 interface ChromeTarget {
   description: string;
@@ -349,6 +347,15 @@ const ChromeDebuggerPanel: React.FC = () => {
     
   // Reference to the bridge WebSocket
   const bridgeWsRef = useRef<WebSocket | null>(null);
+
+
+  const launchChrome = async () => {
+    try {
+      await core.invoke('open_chrome_in_terminal');
+    } catch (error) {
+      console.error("Failed to launch Chrome in Terminal", error);
+    }
+  };
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -786,6 +793,14 @@ const ChromeDebuggerPanel: React.FC = () => {
             >
               Check Again
             </Button>
+            <Button
+              variant="outline"
+              leftSection={<Terminal size={16} />}
+              onClick={launchChrome}
+              mt="md"
+            >
+              Launch Chrome in Terminal
+            </Button>            
           </div>
         ) : (
           <>

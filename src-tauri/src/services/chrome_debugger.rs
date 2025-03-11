@@ -21,3 +21,35 @@ pub async fn fetch_chrome_targets(port: u16) -> Result<Value, String> {
         Err(e) => Err(format!("Failed to connect to Chrome: {}", e))
     }
 }
+
+// Only include this function in debug builds
+#[cfg(debug_assertions)]
+#[tauri::command]
+pub fn open_chrome_in_terminal() -> Result<(), String> {
+    // Use AppleScript to open Terminal and run Chrome with remote debugging enabled
+    let chrome_script = r#"
+        tell application "Terminal"
+            do script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222"
+        end tell
+    "#;
+    std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(chrome_script)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    
+    // Also launch a visible terminal to run npm run bridge at project root
+    let bridge_script = r#"
+        tell application "Terminal"
+            activate
+            do script "cd $(osascript -e 'POSIX path of (choose folder with prompt \"Select project root directory:\")') && npm run bridge"
+        end tell
+    "#;
+    std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(bridge_script)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
