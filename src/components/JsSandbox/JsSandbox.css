@@ -1,0 +1,67 @@
+/* src/components/JsSandbox/JsSandbox.css */
+.js-sandbox .editor-container {
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+  }
+  
+  .js-sandbox .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .js-sandbox .output-content {
+    font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  
+  .js-sandbox .output-line {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+  }
+  
+  .js-sandbox .output-type {
+    font-weight: bold;
+    margin-right: 4px;
+  }
+  
+  /* Color overrides for specific output types */
+  .js-sandbox .output-log {
+    /* Default color set by parent */
+  }
+  
+  .js-sandbox .output-error {
+    color: #f87171;
+  }
+  
+  .js-sandbox .output-warn {
+    color: #facc15;
+  }
+  
+  .js-sandbox .output-info {
+    color: #60a5fa;
+  }
+  
+  .js-sandbox .output-result {
+    color: #4ade80;
+    font-weight: 600;
+  }
+  
+  /* For Monaco Editor border in dark mode */
+  body.dark-mode .js-sandbox .editor-container {
+    border-color: #373A40;
+  }
+  
+  /* Proper spacing for buttons */
+  .js-sandbox .mantine-Button-root {
+    margin-right: 8px;
+  }
+  
+  .js-sandbox .mantine-ActionIcon-root {
+    margin-left: 4px;
+  }

@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -10,9 +10,9 @@ import { PromptsManager } from './components/Prompts';
 import { APISettings } from './components/APISettings';
 import { SignalsPanel } from './components/Signals';
 import { HtmlRendererPanel } from './components/HtmlRenderer';
+import { JsSandboxPanel } from './components/JsSandbox';
 import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
-// import { core } from '@tauri-apps/api';
 import { Window } from '@tauri-apps/api/window';
 
 function App() {
@@ -31,7 +31,6 @@ function App() {
       const currentWindow = Window.getCurrent();
       await currentWindow.setTheme(newIsDark ? 'dark' : 'light');
       
-
       console.log('System appearance updated successfully');
     } catch (err) {
       console.error('Failed to update system appearance:', err);
@@ -75,6 +74,9 @@ function App() {
                 <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
                   Python Sandbox
                 </Tabs.Tab>
+                <Tabs.Tab value="jssandbox" leftSection={<CodeIcon size={16} />}>
+                  JavaScript Sandbox
+                </Tabs.Tab>
                 <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
                   API Settings
                 </Tabs.Tab>
@@ -100,6 +102,10 @@ function App() {
 
               <Tabs.Panel value="python" className="p-4">
                 <PythonPanel />
+              </Tabs.Panel>
+              
+              <Tabs.Panel value="jssandbox" className="p-4">
+                <JsSandboxPanel isDark={isDark} />
               </Tabs.Panel>
 
               <Tabs.Panel value="api" className="p-4">
