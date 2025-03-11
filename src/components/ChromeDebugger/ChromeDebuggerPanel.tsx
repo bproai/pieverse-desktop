@@ -815,50 +815,53 @@ const ChromeDebuggerPanel: React.FC = () => {
                 placeholder="Select Chrome targets to monitor..."
                 searchable
                 clearable
-                maxDropdownHeight={500}
-                dropdownPosition="bottom"
-                nothingFound="No matching targets"
-                itemComponent={({ value, label, url, type }) => (
+                // maxHeight={500}
+                comboboxProps={{ position: 'bottom' }}
+                withScrollArea={true}
+                renderOption={({ option }) => {
+                    const { label, url, type } = option;
+                    return (
                     <div style={{ padding: '8px 4px', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
                         <Badge size="xs" variant="filled" color={
-                        type === 'page' ? 'blue' : 
-                        type === 'iframe' ? 'teal' :
-                        type === 'service_worker' ? 'orange' :
-                        type === 'worker' ? 'grape' : 'gray'
+                            type === 'page' ? 'blue' : 
+                            type === 'iframe' ? 'teal' :
+                            type === 'service_worker' ? 'orange' :
+                            type === 'worker' ? 'grape' : 'gray'
                         } style={{ marginRight: 8, flexShrink: 0 }}>
-                        {type}
+                            {type}
                         </Badge>
                         <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>
+                            <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>
                             {label}
+                            </div>
                         </div>
                         </div>
-                    </div>
-                    {url && (
+                        {url && (
                         <div style={{ 
-                        fontSize: '12px', 
-                        color: '#666', 
-                        marginLeft: 4, 
-                        wordBreak: 'break-all',
+                            fontSize: '12px', 
+                            color: '#666', 
+                            marginLeft: 4, 
+                            wordBreak: 'break-all',
                         }}>
-                        {url}
+                            {url}
                         </div>
-                    )}
+                        )}
                     </div>
-                )}
+                    );
+                }}
+                // emptyLabel="No matching targets"
                 styles={{
                     dropdown: {
                     width: 'auto',
                     minWidth: '300px',
-                    // maxWidth: '100vw'
                     },
-                    item: {
+                    option: {
                     padding: '2px 12px',
                     whiteSpace: 'normal',
                     overflow: 'visible',
                     },
-                    itemsWrapper: {
+                    options: {
                     padding: '4px 0'
                     },
                     input: {
