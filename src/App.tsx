@@ -21,6 +21,8 @@ function App() {
   const [promptsBackend, setPromptsBackend] = React.useState<'mysql' | 'sqlite'>('sqlite');
   const theme = useMantineTheme();
 
+  const isDevMode = import.meta.env.DEV === true;
+
   const toggleColorScheme = async () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
@@ -87,9 +89,11 @@ function App() {
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
                   Document Renderer
                 </Tabs.Tab>
-                <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
-                  Chrome Debugger
-                </Tabs.Tab>
+                  {isDevMode && (
+                    <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
+                      Chrome Debugger
+                    </Tabs.Tab>
+                  )}
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -124,9 +128,11 @@ function App() {
                 <HtmlRendererPanel isDark={isDark} />
               </Tabs.Panel>
 
-              <Tabs.Panel value="chrome-debugger" className="p-4">
-                <ChromeDebuggerPanel />
-              </Tabs.Panel>
+              {isDevMode && (
+                <Tabs.Panel value="chrome-debugger" className="p-4">
+                  <ChromeDebuggerPanel />
+                </Tabs.Panel>
+              )}
             </Tabs>
           </main>
 
