@@ -78,113 +78,180 @@ interface WebSocketOption {
   faviconUrl?: string;      // Favicon URL when available
 }
 
-  
 // Custom component for rendering the dropdown items
 const ChromeTargetItem = ({ 
-    label, 
-    url, 
-    type, 
-    webSocketDebuggerUrl,
-    faviconUrl
-  }: { 
-    label: string; 
-    url: string; 
-    type: string;
-    webSocketDebuggerUrl: string;
-    faviconUrl?: string;
-  }) => {
-    // Truncate strings to reasonable lengths
-    const truncateUrl = (url: string, maxLength: number = 40) => {
-      if (!url) return '';
-      return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
-    };
-    
-    const truncateWsUrl = (wsUrl: string, maxLength: number = 40) => {
-      if (!wsUrl) return '';
-      const parts = wsUrl.split('://');
-      if (parts.length < 2) return truncateUrl(wsUrl, maxLength);
-      
-      const protocol = parts[0] + '://';
-      const restOfUrl = parts[1];
-      
-      if (restOfUrl.length <= maxLength - protocol.length) return wsUrl;
-      
-      return protocol + restOfUrl.substring(0, maxLength - protocol.length) + '...';
-    };
-    
-    // Get type display info
-    const getTypeConfig = () => {
-      switch (type) {
-        case 'page':
-            return { icon: <Globe size={16} />, color: 'blue' };
-        case 'iframe':
-          return { icon: <LayoutTemplate size={16} />, color: 'teal' };
-        case 'service_worker':
-          return { icon: <ServerCog size={16} />, color: 'orange' };
-        case 'worker':
-          return { icon: <Code2 size={16} />, color: 'grape' };
-        case 'shared_worker':
-          return { icon: <ServerCog size={16} />, color: 'indigo' };
-        default:
-          return { icon: <FileCode size={16} />, color: 'gray' };
-      }
-    };
-    
-    const { icon, color } = getTypeConfig();
-    const truncatedUrl = truncateUrl(url);
-    const truncatedWsUrl = truncateWsUrl(webSocketDebuggerUrl);
+  label, 
+  url, 
+  type, 
+  webSocketDebuggerUrl,
+  faviconUrl
+}) => {
+  // State for copy feedback
+  const [copyStatus, setCopyStatus] = useState(false);
   
-    return (
-      <div style={{ padding: '8px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-          {/* Left icon */}
-          {faviconUrl ? (
-            <img 
-              src={faviconUrl} 
-              alt="" 
-              style={{ width: 16, height: 16, marginRight: 8, flexShrink: 0 }} 
-            />
-          ) : (
-            <ThemeIcon size="sm" variant="light" color={color} style={{ marginRight: 8, flexShrink: 0 }}>
-              {icon}
-            </ThemeIcon>
-          )}
-          
-          {/* Title */}
-          <Text size="sm" weight={500} style={{ flex: 1, marginRight: 8 }} lineClamp={1}>
-            {label}
-          </Text>
-          
-          {/* Type badge */}
-          <Badge size="xs" variant="filled" color={color} style={{ flexShrink: 0 }}>
-            {type}
-          </Badge>
-        </div>
-        
-        {/* URL row */}
-        <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
-          <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>URL:</Text>
-          <Text size="xs" color="dimmed" lineClamp={1} style={{ flex: 1 }}>
-            {truncatedUrl}
-          </Text>
-        </div>
-        
-        {/* WebSocket URL row */}
-        <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
-          <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>WS:</Text>
-          <Text 
-            size="xs" 
-            color="dimmed" 
-            lineClamp={1} 
-            style={{ flex: 1, fontFamily: 'monospace', fontSize: '10px' }}
-          >
-            {truncatedWsUrl}
-          </Text>
-        </div>
-      </div>
-    );
-};
+  // Truncate strings to reasonable lengths
+  const truncateUrl = (url, maxLength = 40) => {
+    if (!url) return '';
+    return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
+  };
+  
+  const truncateWsUrl = (wsUrl, maxLength = 40) => {
+    if (!wsUrl) return '';
+    const parts = wsUrl.split('://');
+    if (parts.length < 2) return truncateUrl(wsUrl, maxLength);
+    
+    const protocol = parts[0] + '://';
+    const restOfUrl = parts[1];
+    
+    if (restOfUrl.length <= maxLength - protocol.length) return wsUrl;
+    
+    return protocol + restOfUrl.substring(0, maxLength - protocol.length) + '...';
+  };
+  
+  // Get type display info
+  const getTypeConfig = () => {
+    switch (type) {
+      case 'page':
+          return { icon: <Globe size={16} />, color: 'blue' };
+      case 'iframe':
+        return { icon: <LayoutTemplate size={16} />, color: 'teal' };
+      case 'service_worker':
+        return { icon: <ServerCog size={16} />, color: 'orange' };
+      case 'worker':
+        return { icon: <Code2 size={16} />, color: 'grape' };
+      case 'shared_worker':
+        return { icon: <ServerCog size={16} />, color: 'indigo' };
+      default:
+        return { icon: <FileCode size={16} />, color: 'gray' };
+    }
+  };
+  
+  const { icon, color } = getTypeConfig();
+  const truncatedUrl = truncateUrl(url);
+  const truncatedWsUrl = truncateWsUrl(webSocketDebuggerUrl);
+  
+  // Create the JSON object for tooltip display and copying
+  const jsonData = {
+    description: "",
+    devtoolsFrontendUrl: webSocketDebuggerUrl ? 
+      `/devtools/inspector.html?ws=localhost:9222/devtools/page/${webSocketDebuggerUrl.split('/').pop()}` : "",
+    id: webSocketDebuggerUrl ? webSocketDebuggerUrl.split('/').pop() : "",
+    title: label,
+    type: type,
+    url: url,
+    webSocketDebuggerUrl: webSocketDebuggerUrl
+  };
+  
+  const fullJson = JSON.stringify(jsonData, null, 2);
+  
+  // Handle copy to clipboard
+  const handleCopy = (e) => {
+    e.stopPropagation(); // Prevent selecting the item
+    navigator.clipboard.writeText(fullJson)
+      .then(() => {
+        setCopyStatus(true);
+        setTimeout(() => setCopyStatus(false), 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  };
 
+  // Wrap the existing UI with a Tooltip component
+  return (
+    <div style={{ position: 'relative', padding: '8px 0' }}>
+      {/* Copy button positioned at the right side of the item */}
+      <div style={{ 
+        position: 'absolute', 
+        right: '10px', 
+        top: '50%', 
+        transform: 'translateY(-50%)',
+        zIndex: 5
+      }}>
+        <Tooltip label={copyStatus ? "Copied!" : "Copy JSON data"} position="left">
+          <ActionIcon 
+            size="xs" 
+            color={copyStatus ? "green" : "gray"}
+            variant="subtle"
+            onClick={handleCopy}
+          >
+            {copyStatus ? <Check size={14} /> : <Copy size={14} />}
+          </ActionIcon>
+        </Tooltip>
+      </div>
+
+      <Tooltip
+        label={
+          <Code block sx={{ 
+            maxWidth: '500px', 
+            maxHeight: '400px', 
+            overflow: 'auto',
+            fontSize: '12px',
+            padding: '12px',
+            backgroundColor: '#2a2a2a',
+            color: 'white' 
+          }}>
+            {fullJson}
+          </Code>
+        }
+        position="right"
+        withArrow
+        multiline
+        width={500}
+        zIndex={1000}
+      >
+        {/* This is your original component JSX */}
+        <div style={{ paddingRight: '25px' /* Make room for the copy button */ }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+            {/* Left icon */}
+            {faviconUrl ? (
+              <img 
+                src={faviconUrl} 
+                alt="" 
+                style={{ width: 16, height: 16, marginRight: 8, flexShrink: 0 }} 
+              />
+            ) : (
+              <ThemeIcon size="sm" variant="light" color={color} style={{ marginRight: 8, flexShrink: 0 }}>
+                {icon}
+              </ThemeIcon>
+            )}
+            
+            {/* Title */}
+            <Text size="sm" weight={500} style={{ flex: 1, marginRight: 8 }} lineClamp={1}>
+              {label}
+            </Text>
+            
+            {/* Type badge */}
+            <Badge size="xs" variant="filled" color={color} style={{ flexShrink: 0 }}>
+              {type}
+            </Badge>
+          </div>
+          
+          {/* URL row */}
+          <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
+            <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>URL:</Text>
+            <Text size="xs" color="dimmed" lineClamp={1} style={{ flex: 1 }}>
+              {truncatedUrl}
+            </Text>
+          </div>
+          
+          {/* WebSocket URL row */}
+          <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
+            <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>WS:</Text>
+            <Text 
+              size="xs" 
+              color="dimmed" 
+              lineClamp={1} 
+              style={{ flex: 1, fontFamily: 'monospace', fontSize: '10px' }}
+            >
+              {truncatedWsUrl}
+            </Text>
+          </div>
+        </div>
+      </Tooltip>
+    </div>
+  );
+};
 // After ChromeTargetItem and before ChromeDebuggerPanel
 const ResponsiveBadgeContainer = ({ targetSummary }) => {
     const containerRef = useRef(null);
@@ -820,70 +887,51 @@ const ChromeDebuggerPanel: React.FC = () => {
               
               <MultiSelect
                 data={websocketOptions.map(option => ({
-                    value: option.value,
-                    label: option.label,
-                    url: option.url,
-                    type: option.type
+                  value: option.value,
+                  label: option.label,
+                  url: option.url,
+                  type: option.type,
+                  webSocketDebuggerUrl: option.webSocketDebuggerUrl,  // Make sure to pass this property
+                  faviconUrl: option.faviconUrl  // And this one
                 }))}
                 value={selectedWebsockets}
                 onChange={(values) => setSelectedWebsockets(values)}
                 placeholder="Select Chrome targets to monitor..."
                 searchable
                 clearable
-                // maxHeight={500}
                 comboboxProps={{ position: 'bottom' }}
                 withScrollArea={true}
                 renderOption={({ option }) => {
-                    const { label, url, type } = option;
-                    return (
-                    <div style={{ padding: '8px 4px', width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                        <Badge size="xs" variant="filled" color={
-                            type === 'page' ? 'blue' : 
-                            type === 'iframe' ? 'teal' :
-                            type === 'service_worker' ? 'orange' :
-                            type === 'worker' ? 'grape' : 'gray'
-                        } style={{ marginRight: 8, flexShrink: 0 }}>
-                            {type}
-                        </Badge>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>
-                            {label}
-                            </div>
-                        </div>
-                        </div>
-                        {url && (
-                        <div style={{ 
-                            fontSize: '12px', 
-                            color: '#666', 
-                            marginLeft: 4, 
-                            wordBreak: 'break-all',
-                        }}>
-                            {url}
-                        </div>
-                        )}
-                    </div>
-                    );
+                  // Make sure all necessary properties are passed to ChromeTargetItem
+                  const { label, url, type, webSocketDebuggerUrl, faviconUrl } = option;
+                  return (
+                    <ChromeTargetItem
+                      label={label}
+                      url={url}
+                      type={type}
+                      webSocketDebuggerUrl={webSocketDebuggerUrl}
+                      faviconUrl={faviconUrl}
+                    />
+                  );
                 }}
-                // emptyLabel="No matching targets"
                 styles={{
-                    dropdown: {
+                  dropdown: {
                     width: 'auto',
                     minWidth: '300px',
-                    },
-                    option: {
+                  },
+                  option: {
                     padding: '2px 12px',
                     whiteSpace: 'normal',
                     overflow: 'visible',
-                    },
-                    options: {
+                  },
+                  options: {
                     padding: '4px 0'
-                    },
-                    input: {
+                  },
+                  input: {
                     minHeight: '42px'
-                    }
+                  }
                 }}
-                />
+              />
               
               <Group position="right">
                 <Button

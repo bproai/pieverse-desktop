@@ -97,7 +97,6 @@ use services::screenshot::{
 };
 
 use services::chrome_debugger::fetch_chrome_targets;
-#[cfg(debug_assertions)]
 use services::chrome_debugger::open_chrome_in_terminal;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
