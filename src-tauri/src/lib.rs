@@ -99,6 +99,13 @@ use services::screenshot::{
 use services::chrome_debugger::fetch_chrome_targets;
 use services::chrome_debugger::open_chrome_in_terminal;
 
+use services::project_structure::{
+    get_project_structure,
+    generate_structure_text,
+    is_valid_path
+};
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Create and initialize the trend spike service
@@ -194,7 +201,10 @@ pub fn run() {
             save_clipboard_image,
             update_system_appearance,
             fetch_chrome_targets,
-            open_chrome_in_terminal
+            open_chrome_in_terminal,
+            get_project_structure,
+            generate_structure_text,
+            is_valid_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

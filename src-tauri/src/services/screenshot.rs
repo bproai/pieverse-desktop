@@ -34,7 +34,7 @@ pub async fn take_screenshot(window: Window) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn take_screenshot_to_clipboard(window: Window) -> Result<bool, String> {
+pub async fn take_screenshot_to_clipboard(_window: Window) -> Result<bool, String> {
     // On macOS, try multiple approaches to capture the window
     #[cfg(target_os = "macos")]
     {

@@ -21,3 +21,6 @@ pub mod screenshot;
 
 // In src-tauri/src/services/mod.rs
 pub mod chrome_debugger;
+
+// Project Structure service
+pub mod project_structure;

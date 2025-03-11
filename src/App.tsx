@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -15,6 +15,8 @@ import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
 import { Window } from '@tauri-apps/api/window';
 import ChromeDebuggerPanel from './components/ChromeDebugger';
+import FolderStructurePanel from './components/FolderStructure/FolderStructurePanel';
+
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -89,11 +91,15 @@ function App() {
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
                   Document Renderer
                 </Tabs.Tab>
-                  {isDevMode && (
-                    <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
-                      Chrome Debugger
-                    </Tabs.Tab>
-                  )}
+                {isDevMode && (
+                  <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
+                    Chrome Debugger
+                  </Tabs.Tab>
+                )}
+                <Tabs.Tab value="folder-structure" leftSection={<FolderTree size={16} />}>
+                  Project Structure
+                </Tabs.Tab>
+
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -133,6 +139,9 @@ function App() {
                   <ChromeDebuggerPanel />
                 </Tabs.Panel>
               )}
+              <Tabs.Panel value="folder-structure" className="p-4">
+                <FolderStructurePanel />
+              </Tabs.Panel>
             </Tabs>
           </main>
 

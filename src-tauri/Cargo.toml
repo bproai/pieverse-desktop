@@ -15,7 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2.0.0", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
-tauri-plugin-dialog = "2.0.0"
+tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2.0.0"
 tauri-plugin-fs = "2.0.0"
 serde = { version = "1", features = ["derive"] }
@@ -47,3 +47,4 @@ uuid = { version = "1.4", features = ["v4", "serde"] }
 url = "2.4"
 cocoa = "0.24"
 objc = "0.2"
+regex = "1.9.5"
