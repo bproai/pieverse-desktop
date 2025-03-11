@@ -68,8 +68,8 @@ const FolderStructurePanel: React.FC = () => {
     exclude_target: true,
     exclude_build: true,
     exclude_hidden: true,
-    custom_excludes: false,
-    exclude_patterns: '',
+    custom_excludes: true,
+    exclude_patterns: "monaco-editor",
   });
   const [showFilterOptions, setShowFilterOptions] = useState<boolean>(false);
   const [treeText, setTreeText] = useState<string>('');
@@ -110,49 +110,44 @@ const FolderStructurePanel: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Convert the filterOptions object properly to match what the Rust side expects
-      const filters = {
+      // Build the filters object from your state.
+      // Ensure exclude_patterns is sent as null if custom_excludes is false.
+      const filters: FilterOptions = {
         exclude_node_modules: filterOptions.exclude_node_modules,
         exclude_git: filterOptions.exclude_git,
         exclude_target: filterOptions.exclude_target,
         exclude_build: filterOptions.exclude_build,
         exclude_hidden: filterOptions.exclude_hidden,
-        custom_excludes: filterOptions.custom_excludes
+        custom_excludes: filterOptions.custom_excludes,
+        exclude_patterns: filterOptions.custom_excludes ? filterOptions.exclude_patterns : null,
       };
-      
-      // Only add exclude_patterns if custom_excludes is true
-      if (filterOptions.custom_excludes) {
-        filters['exclude_patterns'] = filterOptions.exclude_patterns;
-      }
-      
-      const structure = await core.invoke('get_project_structure', { 
+  
+      const structure = await core.invoke("get_project_structure", { 
         path: projectPath,
-        filters
+        filters,
       }) as FileNode;
-      
-      // Add UI state properties to all nodes
-      // Only expand the root folder by default, collapse all others
+  
+      // Process the file tree as before
       const processNode = (node: FileNode, isRoot: boolean = false): FileNode => {
         return {
           ...node,
-          isExpanded: isRoot, // Only expand if it's the root node
+          isExpanded: isRoot, // Only expand the root node
           isExcluded: false,
-          children: node.children?.map(child => processNode(child, false)) // All children are not root
+          children: node.children?.map(child => processNode(child, false)),
         };
       };
-      
-      setFileTree(processNode(structure, true)); // Pass true for the root node
-      
-      // Ensure tree tab is active after loading completes
+  
+      setFileTree(processNode(structure, true));
       setActiveTab("tree");
     } catch (error: any) {
-      console.error('Error loading project structure:', error);
+      console.error("Error loading project structure:", error);
       setError(error.toString());
       setFileTree(null);
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Generate tree text representation
   const generateTreeText = async () => {
@@ -570,7 +565,6 @@ const renderNode = (node: FileNode, level: number = 0) => {
           )}
 
           {/* Main content */}
-          // Update the main content card with simplified Tabs implementation
           <Card withBorder p={0} radius="md">
             <Tabs defaultValue="tree">
                 <Tabs.List>

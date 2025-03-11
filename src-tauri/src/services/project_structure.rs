@@ -1,6 +1,5 @@
 // src-tauri/src/services/project_structure.rs
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::command;
@@ -16,8 +15,20 @@ pub struct FileNode {
     pub extension: Option<String>,
 }
 
+// New custom filter struct that includes an optional string for exclude patterns.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterOptions {
+    pub exclude_node_modules: bool,
+    pub exclude_git: bool,
+    pub exclude_target: bool,
+    pub exclude_build: bool,
+    pub exclude_hidden: bool,
+    pub custom_excludes: bool,
+    pub exclude_patterns: Option<String>, // Use Option so it can be omitted if not needed.
+}
+
 #[command]
-pub async fn get_project_structure(path: String, filters: HashMap<String, bool>) -> Result<FileNode, String> {
+pub async fn get_project_structure(path: String, filters: FilterOptions) -> Result<FileNode, String> {
     let exclude_regex = create_exclude_regex(&filters)?;
     let path = PathBuf::from(path);
     
@@ -59,7 +70,6 @@ fn generate_tree(node: &FileNode, prefix: &str, is_last: bool, includeFiles: boo
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
             let child_is_last = i == count - 1;
-            // If the child is a directory, process recursively; if it's a file and includeFiles is true, just print it.
             if child.is_dir {
                 output.push_str(&generate_tree(child, &new_prefix, child_is_last, includeFiles));
             } else if includeFiles {
@@ -74,9 +84,7 @@ fn generate_tree(node: &FileNode, prefix: &str, is_last: bool, includeFiles: boo
 fn read_dir_recursive(base_path: &Path, current_path: &Path, exclude_regex: &Option<Regex>) -> Result<FileNode, String> {
     let name = current_path.file_name()
         .and_then(|n| n.to_str())
-        .unwrap_or_else(|| {
-            current_path.to_str().unwrap_or("Unknown")
-        })
+        .unwrap_or_else(|| current_path.to_str().unwrap_or("Unknown"))
         .to_string();
     
     let rel_path = current_path.strip_prefix(base_path.parent().unwrap_or(Path::new("")))
@@ -84,7 +92,7 @@ fn read_dir_recursive(base_path: &Path, current_path: &Path, exclude_regex: &Opt
     
     let path_str = rel_path.to_string_lossy().to_string();
     
-    // Check if path matches exclude pattern
+    // Check if path matches the exclude pattern.
     if let Some(regex) = exclude_regex {
         if regex.is_match(&path_str) {
             return Err(format!("Path excluded by filter: {}", path_str));
@@ -124,34 +132,22 @@ fn read_dir_recursive(base_path: &Path, current_path: &Path, exclude_regex: &Opt
                         Ok(entry) => {
                             let child_path = entry.path();
                             match read_dir_recursive(base_path, &child_path, exclude_regex) {
-                                Ok(child_node) => {
-                                    children.push(child_node);
-                                },
-                                Err(_) => {
-                                    // Skip excluded files/directories
-                                    continue;
-                                }
+                                Ok(child_node) => children.push(child_node),
+                                Err(_) => continue, // Skip excluded files/directories
                             }
                         },
-                        Err(e) => {
-                            return Err(format!("Failed to read directory entry: {}", e));
-                        }
+                        Err(e) => return Err(format!("Failed to read directory entry: {}", e)),
                     }
                 }
             },
-            Err(e) => {
-                return Err(format!("Failed to read directory {}: {}", current_path.display(), e));
-            }
+            Err(e) => return Err(format!("Failed to read directory {}: {}", current_path.display(), e)),
         }
         
-        // Sort children: directories first, then files, alphabetically within each group
+        // Sort children: directories first, then files, alphabetically.
         children.sort_by(|a, b| {
             match (a.is_dir, b.is_dir) {
-                // Both are directories or both are files - sort alphabetically
                 (true, true) | (false, false) => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-                // Directory before file
                 (true, false) => std::cmp::Ordering::Less,
-                // File after directory
                 (false, true) => std::cmp::Ordering::Greater,
             }
         });
@@ -162,41 +158,38 @@ fn read_dir_recursive(base_path: &Path, current_path: &Path, exclude_regex: &Opt
     Ok(node)
 }
 
-fn create_exclude_regex(filters: &HashMap<String, bool>) -> Result<Option<Regex>, String> {
-    let mut patterns = Vec::<String>::new();  // Change to Vec<String> to own the strings
+fn create_exclude_regex(filters: &FilterOptions) -> Result<Option<Regex>, String> {
+    let mut patterns = Vec::<String>::new();
     
-    // Add common patterns to exclude
-    if filters.get("exclude_node_modules").unwrap_or(&true) == &true {
+    if filters.exclude_node_modules {
         patterns.push("node_modules".to_string());
     }
-    if filters.get("exclude_git").unwrap_or(&true) == &true {
+    if filters.exclude_git {
         patterns.push(r"\.git".to_string());
     }
-    if filters.get("exclude_target").unwrap_or(&true) == &true {
+    if filters.exclude_target {
         patterns.push("target".to_string());
     }
-    if filters.get("exclude_build").unwrap_or(&true) == &true {
+    if filters.exclude_build {
         patterns.push("build|dist".to_string());
     }
-    if filters.get("exclude_hidden").unwrap_or(&true) == &true {
-        patterns.push(r"/\.[^/]*$".to_string());  // Files starting with a dot
+    if filters.exclude_hidden {
+        patterns.push(r"/\.[^/]*$".to_string());
     }
     
-    // Add custom exclude patterns
-    if let Some(custom_excludes) = filters.get("custom_excludes") {
-        if custom_excludes == &true {
-            if let Some(exclude_patterns) = filters.get("exclude_patterns") {
-                // Store the owned string in the vector
-                patterns.push(exclude_patterns.to_string());
+    if filters.custom_excludes {
+        if let Some(user_patterns) = &filters.exclude_patterns {
+            let trimmed = user_patterns.trim();
+            if !trimmed.is_empty() {
+                patterns.push(trimmed.to_string());
             }
         }
-    }
+    }    
     
     if patterns.is_empty() {
         return Ok(None);
     }
     
-    // Join the owned strings
     let pattern = format!("({})", patterns.join("|"));
     match Regex::new(&pattern) {
         Ok(regex) => Ok(Some(regex)),
