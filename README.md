@@ -94,6 +94,52 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Cross-platform screenshot and audio recording capabilities.
 - Clipboard integration and organized file-based saving.
 
+```markdown
+### 🔍 Chrome Extension Debugging
+- Built-in Chrome DevTools Protocol integration for monitoring and debugging Chrome extensions
+- Features include:
+  - **Real-time console logs:** Monitor extension background scripts, service workers, and other Chrome targets
+  - **Selective target monitoring:** Choose which Chrome targets to capture logs from
+  - **Log filtering:** Search and filter console messages by content or log level
+  - **Export capability:** Save logs to JSON for sharing or further analysis
+  - **Responsive design:** Adapts to different screen sizes with intelligent badge display
+  - **One-click copy:** Easily copy log entries to clipboard
+- Helps troubleshoot extension behavior, track background processes, and debug service worker interactions
+
+## Chrome Extension Debugging Setup
+
+To use the Chrome Extension debugging feature:
+
+1. Close all Chrome instances
+
+2. Start Chrome with remote debugging enabled:
+   ```bash
+   # macOS
+   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+   
+   # Windows
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
+   
+   # Linux
+   google-chrome --remote-debugging-port=9222
+   ```
+
+3. In a separate terminal window, start the Chrome Logger Bridge:
+   ```bash
+   npm run bridge
+   ```
+
+4. Launch the PieVerse app in another terminal window:
+   ```bash
+   npm run tauri dev
+   ```
+
+5. Navigate to the Chrome DevTools Protocol Debugger in the app and click "Refresh Targets" to see available Chrome targets.
+
+6. Select the extension or other Chrome target you want to monitor, then click "Connect" to start capturing logs.
+
+The bridge creates a WebSocket server that facilitates communication between Chrome's DevTools Protocol and the application, allowing you to monitor console logs from Chrome extensions and other Chrome targets in real-time.
+
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:
 - Business meeting facilitation with the Digital Twin.

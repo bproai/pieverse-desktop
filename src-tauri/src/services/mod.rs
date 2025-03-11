@@ -18,3 +18,6 @@ pub mod trend_spike_service;
 
 // Screenshot service
 pub mod screenshot;
+
+// In src-tauri/src/services/mod.rs
+pub mod chrome_debugger;

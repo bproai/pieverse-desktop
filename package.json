@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri dev": "tauri dev",
-    "tauri build": "vite build && node copy-monaco-for-prod.js && tauri build"
+    "tauri build": "vite build && node copy-monaco-for-prod.js && tauri build",
+    "bridge": "node scripts/chrome-bridge/index.js"
   },
   "keywords": [],
   "author": "",
@@ -39,10 +40,12 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.17",
+    "chrome-remote-interface": "^0.33.3",
     "monaco-editor-webpack-plugin": "^7.1.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.7.3",
-    "vite": "^6.1.1"
+    "vite": "^6.1.1",
+    "ws": "^8.18.1"
   }
 }

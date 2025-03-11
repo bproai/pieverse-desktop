@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -14,6 +14,7 @@ import { JsSandboxPanel } from './components/JsSandbox';
 import BrandLogo from './components/BrandLogo';
 import Avatar from './components/Avatar';
 import { Window } from '@tauri-apps/api/window';
+import ChromeDebuggerPanel from './components/ChromeDebugger';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -86,6 +87,9 @@ function App() {
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
                   Document Renderer
                 </Tabs.Tab>
+                <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
+                  Chrome Debugger
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -118,6 +122,10 @@ function App() {
 
               <Tabs.Panel value="htmlrenderer" className="p-4">
                 <HtmlRendererPanel isDark={isDark} />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="chrome-debugger" className="p-4">
+                <ChromeDebuggerPanel />
               </Tabs.Panel>
             </Tabs>
           </main>

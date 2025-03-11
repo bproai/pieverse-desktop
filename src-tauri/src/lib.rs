@@ -95,6 +95,9 @@ use services::screenshot::{
     take_screenshot_to_clipboard,
     save_clipboard_image  // Add this line
 };
+
+use services::chrome_debugger::fetch_chrome_targets;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Create and initialize the trend spike service
@@ -188,7 +191,8 @@ pub fn run() {
             take_screenshot,
             take_screenshot_to_clipboard,
             save_clipboard_image,
-            update_system_appearance
+            update_system_appearance,
+            fetch_chrome_targets
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
