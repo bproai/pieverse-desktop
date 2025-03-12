@@ -1,5 +1,5 @@
 // src/components/FolderStructure/FolderStructurePanel.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Text, 
   Button, 
@@ -11,26 +11,23 @@ import {
   Badge, 
   ScrollArea,
   Checkbox,
-  Switch,
   ActionIcon,
-  Tooltip,
   Collapse,
   ThemeIcon,
   useMantineTheme,
   Tabs,
-  LoadingOverlay,
   Code,
-  CopyButton,
   Textarea
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+import { AlertCircle, Folder, FolderOpen, FileText, Terminal, Copy, Check, RefreshCw, Filter, X } from 'lucide-react';
 
-// Import specific icons individually
-import { AlertCircle, Folder, FolderOpen, FileText, Terminal, Copy, Check, RefreshCw, Filter, Save, Download, Upload, ChevronDown, ChevronRight, File, X } from 'lucide-react';
-
-// Import Tauri API for Tauri 2.0
+// Tauri API imports
 import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
+import * as path from '@tauri-apps/api/path';
+import { exists, readTextFile } from '@tauri-apps/plugin-fs';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 // Interfaces
 interface FileNode {
@@ -42,6 +39,7 @@ interface FileNode {
   extension?: string;
   isExpanded?: boolean;
   isExcluded?: boolean;
+  isSelected?: boolean; // Track selection state
 }
 
 interface FilterOptions {
@@ -77,20 +75,24 @@ const FolderStructurePanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('tree');
   const [copiedText, setCopiedText] = useState<boolean>(false);
   const [llmContext, setLlmContext] = useState<string>('');
+  
+  // Track selected files for drag/clipboard
+  const [selectedFiles, setSelectedFiles] = useState<FileNode[]>([]);
+  const dragPreviewRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     console.log('Active tab changed to:', activeTab);
   }, [activeTab]);
 
   // Validate project path
-  const validatePath = useCallback(async (path: string) => {
-    if (!path) {
+  const validatePath = useCallback(async (pathStr: string) => {
+    if (!pathStr) {
       setIsPathValid(false);
       return;
     }
-
     try {
-      const isValid = await core.invoke('is_valid_path', { path });
+      const isValid = await core.invoke('is_valid_path', { path: pathStr });
       setIsPathValid(!!isValid);
     } catch (error) {
       console.error('Error validating path:', error);
@@ -98,20 +100,27 @@ const FolderStructurePanel: React.FC = () => {
     }
   }, []);
 
-  // Update path validation when path changes
   useEffect(() => {
     validatePath(projectPath);
   }, [projectPath, validatePath]);
 
-  // Modified processNode function in loadProjectStructure
+  // Process node to add selection info
+  const processNode = (node: FileNode, isRoot: boolean = false): FileNode => {
+    return {
+      ...node,
+      isExpanded: isRoot,
+      isExcluded: false,
+      isSelected: false,
+      children: node.children?.map(child => processNode(child, false)),
+    };
+  };
+
+  // Load project structure
   const loadProjectStructure = async () => {
     if (!isPathValid) return;
-  
     setLoading(true);
     setError(null);
     try {
-      // Build the filters object from your state.
-      // Ensure exclude_patterns is sent as null if custom_excludes is false.
       const filters: FilterOptions = {
         exclude_node_modules: filterOptions.exclude_node_modules,
         exclude_git: filterOptions.exclude_git,
@@ -121,24 +130,13 @@ const FolderStructurePanel: React.FC = () => {
         custom_excludes: filterOptions.custom_excludes,
         exclude_patterns: filterOptions.custom_excludes ? filterOptions.exclude_patterns : null,
       };
-  
       const structure = await core.invoke("get_project_structure", { 
         path: projectPath,
         filters,
       }) as FileNode;
-  
-      // Process the file tree as before
-      const processNode = (node: FileNode, isRoot: boolean = false): FileNode => {
-        return {
-          ...node,
-          isExpanded: isRoot, // Only expand the root node
-          isExcluded: false,
-          children: node.children?.map(child => processNode(child, false)),
-        };
-      };
-  
       setFileTree(processNode(structure, true));
       setActiveTab("tree");
+      setSelectedFiles([]);
     } catch (error: any) {
       console.error("Error loading project structure:", error);
       setError(error.toString());
@@ -147,27 +145,18 @@ const FolderStructurePanel: React.FC = () => {
       setLoading(false);
     }
   };
-  
 
   // Generate tree text representation
   const generateTreeText = async () => {
     if (!fileTree) return;
-    
     try {
-      // The parameter name is 'indentLevel' (camelCase) in the Rust function,
-      // not 'indent_level' (snake_case)
       const text = await core.invoke('generate_structure_text', { 
         node: fileTree,
-        indentLevel: 0,  // Changed from indent_level to indentLevel
-        includeFiles: includeFiles  // Changed from include_files to includeFiles
+        includeFiles: includeFiles
       }) as string;
-      
       console.log('Generated tree text:', text ? text.substring(0, 100) + '...' : 'empty');
-      
       setTreeText(text);
-      
-      // Also update the LLM context with the tree text and some instructions
-      const context = `Project Structure:\n\`\`\`\n${text}\`\`\`\n\nThis is the folder structure of the project. Use this information to understand the project organization and provide more relevant responses.`;
+      const context = `Project Structure:\n\`\`\`\n${text}\`\`\`\n\nThis is the folder structure of the project.`;
       setLlmContext(context);
     } catch (error: any) {
       console.error('Error generating tree text:', error);
@@ -179,7 +168,6 @@ const FolderStructurePanel: React.FC = () => {
     }
   };
 
-  // Update tree text when fileTree or includeFiles changes
   useEffect(() => {
     if (fileTree) {
       generateTreeText();
@@ -189,118 +177,209 @@ const FolderStructurePanel: React.FC = () => {
   // Toggle node expansion
   const toggleNodeExpansion = (nodePath: string) => {
     if (!fileTree) return;
-    
     const updateNode = (node: FileNode): FileNode => {
       if (node.path === nodePath) {
         return { ...node, isExpanded: !node.isExpanded };
       }
-      
-      return {
-        ...node,
-        children: node.children?.map(updateNode)
-      };
+      return { ...node, children: node.children?.map(updateNode) };
     };
-    
     setFileTree(updateNode(fileTree));
   };
 
   // Toggle node exclusion
   const toggleNodeExclusion = (nodePath: string) => {
     if (!fileTree) return;
-    
     const updateNode = (node: FileNode): FileNode => {
       if (node.path === nodePath) {
         return { 
           ...node, 
           isExcluded: !node.isExcluded,
-          // Exclude/include all children as well
-          children: node.children?.map(child => updateNode({
-            ...child,
-            isExcluded: !node.isExcluded
-          }))
+          children: node.children?.map(child => updateNode({ ...child, isExcluded: !node.isExcluded }))
         };
       }
-      
-      return {
-        ...node,
-        children: node.children?.map(updateNode)
-      };
+      return { ...node, children: node.children?.map(updateNode) };
     };
-    
     setFileTree(updateNode(fileTree));
   };
 
-  // Select folder dialog
-  const selectFolder = async () => {
-    try {
-      // Using Tauri 2.0 dialog plugin
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select Project Folder'
-      });
-      
-      if (selected) {
-        setProjectPath(selected as string);
+  // Toggle file selection (for clipboard/drag)
+  const toggleNodeSelection = (node: FileNode, event: React.MouseEvent) => {
+    if (node.is_dir) return;
+    event.stopPropagation();
+    if (!fileTree) return;
+    const updateNode = (currentNode: FileNode): FileNode => {
+      if (currentNode.path === node.path) {
+        const newSelectedState = !currentNode.isSelected;
+        if (newSelectedState) {
+          setSelectedFiles(prev => [...prev, currentNode]);
+        } else {
+          setSelectedFiles(prev => prev.filter(file => file.path !== currentNode.path));
+        }
+        return { ...currentNode, isSelected: newSelectedState };
       }
-    } catch (error) {
-      console.error('Error selecting folder:', error);
+      return { ...currentNode, children: currentNode.children?.map(updateNode) };
+    };
+    setFileTree(updateNode(fileTree));
+  };
+
+  // Resolve full file path
+  const getCorrectFilePath = async (file: FileNode): Promise<string> => {
+    console.log("Original file path:", file.path, "Project path:", projectPath);
+    const projectDirName = projectPath.split('/').pop() || '';
+    if (file.path.startsWith(projectDirName + '/')) {
+      const trimmedPath = file.path.substring(projectDirName.length + 1);
+      const fullPath = await path.join(projectPath, trimmedPath);
+      return fullPath;
+    }
+    if (file.path.startsWith('/') || file.path.includes(':')) {
+      return file.path;
+    } else {
+      return await path.join(projectPath, file.path);
     }
   };
 
-  // Copy tree text to clipboard
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(activeTab === 'tree' ? treeText : llmContext)
-      .then(() => {
-        setCopiedText(true);
-        setTimeout(() => setCopiedText(false), 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
+  // Merge selected text files and copy to clipboard using Tauri's clipboard API.
+  const copySelectedFilesToClipboard = async () => {
+    if (selectedFiles.length === 0) {
+      notifications.show({
+        title: 'No Files Selected',
+        message: 'Please select at least one file first',
+        color: 'blue'
       });
+      return;
+    }
+    try {
+      const contentPromises = selectedFiles.map(async (file) => {
+        const fullPath = await getCorrectFilePath(file);
+        try {
+          const fileExists = await exists(fullPath);
+          if (!fileExists) {
+            console.error(`File does not exist: ${fullPath}`);
+            return null;
+          }
+          const content = await readTextFile(fullPath);
+          return { name: file.name, content };
+        } catch (error) {
+          console.error(`Error reading file ${fullPath}:`, error);
+          return null;
+        }
+      });
+      const fileContents = (await Promise.all(contentPromises)).filter(Boolean);
+      if (fileContents.length === 0) {
+        notifications.show({
+          title: 'Error',
+          message: 'Could not read any of the selected files',
+          color: 'red'
+        });
+        return;
+      }
+      let clipboardText = '';
+      if (fileContents.length === 1) {
+        clipboardText = fileContents[0].content;
+      } else {
+        clipboardText = fileContents.map(file => 
+          `--- ${file.name} ---\n\n${file.content}`
+        ).join('\n\n\n');
+      }
+      await writeText(clipboardText);
+      notifications.show({
+        title: 'Success',
+        message: `${fileContents.length} file(s) copied to clipboard (${clipboardText.length} characters)`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error copying files to clipboard:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to copy files: ${error}`,
+        color: 'red'
+      });
+    }
   };
 
-  // Render file tree node
-// Updated renderNode function with improved organization and visual dividers
-const renderNode = (node: FileNode, level: number = 0) => {
+  // Handle drag start
+  const handleDragStart = async (event: React.DragEvent<HTMLDivElement>) => {
+    if (selectedFiles.length === 0) return;
+    console.log('Drag start with selected files:', selectedFiles);
+    setIsDragging(true);
+    try {
+      const fileList = selectedFiles.map(f => f.name).join('\n');
+      event.dataTransfer.setData('text/plain', fileList);
+      if (dragPreviewRef.current) {
+        const dragPreview = dragPreviewRef.current;
+        dragPreview.style.display = 'flex';
+        dragPreview.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`;
+        event.dataTransfer.setDragImage(
+          dragPreview, 
+          dragPreview.offsetWidth / 2, 
+          dragPreview.offsetHeight / 2
+        );
+        setTimeout(() => {
+          dragPreview.style.display = 'none';
+        }, 0);
+      }
+      for (const file of selectedFiles) {
+        const fullPath = await getCorrectFilePath(file);
+        try {
+          const fileExists = await exists(fullPath);
+          if (!fileExists) {
+            console.error(`File does not exist: ${fullPath}`);
+            continue;
+          }
+          const content = await readTextFile(fullPath);
+          console.log(`Read ${content.length} characters from ${file.name}`);
+          // For text files, we simply set the content as text data.
+          event.dataTransfer.setData('text/plain', content);
+        } catch (error) {
+          console.error(`Error reading file ${fullPath}:`, error);
+        }
+      }
+      console.log('Drag data prepared successfully');
+    } catch (error) {
+      console.error("Error during drag start:", error);
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Render file tree nodes
+  const renderNode = (node: FileNode, level: number = 0) => {
     if (node.isExcluded) return null;
-    
     const isDirectory = node.is_dir;
     const hasChildren = isDirectory && node.children && node.children.length > 0;
     const isExpanded = node.isExpanded;
-    
-    // Increase indent size
+    const isSelected = node.isSelected;
     const indentSize = 20;
-    
-    // Group children by type if expanded
     let folderChildren: FileNode[] = [];
     let fileChildren: FileNode[] = [];
-    
     if (isDirectory && isExpanded && node.children) {
-      // Sort children: directories first, then files, alphabetically within each group
       folderChildren = node.children
         .filter(child => child.is_dir)
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-        
       fileChildren = node.children
         .filter(child => !child.is_dir)
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     }
-    
     return (
       <div key={node.path}>
         <div 
+          className={`file-node ${isSelected ? 'selected' : ''}`}
           style={{ 
             display: 'flex', 
             alignItems: 'center',
             marginBottom: '4px',
-            cursor: 'pointer',
-            backgroundColor: selectedNodes[node.path] ? theme.colors.blue[0] : 'transparent',
+            cursor: isDirectory ? 'pointer' : 'default',
+            backgroundColor: isSelected ? theme.colors.blue[2] : (selectedNodes[node.path] ? theme.colors.blue[0] : 'transparent'),
             padding: '4px 8px',
             borderRadius: '4px'
           }}
+          draggable={!isDirectory && isSelected}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          {/* Indentation with connecting lines */}
           {Array.from({ length: level }).map((_, i) => (
             <div 
               key={i}
@@ -311,7 +390,6 @@ const renderNode = (node: FileNode, level: number = 0) => {
                 flexShrink: 0
               }}
             >
-              {/* Vertical connecting line */}
               {i < level - 1 && (
                 <div
                   style={{
@@ -324,8 +402,6 @@ const renderNode = (node: FileNode, level: number = 0) => {
                   }}
                 />
               )}
-              
-              {/* Last level L-shaped connector */}
               {i === level - 1 && (
                 <>
                   <div
@@ -352,21 +428,17 @@ const renderNode = (node: FileNode, level: number = 0) => {
               )}
             </div>
           ))}
-          
-          {/* Expand/collapse button for directories */}
           {isDirectory && hasChildren ? (
             <ActionIcon 
               size="xs" 
               onClick={() => toggleNodeExpansion(node.path)}
               style={{ marginRight: '4px' }}
             >
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {isExpanded ? <Terminal size={14} /> : <Terminal size={14} />}
             </ActionIcon>
           ) : (
             <div style={{ width: '22px', marginRight: '4px' }} />
           )}
-          
-          {/* File/folder icon */}
           <ThemeIcon 
             size="sm" 
             color={isDirectory ? "blue" : "gray"} 
@@ -383,13 +455,13 @@ const renderNode = (node: FileNode, level: number = 0) => {
               <FileText size={14} />
             }
           </ThemeIcon>
-          
-          {/* Node name */}
           <Text 
             size="sm" 
-            onClick={() => {
+            onClick={(e) => {
               if (isDirectory && hasChildren) {
                 toggleNodeExpansion(node.path);
+              } else if (!isDirectory) {
+                toggleNodeSelection(node, e);
               }
             }}
             style={{
@@ -400,8 +472,6 @@ const renderNode = (node: FileNode, level: number = 0) => {
           >
             {node.name}
           </Text>
-          
-          {/* File count badge for folders */}
           {isDirectory && hasChildren && (
             <Badge 
               size="xs" 
@@ -412,27 +482,31 @@ const renderNode = (node: FileNode, level: number = 0) => {
               {node.children?.length || 0}
             </Badge>
           )}
-          
-          {/* Toggle include/exclude */}
+          {!isDirectory && (
+            <Checkbox 
+              checked={isSelected}
+              onChange={(e) => {
+                toggleNodeSelection(node, e.nativeEvent as unknown as React.MouseEvent);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ marginRight: '8px' }}
+            />
+          )}
           <ActionIcon 
             size="xs" 
             color={node.isExcluded ? "red" : "gray"} 
             variant="subtle"
             onClick={() => toggleNodeExclusion(node.path)}
-            style={{ marginLeft: '8px' }}
+            style={{ marginLeft: '4px' }}
           >
             <X size={14} />
           </ActionIcon>
         </div>
-        
-        {/* Render folder children first */}
         {isDirectory && isExpanded && folderChildren.length > 0 && (
           <div>
             {folderChildren.map(child => renderNode(child, level + 1))}
           </div>
         )}
-        
-        {/* Add a divider between folders and files if both exist */}
         {isDirectory && isExpanded && folderChildren.length > 0 && fileChildren.length > 0 && (
           <div 
             style={{
@@ -449,8 +523,6 @@ const renderNode = (node: FileNode, level: number = 0) => {
             />
           </div>
         )}
-        
-        {/* Then render file children */}
         {isDirectory && isExpanded && fileChildren.length > 0 && (
           <div>
             {fileChildren.map(child => renderNode(child, level + 1))}
@@ -460,8 +532,70 @@ const renderNode = (node: FileNode, level: number = 0) => {
     );
   };
 
+  // Folder selection dialog
+  const selectFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Project Folder'
+      });
+      if (selected) {
+        setProjectPath(selected as string);
+      }
+    } catch (error) {
+      console.error('Error selecting folder:', error);
+    }
+  };
+
+  // Copy tree text to clipboard using browser API (for non-file content)
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(activeTab === 'tree' ? treeText : llmContext)
+      .then(() => {
+        setCopiedText(true);
+        setTimeout(() => setCopiedText(false), 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  };
+
+  // Clear file selection
+  const clearSelection = () => {
+    if (!fileTree) return;
+    const clearSelectionInNode = (node: FileNode): FileNode => ({
+      ...node,
+      isSelected: false,
+      children: node.children?.map(clearSelectionInNode)
+    });
+    setFileTree(clearSelectionInNode(fileTree));
+    setSelectedFiles([]);
+  };
+
   return (
     <div className="folder-structure-panel">
+      <div 
+        ref={dragPreviewRef}
+        style={{
+          position: 'fixed',
+          top: '-9999px',
+          left: '-9999px',
+          backgroundColor: theme.colors.blue[5],
+          color: 'white',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          pointerEvents: 'none',
+          zIndex: 9999,
+          display: 'none',
+          alignItems: 'center',
+          gap: '4px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+        }}
+      >
+        <FileText size={12} />
+        <span>0 files</span>
+      </div>
       <Card shadow="sm" p="lg" radius="md" withBorder>
         <Card.Section p="md" className="border-b">
           <Group position="apart">
@@ -481,9 +615,7 @@ const renderNode = (node: FileNode, level: number = 0) => {
             </Group>
           </Group>
         </Card.Section>
-
         <Stack spacing="md" mt="md">
-          {/* Path selection */}
           <Group position="apart" align="end">
             <TextInput
               label="Project Path"
@@ -509,8 +641,30 @@ const renderNode = (node: FileNode, level: number = 0) => {
               Load
             </Button>
           </Group>
-
-          {/* Filter options */}
+          {selectedFiles.length > 0 && (
+            <Alert color="blue" title={`${selectedFiles.length} file(s) selected for transfer`} icon={<FileText size={16} />}>
+                <Group position="apart" mb="xs">
+                <Text size="sm">Select files in the tree view and copy or drag them as needed.</Text>
+                <Group>
+                    <Button variant="subtle" size="xs" onClick={clearSelection}>
+                    Clear Selection
+                    </Button>
+                    <Button 
+                    onClick={copySelectedFilesToClipboard}
+                    size="xs"
+                    variant="filled"
+                    color="green"
+                    leftSection={<Copy size={14} />}
+                    >
+                    Copy to Clipboard
+                    </Button>
+                </Group>
+                </Group>
+                <Text size="xs" color="dimmed">
+                Tip: Use Copy to Clipboard (recommended) for reliable transfer, or drag selected files for compatible targets.
+                </Text>
+            </Alert>
+            )}
           <Collapse in={showFilterOptions}>
             <Card withBorder p="md" radius="md">
               <Text weight={600} mb="md">Filter Options</Text>
@@ -556,111 +710,89 @@ const renderNode = (node: FileNode, level: number = 0) => {
               </Stack>
             </Card>
           </Collapse>
-
-          {/* Error message */}
           {error && (
             <Alert color="red" title="Error" icon={<AlertCircle size={16} />}>
               {error}
             </Alert>
           )}
-
-          {/* Main content */}
           <Card withBorder p={0} radius="md">
-            <Tabs defaultValue="tree">
-                <Tabs.List>
+            <Tabs defaultValue="tree" value={activeTab} onChange={setActiveTab}>
+              <Tabs.List>
                 <Tabs.Tab value="tree" icon={<Folder size={16} />}>
-                    Folder Tree
+                  Folder Tree
                 </Tabs.Tab>
                 <Tabs.Tab value="text" icon={<FileText size={16} />}>
-                    Text Representation
+                  Text Representation
                 </Tabs.Tab>
                 <Tabs.Tab value="llm" icon={<Terminal size={16} />}>
-                    LLM Context
+                  LLM Context
                 </Tabs.Tab>
-                </Tabs.List>
-                
-                <Tabs.Panel value="tree" pt="xs">
+              </Tabs.List>
+              <Tabs.Panel value="tree" pt="xs">
                 <Group position="apart" mb="md" p="md">
+                  <Group>
                     <Text weight={600}>Project Structure</Text>
-                    <Checkbox
+                    {selectedFiles.length > 0 && (
+                      <Badge color="blue">{selectedFiles.length} file(s) selected</Badge>
+                    )}
+                  </Group>
+                  <Checkbox
                     label="Include files in text output"
                     checked={includeFiles}
                     onChange={(e) => setIncludeFiles(e.currentTarget.checked)}
-                    />
+                  />
                 </Group>
-                
                 <ScrollArea h={500} type="auto" p="md">
-                    {fileTree ? (
-                    renderNode(fileTree)
-                    ) : (
+                  {fileTree ? renderNode(fileTree) : (
                     <Text color="dimmed" align="center" mt="lg">
-                        {loading ? "Loading project structure..." : "No project loaded"}
+                      {loading ? "Loading project structure..." : "No project loaded"}
                     </Text>
-                    )}
+                  )}
                 </ScrollArea>
-                </Tabs.Panel>
-
-                <Tabs.Panel value="text" pt="xs">
+              </Tabs.Panel>
+              <Tabs.Panel value="text" pt="xs">
                 <Group position="apart" mb="md" p="md">
-                    <Text weight={600}>Text Representation</Text>
-                    <CopyButton value={treeText} timeout={2000}>
-                    {({ copied, copy }) => (
-                        <Button 
-                        color={copied ? 'teal' : 'blue'}
-                        onClick={copy}
-                        leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
-                        size="sm"
-                        >
-                        {copied ? 'Copied' : 'Copy'}
-                        </Button>
-                    )}
-                    </CopyButton>
+                  <Text weight={600}>Text Representation</Text>
                 </Group>
-                
                 <ScrollArea h={500} type="auto" p="md">
-                    <Code block sx={{ fontSize: '12px', lineHeight: 1.5 }}>
+                  <Code block sx={{ fontSize: '12px', lineHeight: 1.5 }}>
                     {treeText || "No project structure generated yet."}
-                    </Code>
+                  </Code>
                 </ScrollArea>
-                </Tabs.Panel>
-
-                <Tabs.Panel value="llm" pt="xs">
+              </Tabs.Panel>
+              <Tabs.Panel value="llm" pt="xs">
                 <Group position="apart" mb="md" p="md">
-                    <Text weight={600}>LLM Context</Text>
-                    <CopyButton value={llmContext} timeout={2000}>
-                    {({ copied, copy }) => (
-                        <Button 
-                        color={copied ? 'teal' : 'blue'}
-                        onClick={copy}
-                        leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
-                        size="sm"
-                        >
-                        {copied ? 'Copied' : 'Copy to Clipboard'}
-                        </Button>
-                    )}
-                    </CopyButton>
+                  <Text weight={600}>LLM Context</Text>
                 </Group>
-                
                 <div style={{ padding: '0 16px 16px 16px' }}>
-                    <Textarea
+                  <Textarea
                     value={llmContext}
                     onChange={(e) => setLlmContext(e.currentTarget.value)}
                     minRows={15}
                     maxRows={20}
                     autosize
                     style={{ fontFamily: 'monospace', fontSize: '12px' }}
-                    />
-                    
-                    <Text size="xs" color="dimmed" mt="sm">
-                    Edit this text as needed before using it as context with an LLM. The folder structure is 
-                    formatted to be clear and informative for the model.
-                    </Text>
+                  />
+                  <Text size="xs" color="dimmed" mt="sm">
+                    Edit this text as needed before using it as context with an LLM.
+                  </Text>
                 </div>
-                </Tabs.Panel>
+              </Tabs.Panel>
             </Tabs>
           </Card>
         </Stack>
       </Card>
+      <style>
+        {`
+          .file-node.selected {
+            background-color: ${theme.colors.blue[1]} !important;
+            border: 1px solid ${theme.colors.blue[5]};
+          }
+          .file-node:not(.selected):hover {
+            background-color: ${theme.colors.gray[0]};
+          }
+        `}
+      </style>
     </div>
   );
 };

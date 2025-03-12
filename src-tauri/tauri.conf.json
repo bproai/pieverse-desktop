@@ -44,7 +44,7 @@
   },
   "plugins": {
     "fs": {
-      "scope": ["$AUDIO/*", "$AUDIO_DIR/*", "$RESOURCE/*", "$PICTURE/*", "$PICTURE_DIR/*"]
+      "requireLiteralLeadingDot": false
     },
     "protocol": {
       "asset": true,
