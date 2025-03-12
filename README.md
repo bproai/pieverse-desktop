@@ -77,6 +77,16 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Integrated Python environment with Monaco Editor (syntax highlighting and autocompletion).
 - Preloaded libraries (pandas, numpy, etc.) and secure execution via Rust integration (PyO3).
 
+### 🧠 LLM Rules Management
+- Configure and manage behavior rules for large language models
+- Set up automated responses and custom interaction patterns
+- Integrate with the AI assistant for consistent behavior across the application
+
+### 📚 References Management
+- Organize and access reference materials for creative projects and research
+- Import external resources and create custom reference libraries
+- Integrate references with the AI assistant for contextual awareness
+
 ### 🔄 Seamless Integration & Dynamic UI
 - Adaptive, voice AI-assisted frontend that personalizes in real time.
 - Robust API settings ensuring secure connectivity with external data sources and services.
@@ -94,7 +104,6 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Cross-platform screenshot and audio recording capabilities.
 - Clipboard integration and organized file-based saving.
 
-```markdown
 ### 🔍 Chrome Extension Debugging
 - Built-in Chrome DevTools Protocol integration for monitoring and debugging Chrome extensions
 - Features include:
@@ -126,7 +135,9 @@ To use the Chrome Extension debugging feature:
 
 3. In a separate terminal window, start the Chrome Logger Bridge:
    ```bash
-   npm run bridge
+   cd scripts/chrome-bridge
+   npm install  # First time only
+   npm start
    ```
 
 4. Launch the PieVerse app in another terminal window:
@@ -229,23 +240,39 @@ Download the latest release from the [Releases page](https://github.com/youruser
 ```
 pieverse-desktop/
 ├── src/ - React frontend code
+│   ├── components/ - UI components organized by feature
+│   │   ├── APISettings/ - API configuration interface
+│   │   ├── ChromeDebugger/ - Chrome DevTools Protocol integration
+│   │   ├── FolderStructure/ - Project file explorer
+│   │   ├── HtmlRenderer/ - HTML/Markdown rendering component
+│   │   ├── JsSandbox/ - JavaScript execution environment
+│   │   ├── LLMRules/ - LLM behavior configuration
+│   │   ├── MongoDB/ - MongoDB connection and management
+│   │   ├── MySQL/ - MySQL database integration
+│   │   ├── Prompts/ - AI prompt management interface
+│   │   ├── Python/ - Python execution environment
+│   │   ├── References/ - Reference material management
+│   │   └── Signals/ - Trend analysis and signal detection
+│   ├── services/ - Frontend service layers
+│   └── sql/ - SQL schemas and queries
 ├── src-tauri/ - Rust backend code
-├── BP/ - Business presentation assets (SVGs, pitch page, PowerPoint outlines)
-├── Business Plan/ - Strategic business assets
-├── docs/ - Documentation (User Guide, Contributing Guidelines, etc.)
-├── generate_changelog.py - Utility scripts including changelog generation
-├── package.json - Node.js dependencies
+│   ├── capabilities/ - Tauri 2.0 security capabilities
+│   ├── src/ - Rust source code
+│   │   ├── services/ - Backend services
+│   │   └── python_scripts/ - Python scripts for data analysis
+├── scripts/
+│   └── chrome-bridge/ - WebSocket bridge for Chrome DevTools Protocol
 └── ...
 ```
 
 ## 🏗️ Architecture
-PieVerse Desktop is built using the Tauri framework, combining a robust Rust backend with a dynamic React frontend.
+PieVerse Desktop is built using the Tauri 2.0 framework, combining a robust Rust backend with a dynamic React frontend.
 
 ### Frontend:
 Built with React and TypeScript, using Mantine UI and TailwindCSS, it offers a creative workspace and dynamic interface adjustments.
 
 ### Backend:
-Powered by Rust with Tauri, it uses SQLite for local storage, supports MySQL/MongoDB, and exposes a RESTful API via Axum.
+Powered by Rust with Tauri 2.0, it uses SQLite for local storage, supports MySQL/MongoDB, and exposes a RESTful API via Axum.
 
 ### AI Technology:
 Multiple AI models (Rule-based, GPT-4o mini, GPT-4o Realtime, and GPT-4o Realtime Mini) adapt to your needs for natural, interactive experiences.
@@ -262,7 +289,7 @@ src-tauri/.local/share/pieverse/prompts.db
 ```
 
 ### Production Mode
-The database is stored in the system's local data directory:
+The database is stored in the system's local data directory (using Tauri 2.0 path resolution):
 - **macOS:** `~/Library/Application Support/pieverse/prompts.db`
 - **Windows:** `C:\Users\<username>\AppData\Local\pieverse\prompts.db`
 - **Linux:** `~/.local/share/pieverse/prompts.db`
