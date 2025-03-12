@@ -108,6 +108,13 @@ use services::references::{
     load_references,
     save_references
 };
+use services::vscode_ws::{
+    VSCodeWebSocketState,
+    start_vscode_ws_server,
+    stop_vscode_ws_server,
+    get_vscode_ws_status,
+    send_code_diff_to_vscode
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -143,7 +150,8 @@ pub fn run() {
         .manage(PythonService::new())
         .manage(SqliteService::new())
         .manage(ApiServerState::default())
-        .manage(trend_spike_service) // use the original value here
+        .manage(trend_spike_service)
+        .manage(VSCodeWebSocketState::new())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -209,7 +217,11 @@ pub fn run() {
             generate_structure_text,
             is_valid_path,
             load_references,
-            save_references            
+            save_references,
+            start_vscode_ws_server,
+            stop_vscode_ws_server,
+            get_vscode_ws_status,
+            send_code_diff_to_vscode,            
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

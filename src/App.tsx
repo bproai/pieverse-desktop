@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -18,6 +18,7 @@ import ChromeDebuggerPanel from './components/ChromeDebugger';
 import FolderStructurePanel from './components/FolderStructure/FolderStructurePanel';
 import { ReferencesPanel } from './components/References';
 import { LLMRulesPanel } from './components/LLMRules';
+import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -106,6 +107,9 @@ function App() {
                 <Tabs.Tab value="llm-rules" leftSection={<Brain size={16} />}>
                   LLM Rules
                 </Tabs.Tab>
+                <Tabs.Tab value="vscode" leftSection={<Brackets size={16} />}>
+                  VS Code Integration
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -157,7 +161,11 @@ function App() {
               <Tabs.Panel value="llm-rules" className="p-4">
                 <LLMRulesPanel />
               </Tabs.Panel>
-            </Tabs>
+
+              <Tabs.Panel value="vscode" className="p-4">
+                <VSCodeIntegrationPanel />
+              </Tabs.Panel>
+            </Tabs>           
           </main>
 
           {/* Render the floating Avatar */}

@@ -1,7 +1,7 @@
 {
   "name": "pieverse-diff-extension",
-  "displayName": "pieverse-diff-extension",
-  "description": "",
+  "displayName": "PieVerse Diff Extension",
+  "description": "VS Code extension for interacting with PieVerse Desktop application",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.98.0"
@@ -16,8 +16,16 @@
   "contributes": {
     "commands": [
       {
-        "command": "pieverse-diff-extension.helloWorld",
-        "title": "Hello World"
+        "command": "pieverse-diff.connect",
+        "title": "Connect to PieVerse"
+      },
+      {
+        "command": "pieverse-diff.setWebSocketUrl",
+        "title": "Set PieVerse WebSocket URL"
+      },
+      {
+        "command": "pieverse-diff.showDiff",
+        "title": "Show PieVerse Diff"
       }
     ],
     "viewsContainers": {
@@ -36,6 +44,30 @@
           "name": "Diff Dashboard"
         }
       ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "pieverse-diff.connect",
+          "when": "view == pieverseDiffView",
+          "group": "navigation"
+        },
+        {
+          "command": "pieverse-diff.setWebSocketUrl",
+          "when": "view == pieverseDiffView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PieVerse Diff Extension",
+      "properties": {
+        "pieverse-diff.websocketUrl": {
+          "type": "string",
+          "default": "ws://localhost:3001",
+          "description": "WebSocket URL for connecting to PieVerse Desktop"
+        }
+      }
     }
   },
   "scripts": {

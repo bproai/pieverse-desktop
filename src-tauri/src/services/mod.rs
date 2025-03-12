@@ -30,3 +30,6 @@ pub mod references;
 
 // LLM Rules service
 pub mod llm_rules;
+
+// VS Code integration service
+pub mod vscode_ws;
