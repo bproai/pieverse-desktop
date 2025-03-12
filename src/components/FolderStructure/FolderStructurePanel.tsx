@@ -69,7 +69,7 @@ const FolderStructurePanel: React.FC = () => {
     exclude_build: true,
     exclude_hidden: true,
     custom_excludes: true,
-    exclude_patterns: "monaco-editor",
+    exclude_patterns: "monaco-editor|Business Plan|lessons-learned",
   });
   const [showFilterOptions, setShowFilterOptions] = useState<boolean>(false);
   const [treeText, setTreeText] = useState<string>('');
