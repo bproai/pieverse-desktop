@@ -65,15 +65,10 @@ interface LLMRule {
 
 // LLM Models data
 const llmModels = [
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-  { value: 'claude-3-opus', label: 'Claude 3 Opus' },
-  { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet' },
-  { value: 'llama-3', label: 'Llama 3' },
-  { value: 'mistral', label: 'Mistral' },
-  { value: 'gemini-pro', label: 'Gemini Pro' },
-  { value: 'other', label: 'Other' }
-];
+    { value: 'any-model', label: 'Any Model' },
+    { value: 'claude-3.7-sonnet', label: 'Claude 3.7 Sonnet' },
+    { value: 'gpt-o3-mini-high', label: 'ChatGPT o3-mini-high' }
+  ];
 
 // Available colors for rules
 const colorOptions = [
@@ -103,7 +98,7 @@ const LLMRulesPanel: React.FC = () => {
   const [newRule, setNewRule] = useState<Omit<LLMRule, 'id' | 'dateCreated' | 'dateModified'>>({
     name: '',
     description: '',
-    model: 'gpt-4',
+    model: 'Any Model',
     content: '',
     tags: [],
     variables: [],
@@ -139,7 +134,7 @@ const LLMRulesPanel: React.FC = () => {
           id: '1',
           name: 'Expert Coding Assistant',
           description: 'Instructions for an LLM to behave as a coding expert',
-          model: 'gpt-4',
+          model: 'any-model',
           content: `You are an expert software developer specializing in modern web technologies.
 Follow these guidelines:
 - Provide clean, efficient, and well-commented code
@@ -188,7 +183,7 @@ Use variables like this:
           id: '2',
           name: 'Creative Writing Coach',
           description: 'Instructions for an LLM to act as a writing coach',
-          model: 'claude-3-opus',
+          model: 'claude-3.7-sonnet',
           content: `You are a supportive and insightful creative writing coach.
 Your goal is to help writers improve their craft while maintaining their unique voice.
 
@@ -232,6 +227,60 @@ Remember: your goal is to help the writer tell THEIR story better, not to rewrit
           dateModified: '2024-03-01T09:30:00Z',
           isSystem: false,
           color: '#40C057'
+        },
+        {
+          id: '3',
+          name: 'Tauri 2.0 Developer',
+          description: 'Instructs LLMs to use correct Tauri 2.0 APIs and patterns',
+          model: 'any-model',
+          content: `You are assisting with a React + Tauri 2.0 application. Be aware of the following important differences between Tauri 1.0 and 2.0:
+
+1. API IMPORTS AND INVOCATION:
+   - Tauri 1.0: \`import { invoke } from '@tauri-apps/api/tauri';\`
+   - Tauri 2.0: \`import { core } from '@tauri-apps/api';\` and use \`core.invoke()\`
+
+2. DIALOG API:
+   - Tauri 1.0: Uses \`@tauri-apps/api/dialog\`
+   - Tauri 2.0: Uses \`@tauri-apps/plugin-dialog\`
+
+3. FILESYSTEM ACCESS:
+   - Tauri 1.0: Direct path resolution methods
+   - Tauri 2.0: Uses \`app_handle.path().app_data_dir()\` pattern
+
+4. WINDOW MANAGEMENT:
+   - Tauri 1.0: Different window creation API
+   - Tauri 2.0: Updated window management patterns
+
+5. PLUGIN SYSTEMS:
+   - Tauri 2.0 has a new plugin registration system
+
+Always refer to the latest Tauri 2.0 documentation at https://v2.tauri.app/ when providing code examples. Do not use outdated Tauri 1.0 patterns or APIs in your responses.
+
+When encountering code using Tauri 1.0 patterns, explicitly point out the needed changes for Tauri 2.0 compatibility, focusing especially on properly importing and using \`core.invoke()\` instead of \`invoke()\`.
+
+Use variables like this:
+- Project focus: {{projectFocus}}
+- Additional considerations: {{additionalNotes}}`,
+          tags: ['tauri', 'react', 'coding', 'compatibility'],
+          variables: [
+            {
+              name: 'projectFocus',
+              description: 'The specific area of Tauri development',
+              defaultValue: 'Full-stack integration',
+              type: 'select',
+              options: ['Frontend integration', 'Backend services', 'Full-stack integration', 'Plugin development']
+            },
+            {
+              name: 'additionalNotes',
+              description: 'Any additional considerations for the project',
+              defaultValue: 'Focus on cross-platform compatibility',
+              type: 'text'
+            }
+          ],
+          dateCreated: new Date().toISOString(),
+          dateModified: new Date().toISOString(),
+          isSystem: true,
+          color: '#4C6EF5'
         }
       ];
       
