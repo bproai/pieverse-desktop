@@ -1,16 +1,17 @@
 import * as vscode from 'vscode';
+import WebSocket from 'ws';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as crypto from 'crypto';
-// Import WebSocket as a default import
-import WebSocket from 'ws';
 
+// Define global variables
 let ws: WebSocket | null = null;
 let wsReconnectInterval: NodeJS.Timeout | null = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 let statusBarItem: vscode.StatusBarItem;
+let chatPanel: vscode.WebviewPanel | undefined;
 
 // Define a simple TreeItem for your Diff Dashboard
 class DiffTreeItem extends vscode.TreeItem {
@@ -28,7 +29,7 @@ class DiffTreeItem extends vscode.TreeItem {
   }
 }
 
-// Create a basic TreeDataProvider for the diff view
+// Create a TreeDataProvider for the diff view
 class DiffTreeDataProvider implements vscode.TreeDataProvider<DiffTreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<DiffTreeItem | undefined | void> =
     new vscode.EventEmitter<DiffTreeItem | undefined | void>();
@@ -69,6 +70,198 @@ class DiffTreeDataProvider implements vscode.TreeDataProvider<DiffTreeItem> {
   }
 }
 
+// Create and show chat panel
+function createChatPanel(context: vscode.ExtensionContext) {
+  // Create and show panel
+  const panel = vscode.window.createWebviewPanel(
+    'pieverseChatPanel',
+    'PieVerse Chat',
+    vscode.ViewColumn.Two,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true
+    }
+  );
+
+  // Set the HTML content
+  panel.webview.html = getChatWebviewContent();
+
+  // Handle messages from the webview
+  panel.webview.onDidReceiveMessage(
+    message => {
+      switch (message.command) {
+        case 'sendMessage':
+          sendMessageToTauri(message.text);
+          return;
+      }
+    },
+    undefined,
+    context.subscriptions
+  );
+
+  return panel;
+}
+
+// Send messages to Tauri via WebSocket
+function sendMessageToTauri(text: string) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const message = JSON.stringify({
+      type: 'chat',
+      content: text
+    });
+    ws.send(message);
+    vscode.window.showInformationMessage(`Sent: ${text}`);
+  } else {
+    vscode.window.showErrorMessage('WebSocket is not connected. Please connect to PieVerse first.');
+  }
+}
+
+// Get HTML for the chat interface
+function getChatWebviewContent() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PieVerse Chat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            padding: 0;
+            margin: 0;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+        }
+        .message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .user-message {
+            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            color: var(--vscode-editor-foreground);
+            align-self: flex-end;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            color: var(--vscode-editor-foreground);
+            align-self: flex-start;
+            margin-right: 20%;
+        }
+        #input-container {
+            display: flex;
+            margin-top: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid var(--vscode-input-border);
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border-radius: 4px;
+        }
+        #send-button {
+            margin-left: 8px;
+            padding: 8px 16px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #send-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="message-input" placeholder="Type a message..." />
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const vscode = acquireVsCodeApi();
+            const messagesContainer = document.getElementById('messages');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+
+            // Function to add a message to the chat
+            function addMessage(text, isSelf) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message');
+                messageElement.classList.add(isSelf ? 'user-message' : 'bot-message');
+                messageElement.textContent = text;
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            // Function to send a message
+            function sendMessage() {
+                const text = messageInput.value.trim();
+                if (text) {
+                    // Add message to chat
+                    addMessage(text, true);
+                    
+                    // Send message to extension
+                    vscode.postMessage({
+                        command: 'sendMessage',
+                        text: text
+                    });
+                    
+                    // Clear input
+                    messageInput.value = '';
+                }
+            }
+
+            // Send button click event
+            sendButton.addEventListener('click', sendMessage);
+
+            // Enter key event
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // Handle messages from the extension
+            window.addEventListener('message', event => {
+                const message = event.data;
+                switch (message.command) {
+                    case 'receiveMessage':
+                        addMessage(message.text, false);
+                        break;
+                }
+            });
+        }());
+    </script>
+</body>
+</html>`;
+}
+
 export function activate(context: vscode.ExtensionContext) {
   console.log('PieVerse Diff Extension activated.');
 
@@ -87,6 +280,22 @@ export function activate(context: vscode.ExtensionContext) {
   // Get config
   const config = vscode.workspace.getConfiguration('pieverse-diff');
   const wsUrl = config.get<string>('websocketUrl') || 'ws://localhost:3001';
+
+  // Register command to open chat panel
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.openChat', () => {
+      if (chatPanel) {
+        chatPanel.reveal();
+      } else {
+        chatPanel = createChatPanel(context);
+        chatPanel.onDidDispose(
+          () => { chatPanel = undefined; },
+          null,
+          context.subscriptions
+        );
+      }
+    })
+  );
 
   // Register commands
   context.subscriptions.push(
@@ -215,7 +424,52 @@ function connectWebSocket(wsUrl: string, treeDataProvider: DiffTreeDataProvider,
 
       ws.on('message', (data: WebSocket.Data) => {
         console.log('Received data from PieVerse:', data);
-        handleSuggestedUpdate(data.toString(), treeDataProvider, context);
+        const dataStr = data.toString();
+        
+        try {
+          // Try to parse as JSON to determine message type
+          const jsonData = JSON.parse(dataStr);
+          
+          if (jsonData.type === 'chat') {
+            // Handle as chat message
+            if (chatPanel && chatPanel.webview) {
+              chatPanel.webview.postMessage({ 
+                command: 'receiveMessage', 
+                text: jsonData.content,
+                sender: 'PieVerse'
+              });
+              
+              // If chat panel isn't open, show notification with option to open it
+              if (!chatPanel.visible) {
+                vscode.window.showInformationMessage(
+                  `New message from PieVerse: ${jsonData.content}`, 
+                  'Open Chat'
+                ).then(selection => {
+                  if (selection === 'Open Chat') {
+                    vscode.commands.executeCommand('pieverse-diff.openChat');
+                  }
+                });
+              }
+            } else {
+              // If chat panel doesn't exist, show notification with option to open it
+              vscode.window.showInformationMessage(
+                `New message from PieVerse: ${jsonData.content}`, 
+                'Open Chat'
+              ).then(selection => {
+                if (selection === 'Open Chat') {
+                  vscode.commands.executeCommand('pieverse-diff.openChat');
+                }
+              });
+            }
+          } else if (jsonData.originalFile && jsonData.suggestedContent) {
+            // Handle as diff suggestion
+            handleSuggestedUpdate(dataStr, treeDataProvider, context);
+          }
+        } catch (e) {
+          // If not valid JSON or doesn't have expected format,
+          // try handling as a diff suggestion
+          handleSuggestedUpdate(dataStr, treeDataProvider, context);
+        }
       });
 
       ws.on('close', () => {
@@ -281,6 +535,12 @@ function connectWebSocket(wsUrl: string, treeDataProvider: DiffTreeDataProvider,
 function handleSuggestedUpdate(suggestedData: string, treeDataProvider: DiffTreeDataProvider, context: vscode.ExtensionContext) {
   try {
     const suggestion = JSON.parse(suggestedData);
+    
+    // Check if this is a proper diff suggestion
+    if (!suggestion.originalFile || !suggestion.suggestedContent) {
+      console.log("Received non-diff message:", suggestedData);
+      return;
+    }
     
     // Create a descriptive name for the tree item
     const fileName = suggestion.originalFile.split('/').pop() || suggestion.originalFile.split('\\').pop();
@@ -379,6 +639,10 @@ export function deactivate() {
   
   if (statusBarItem) {
     statusBarItem.dispose();
+  }
+  
+  if (chatPanel) {
+    chatPanel.dispose();
   }
   
   console.log('PieVerse Diff Extension deactivated.');

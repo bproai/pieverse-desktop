@@ -113,7 +113,8 @@ use services::vscode_ws::{
     start_vscode_ws_server,
     stop_vscode_ws_server,
     get_vscode_ws_status,
-    send_code_diff_to_vscode
+    send_code_diff_to_vscode,
+    send_chat_to_vscode
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -221,7 +222,8 @@ pub fn run() {
             start_vscode_ws_server,
             stop_vscode_ws_server,
             get_vscode_ws_status,
-            send_code_diff_to_vscode,            
+            send_code_diff_to_vscode,
+            send_chat_to_vscode
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

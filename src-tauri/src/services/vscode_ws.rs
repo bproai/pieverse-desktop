@@ -7,7 +7,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::broadcast;
 use tokio::sync::oneshot;
 use serde::{Serialize, Deserialize};
-use tauri::{AppHandle, Manager, Window, Listener, Emitter};
+use tauri::{AppHandle, Manager, Listener, Emitter};
 use tokio_tungstenite::WebSocketStream;
 
 // Make sure everything is Send + Sync
@@ -40,8 +40,6 @@ impl VSCodeWebSocketState {
     }
 }
 
-// Start WebSocket server - safe wrapper around the actual implementation
-// This is a non-async command that returns immediately and spawns the server setup in the background
 #[tauri::command]
 pub fn start_vscode_ws_server(
     app: AppHandle,
@@ -49,12 +47,13 @@ pub fn start_vscode_ws_server(
     state: tauri::State<'_, VSCodeWebSocketState>,
 ) -> Result<(), String> {
     // Check if already running
-    if let Ok(is_running) = state.server_running.lock() {
-        if *is_running {
-            return Err("Server is already running".to_string());
-        }
-    } else {
-        return Err("Failed to lock server state".to_string());
+    let is_running = match state.server_running.lock() {
+        Ok(guard) => *guard,
+        Err(_) => return Err("Failed to lock server state".to_string()),
+    };
+    
+    if is_running {
+        return Err("Server is already running".to_string());
     }
     
     // Extract port
@@ -65,156 +64,123 @@ pub fn start_vscode_ws_server(
         *port_lock = server_port;
     }
     
-    // Clone everything needed for the task
-    let app_handle = app.clone();
+    // Clone state for the server
     let running = state.server_running.clone();
     let shutdown_sender = state.shutdown_sender.clone();
     let broadcast_tx = state.broadcast_tx.clone();
     
-    // Spawn task to start server using Tauri's async runtime
+    // Create a broadcast channel
+    let (tx, _rx) = broadcast::channel::<String>(16);
+    let event_tx = tx.clone();
+    
+    // Store broadcast sender
+    if let Ok(mut tx_lock) = broadcast_tx.lock() {
+        *tx_lock = Some(tx.clone());
+    }
+
+    // First set up event listener for sending messages to VS Code
+    let app_for_listen = app.clone();
+    let listen_handle = app_for_listen.listen("send-vscode-diff", move |event| {
+        let payload = event.payload();
+        let _ = event_tx.send(payload.to_string());
+    });
+    
+    // Now spawn the async task
+    let app_for_server = app;
     tauri::async_runtime::spawn(async move {
-        match setup_server(app_handle, server_port, running, shutdown_sender, broadcast_tx).await {
-            Ok(port) => println!("VS Code WebSocket server started on port {}", port),
-            Err(e) => eprintln!("Failed to start VS Code WebSocket server: {}", e),
+        // Start the server
+        if let Err(e) = run_ws_server(
+            app_for_server,
+            server_port,
+            running,
+            shutdown_sender,
+            tx
+        ).await {
+            eprintln!("WebSocket server error: {}", e);
         }
+        
+        // Clean up event listener when server stops
+        let _ = app_for_listen.unlisten(listen_handle);
     });
     
     Ok(())
 }
 
-// This function starts the actual server in a separate task
-// It's an async function designed to run inside Tauri's tokio runtime
-async fn setup_server(
-    app_handle: AppHandle,
-    start_port: u16,
+// Separate function for the actual server implementation
+async fn run_ws_server(
+    app: AppHandle,
+    port: u16,
     running: Arc<Mutex<bool>>,
     shutdown_sender: SendableShutdown,
-    broadcast_tx: SendableTx,
-) -> Result<u16, String> {
-    // Create broadcast channel for messages
-    let (tx, _rx) = broadcast::channel::<String>(16);
-    
-    // Store broadcast sender in state
-    if let Ok(mut tx_lock) = broadcast_tx.lock() {
-        *tx_lock = Some(tx.clone());
-    } else {
-        return Err("Failed to lock broadcast sender".to_string());
-    }
-    
+    tx: broadcast::Sender<String>
+) -> Result<(), String> {
     // Create shutdown channel
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
     
-    // Store shutdown sender in state
-    if let Ok(mut shutdown_lock) = shutdown_sender.lock() {
-        *shutdown_lock = Some(shutdown_tx);
-    } else {
-        return Err("Failed to lock shutdown sender".to_string());
+    // Store shutdown sender
+    if let Ok(mut sender) = shutdown_sender.lock() {
+        *sender = Some(shutdown_tx);
     }
     
-    // Try multiple ports if the initial one is in use
-    let mut current_port = start_port;
-    let max_port_tries = 10; // Try up to 10 ports
-    let mut listener = None;
-
-    for _ in 0..max_port_tries {
-        let addr = format!("127.0.0.1:{}", current_port);
-        match TcpListener::bind(&addr).await {
-            Ok(l) => {
-                listener = Some(l);
-                break;
-            },
-            Err(e) => {
-                println!("Failed to bind to port {}: {}, trying next port...", current_port, e);
-                if current_port < 65535 {
-                    // Try the next port
-                    current_port += 1;
-                } else {
-                    return Err(format!("Failed to bind to any port starting from {}", start_port));
-                }
-            }
-        }
-    }
-    
-    let listener = match listener {
-        Some(l) => l,
-        None => return Err("Failed to find an available port after multiple attempts".to_string()),
+    // Try to bind to the port
+    let addr = format!("127.0.0.1:{}", port);
+    let listener = match TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => return Err(format!("Failed to bind to {}: {}", addr, e)),
     };
     
     let actual_port = match listener.local_addr() {
         Ok(addr) => addr.port(),
-        Err(e) => return Err(format!("Failed to get listener address: {}", e)),
+        Err(e) => return Err(format!("Failed to get local address: {}", e)),
     };
     
-    // Update port in case we got a different one
-    if let Ok(mut port_lock) = running.lock() {
-        *port_lock = true;
-    } else {
-        return Err("Failed to lock server running state".to_string());
+    // Set server as running
+    if let Ok(mut is_running) = running.lock() {
+        *is_running = true;
     }
     
-    // Clone for task
-    let running_clone = running.clone();
-    let tx_clone = tx.clone();
+    println!("VS Code WebSocket server started on port {}", actual_port);
     
-    // Spawn server task
-    tauri::async_runtime::spawn(async move {
-        println!("VS Code WebSocket server started on port {}", actual_port);
-        
-        let mut listener_stream = TcpListenerStream::new(listener);
-        
-        loop {
-            tokio::select! {
-                Some(socket_result) = listener_stream.next() => {
-                    match socket_result {
-                        Ok(stream) => {
-                            if let Ok(peer_addr) = stream.peer_addr() {
-                                println!("New VS Code extension connection from: {}", peer_addr);
-                            }
-                            let conn_tx = tx.clone();
-                            tauri::async_runtime::spawn(async move {
-                                handle_connection(stream, conn_tx).await;
-                            });
-                        },
-                        Err(e) => println!("Error accepting connection: {}", e),
-                    }
-                },
-                _ = &mut shutdown_rx => {
-                    println!("VS Code WebSocket server shutting down");
-                    break;
+    // Start accepting connections
+    let mut listener_stream = TcpListenerStream::new(listener);
+    
+    loop {
+        tokio::select! {
+            Some(socket_result) = listener_stream.next() => {
+                match socket_result {
+                    Ok(stream) => {
+                        if let Ok(peer_addr) = stream.peer_addr() {
+                            println!("New VS Code extension connection from: {}", peer_addr);
+                        }
+                        let conn_tx = tx.clone();
+                        let conn_app = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            handle_connection(stream, conn_tx, conn_app).await;
+                        });
+                    },
+                    Err(e) => println!("Error accepting connection: {}", e),
                 }
+            },
+            _ = &mut shutdown_rx => {
+                println!("VS Code WebSocket server shutting down");
+                break;
             }
         }
-        
-        // Server stopped, update state
-        if let Ok(mut is_running) = running_clone.lock() {
-            *is_running = false;
-        }
-    });
-    
-    // Set up event listener
-    app_handle.listen("send-vscode-diff", move |event| {
-        let payload = event.payload();
-        let _ = tx_clone.send(payload.to_string());
-    });
-    
-    Ok(actual_port)
-}
-
-// Get current port - synchronous function
-#[tauri::command]
-pub fn get_vscode_ws_port(state: tauri::State<'_, VSCodeWebSocketState>) -> Result<u16, String> {
-    match state.port.lock() {
-        Ok(port) => Ok(*port),
-        Err(_) => Err("Failed to get server port".to_string()),
     }
+    
+    // Set server as not running
+    if let Ok(mut is_running) = running.lock() {
+        *is_running = false;
+    }
+    
+    Ok(())
 }
 
-// Stop the WebSocket server
 #[tauri::command]
 pub fn stop_vscode_ws_server(state: tauri::State<'_, VSCodeWebSocketState>) -> Result<(), String> {
     // Check if running
     let is_running = match state.server_running.lock() {
-        Ok(lock) => *lock,
+        Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
     
@@ -237,7 +203,6 @@ pub fn stop_vscode_ws_server(state: tauri::State<'_, VSCodeWebSocketState>) -> R
     }
 }
 
-// Get current server status and port
 #[tauri::command]
 pub fn get_vscode_ws_status(state: tauri::State<'_, VSCodeWebSocketState>) -> Result<(bool, u16), String> {
     let running = match state.server_running.lock() {
@@ -253,7 +218,38 @@ pub fn get_vscode_ws_status(state: tauri::State<'_, VSCodeWebSocketState>) -> Re
     Ok((running, port))
 }
 
-// Send a code diff to VS Code extension
+#[tauri::command]
+pub fn send_chat_to_vscode(
+    state: tauri::State<'_, VSCodeWebSocketState>,
+    message: String,
+) -> Result<(), String> {
+    // Get broadcast sender
+    let tx = match state.broadcast_tx.lock() {
+        Ok(lock) => match lock.clone() {
+            Some(tx) => tx,
+            None => return Err("WebSocket server is not running".to_string()),
+        },
+        Err(_) => return Err("Failed to lock broadcast sender".to_string()),
+    };
+    
+    // Create the chat message payload
+    let chat_message = serde_json::json!({
+        "type": "chat",
+        "content": message
+    });
+    
+    // Serialize and send
+    match serde_json::to_string(&chat_message) {
+        Ok(payload) => {
+            match tx.send(payload) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("Failed to send message: {}", e)),
+            }
+        },
+        Err(e) => Err(format!("Failed to serialize chat message: {}", e)),
+    }
+}
+
 #[tauri::command]
 pub fn send_code_diff_to_vscode(
     state: tauri::State<'_, VSCodeWebSocketState>,
@@ -280,9 +276,8 @@ pub fn send_code_diff_to_vscode(
     }
 }
 
-// Handle WebSocket connections
-async fn handle_connection(stream: TcpStream, tx: broadcast::Sender<String>) {
-    // Attempt to get peer address for logging
+async fn handle_connection(stream: TcpStream, tx: broadcast::Sender<String>, app: AppHandle) {
+    // Get peer address for logging
     let addr = stream.peer_addr().unwrap_or_else(|_| {
         "unknown".parse().unwrap()
     });
@@ -291,17 +286,17 @@ async fn handle_connection(stream: TcpStream, tx: broadcast::Sender<String>) {
     match tokio_tungstenite::accept_async(stream).await {
         Ok(ws_stream) => {
             println!("WebSocket connection established with VS Code extension: {}", addr);
-            process_messages(ws_stream, tx, addr).await;
+            process_messages(ws_stream, tx, addr, app).await;
         },
         Err(e) => println!("Error during WebSocket handshake: {}", e),
     }
 }
 
-// Process WebSocket messages
 async fn process_messages(
     ws_stream: WebSocketStream<TcpStream>,
     tx: broadcast::Sender<String>,
     addr: SocketAddr,
+    app: AppHandle
 ) {
     // Subscribe to broadcasts
     let mut rx = BroadcastStream::new(tx.subscribe());
@@ -316,6 +311,22 @@ async fn process_messages(
                 Ok(msg) => {
                     if let Ok(text) = msg.to_text() {
                         println!("Received message from VS Code: {}", text);
+                        
+                        // Try to parse message
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(text) {
+                            if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
+                                if msg_type == "chat" {
+                                    if let Some(content) = json.get("content").and_then(|c| c.as_str()) {
+                                        // Emit to the frontend
+                                        println!("Emitting chat message to frontend: {}", content);
+                                        let _ = app.emit("vscode-chat-message", serde_json::json!({
+                                            "content": content,
+                                            "sender": "vscode"
+                                        }));
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 Err(e) => {
@@ -326,7 +337,7 @@ async fn process_messages(
         }
     });
     
-    // Task for sending broadcast messages to this client
+    // Task for sending broadcast messages
     let mut write_task = tauri::async_runtime::spawn(async move {
         while let Some(result) = rx.next().await {
             match result {

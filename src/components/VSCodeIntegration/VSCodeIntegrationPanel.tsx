@@ -12,13 +12,15 @@ import {
   Badge, 
   Switch,
   Code,
-  Textarea
+  Textarea,
+  Tabs
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle } from 'lucide-react';
+import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode } from 'lucide-react';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
+import VSCodeChat from './VSCodeChat';
 
 interface VSCodeStatus {
   isRunning: boolean;
@@ -36,6 +38,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [status, setStatus] = useState<VSCodeStatus>({ isRunning: false, port: 3001 });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>('diff');
   
   // Test diff parameters
   const [originalFile, setOriginalFile] = useState<string>('');
@@ -66,13 +69,14 @@ const VSCodeIntegrationPanel: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const serverPort = await core.invoke('start_vscode_ws_server', { port }) as number;
+      await core.invoke('start_vscode_ws_server', { port });
       notifications.show({
         title: 'Success',
-        message: `VS Code WebSocket server started on port ${serverPort}`,
+        message: `VS Code WebSocket server started on port ${port}`,
         color: 'green'
       });
-      setStatus({ isRunning: true, port: serverPort });
+      setStatus({ isRunning: true, port: port });
+      fetchStatus(); // Refresh status to get the actual port
     } catch (error: any) {
       console.error('Error starting VS Code WebSocket server:', error);
       setError(error.toString());
@@ -240,43 +244,60 @@ const VSCodeIntegrationPanel: React.FC = () => {
             </Alert>
           )}
           
-          <Card withBorder p="md" mt="md">
-            <Text weight={600} mb="md">Test VS Code Diff</Text>
-            <Stack spacing="md">
-              <TextInput
-                label="Original File Path"
-                description="Path to the original file that will be modified"
-                placeholder="/path/to/your/file.js"
-                value={originalFile}
-                onChange={(e) => setOriginalFile(e.currentTarget.value)}
-              />
-              
-              <TextInput
-                label="Description"
-                description="Description of the proposed change"
-                placeholder="Refactor function for better performance"
-                value={description}
-                onChange={(e) => setDescription(e.currentTarget.value)}
-              />
-              
-              <Textarea
-                label="Suggested Content"
-                description="New content to be displayed in the diff view"
-                placeholder="// Your suggested code here"
-                value={suggestedContent}
-                onChange={(e) => setSuggestedContent(e.currentTarget.value)}
-                minRows={5}
-              />
-              
-              <Button
-                onClick={sendTestDiff}
-                loading={loading}
-                disabled={!status.isRunning}
-              >
-                Send Test Diff
-              </Button>
-            </Stack>
-          </Card>
+          <Tabs defaultValue="diff" value={activeTab} onChange={setActiveTab}>
+            <Tabs.List>
+              <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
+                Test Diff
+              </Tabs.Tab>
+              <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
+                Chat
+              </Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="diff" p="md">
+              <Card withBorder p="md" mt="md">
+                <Text weight={600} mb="md">Test VS Code Diff</Text>
+                <Stack spacing="md">
+                  <TextInput
+                    label="Original File Path"
+                    description="Path to the original file that will be modified"
+                    placeholder="/path/to/your/file.js"
+                    value={originalFile}
+                    onChange={(e) => setOriginalFile(e.currentTarget.value)}
+                  />
+                  
+                  <TextInput
+                    label="Description"
+                    description="Description of the proposed change"
+                    placeholder="Refactor function for better performance"
+                    value={description}
+                    onChange={(e) => setDescription(e.currentTarget.value)}
+                  />
+                  
+                  <Textarea
+                    label="Suggested Content"
+                    description="New content to be displayed in the diff view"
+                    placeholder="// Your suggested code here"
+                    value={suggestedContent}
+                    onChange={(e) => setSuggestedContent(e.currentTarget.value)}
+                    minRows={5}
+                  />
+                  
+                  <Button
+                    onClick={sendTestDiff}
+                    loading={loading}
+                    disabled={!status.isRunning}
+                  >
+                    Send Test Diff
+                  </Button>
+                </Stack>
+              </Card>
+            </Tabs.Panel>
+            
+            <Tabs.Panel value="chat" p="md">
+              <VSCodeChat isServerRunning={status.isRunning} />
+            </Tabs.Panel>
+          </Tabs>
           
           <Card withBorder p="md">
             <Text weight={600} mb="md">VS Code Extension Integration</Text>

@@ -26,6 +26,10 @@
       {
         "command": "pieverse-diff.showDiff",
         "title": "Show PieVerse Diff"
+      },
+      {
+        "command": "pieverse-diff.openChat",
+        "title": "Open PieVerse Chat"
       }
     ],
     "viewsContainers": {
@@ -54,6 +58,11 @@
         },
         {
           "command": "pieverse-diff.setWebSocketUrl",
+          "when": "view == pieverseDiffView",
+          "group": "navigation"
+        },
+        {
+          "command": "pieverse-diff.openChat",
           "when": "view == pieverseDiffView",
           "group": "navigation"
         }
