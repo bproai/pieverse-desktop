@@ -330,15 +330,15 @@ We welcome community contributions! To contribute:
 For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
 
 ## 📝 Changelog
-- **v0.1.0 (2025-03-01):**
+- **v0.1.0:**
   Initial release – Basic AI assistant avatar, SQLite integration, and prompt management.
-- **v0.2.0 (2025-03-15):**
+- **v0.2.0:**
   Added MySQL/MongoDB support, Python sandbox, and enhanced trend analysis.
-- **v0.3.0 (2025-04-01):**
+- **v0.3.0:**
   Integrated GPT-4o Realtime, improved avatar expressions, and expanded API functionality.
-- **v0.3.1 (2025-04-08):**
+- **v0.3.1:**
   Added HTML Renderer for visualizing and editing HTML content in multiple formats.
-- **v0.3.2 (2025-04-15):**
+- **v0.3.2:**
   Enhanced Document Renderer with Markdown support, syntax highlighting, and <span class="user-style-normal">special tag handling</span>.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
