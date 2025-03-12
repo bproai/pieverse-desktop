@@ -133,11 +133,15 @@ To use the Chrome Extension debugging feature:
    google-chrome --remote-debugging-port=9222
    ```
 
-3. In a separate terminal window, start the Chrome Logger Bridge:
+3. In a separate terminal window, start the Chrome Logger Bridge using one of these methods:
    ```bash
+   # Option 1: Navigate to the bridge directory
    cd scripts/chrome-bridge
    npm install  # First time only
    npm start
+   
+   # Option 2: Run from the project root in DEBUG mode
+   npm run bridge
    ```
 
 4. Launch the PieVerse app in another terminal window:
@@ -150,6 +154,12 @@ To use the Chrome Extension debugging feature:
 6. Select the extension or other Chrome target you want to monitor, then click "Connect" to start capturing logs.
 
 The bridge creates a WebSocket server that facilitates communication between Chrome's DevTools Protocol and the application, allowing you to monitor console logs from Chrome extensions and other Chrome targets in real-time.
+
+PieVerse's Chrome Debugger panel also provides built-in convenience features:
+- **Auto-start capability:** The debugger can spawn terminal instances to automatically:
+  - Launch Chrome in remote debugging mode
+  - Start the bridge connection
+- **One-click setup:** Simplifies the entire debugging process directly from within the application
 
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:
