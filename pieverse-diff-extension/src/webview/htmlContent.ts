@@ -5,9 +5,29 @@
 import { icons } from '../utils/icons';
 
 /**
- * Generate the CSS styles for the panel
+ * Get the complete HTML content for the integrated panel
  */
-export function getPanelStyles(): string {
+export function getCompletePanelHtml(cssUri: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PieVerse</title>
+  <link href="${cssUri}" rel="stylesheet" />
+  <style>${getPanelStyles()}</style>
+</head>
+<body>
+  ${getPanelBodyHtml()}
+  <script>${getPanelScript()}</script>
+</body>
+</html>`;
+}
+
+/**
+ * Get the CSS styles for the panel
+ */
+function getPanelStyles(): string {
   return `
     :root {
       --panel-width: 100%;
@@ -251,12 +271,12 @@ export function getPanelStyles(): string {
       }
     }
   `;
-
+}
 
 /**
  * Generate the HTML for the panel body
  */
-export function getPanelBodyHtml(): string {
+function getPanelBodyHtml(): string {
   return `
     <div class="container">
       <div id="header">
@@ -307,11 +327,12 @@ export function getPanelBodyHtml(): string {
       </div>
     </div>
   `;
+}
 
 /**
  * Get the JavaScript code for the panel
  */
-export function getPanelScript(): string {
+function getPanelScript(): string {
   return `
     (function() {
       const vscode = acquireVsCodeApi();
@@ -517,23 +538,4 @@ Description: \${message.description || 'No description provided'}\`;
       updateConnectionStatus('disconnected');
     }());
   `;
-
-/**
- * Get the complete HTML content for the integrated panel
- */
-export function getCompletePanelHtml(cssUri: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PieVerse</title>
-  <link href="${cssUri}" rel="stylesheet" />
-  <style>${getPanelStyles()}</style>
-</head>
-<body>
-  ${getPanelBodyHtml()}
-  <script>${getPanelScript()}</script>
-</body>
-</html>`;
 }
