@@ -1,0 +1,60 @@
+/* PieVerse Panel custom styles */
+
+/* You can add additional custom styles here that will be applied to the panel */
+
+/* Example: Highlight special messages */
+.system-message.important {
+    border-left-color: #FF5722;
+    font-weight: bold;
+  }
+  
+  /* Example: Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--vscode-scrollbarSlider-background);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--vscode-scrollbarSlider-hoverBackground);
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  
+  /* Resizable chat section */
+  #chat-section {
+    resize: vertical;
+    min-height: 80px;
+    max-height: 300px;
+  }
+  
+  /* Animations */
+  .connection-status {
+    transition: color 0.3s ease;
+  }
+  
+  .icon-button {
+    transition: background-color 0.2s ease;
+  }
+  
+  /* Mobile responsiveness */
+  @media (max-width: 480px) {
+    .header-title {
+      font-size: 12px;
+    }
+    
+    .icon-button {
+      width: 20px;
+      height: 20px;
+    }
+    
+    #chat-section {
+      height: 100px;
+    }
+  }

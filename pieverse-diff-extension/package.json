@@ -17,19 +17,28 @@
     "commands": [
       {
         "command": "pieverse-diff.connect",
-        "title": "Connect to PieVerse"
+        "title": "Connect to PieVerse",
+        "icon": "$(radio-tower)"
       },
       {
         "command": "pieverse-diff.setWebSocketUrl",
-        "title": "Set PieVerse WebSocket URL"
+        "title": "Set PieVerse WebSocket URL",
+        "icon": "$(gear)"
       },
       {
         "command": "pieverse-diff.showDiff",
-        "title": "Show PieVerse Diff"
+        "title": "Show PieVerse Diff",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "pieverse-diff.openPanel",
+        "title": "Open PieVerse Panel",
+        "icon": "$(comment-discussion)"
       },
       {
         "command": "pieverse-diff.openChat",
-        "title": "Open PieVerse Chat"
+        "title": "Open PieVerse Chat",
+        "icon": "$(comment)"
       }
     ],
     "viewsContainers": {
@@ -45,7 +54,7 @@
       "pieverseDiffContainer": [
         {
           "id": "pieverseDiffView",
-          "name": "Diff Dashboard"
+          "name": "PieVerse Dashboard"
         }
       ]
     },
@@ -54,17 +63,35 @@
         {
           "command": "pieverse-diff.connect",
           "when": "view == pieverseDiffView",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "pieverse-diff.openPanel",
+          "when": "view == pieverseDiffView",
+          "group": "navigation@2"
         },
         {
           "command": "pieverse-diff.setWebSocketUrl",
           "when": "view == pieverseDiffView",
-          "group": "navigation"
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "pieverse-diff.connect",
+          "group": "PieVerse"
         },
         {
-          "command": "pieverse-diff.openChat",
-          "when": "view == pieverseDiffView",
-          "group": "navigation"
+          "command": "pieverse-diff.openPanel",
+          "group": "PieVerse"
+        },
+        {
+          "command": "pieverse-diff.setWebSocketUrl",
+          "group": "PieVerse"
+        },
+        {
+          "command": "pieverse-diff.showDiff",
+          "when": "false"
         }
       ]
     },
@@ -91,6 +118,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/jquery": "^3.5.32",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.98.0",
