@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -16,7 +16,8 @@ import Avatar from './components/Avatar';
 import { Window } from '@tauri-apps/api/window';
 import ChromeDebuggerPanel from './components/ChromeDebugger';
 import FolderStructurePanel from './components/FolderStructure/FolderStructurePanel';
-
+import { ReferencesPanel } from './components/References';
+import { LLMRulesPanel } from './components/LLMRules';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -31,8 +32,8 @@ function App() {
     document.body.classList.toggle('dark-mode');
     
     try {
-      // Use the core.invoke method for Tauri 2.0
-      // await core.invoke('update_system_appearance', { dark: newIsDark });
+      // Use the invoke method for Tauri 2.0
+      // await invoke('update_system_appearance', { dark: newIsDark });
       const currentWindow = Window.getCurrent();
       await currentWindow.setTheme(newIsDark ? 'dark' : 'light');
       
@@ -99,7 +100,12 @@ function App() {
                 <Tabs.Tab value="folder-structure" leftSection={<FolderTree size={16} />}>
                   Project Structure
                 </Tabs.Tab>
-
+                <Tabs.Tab value="references" leftSection={<BookOpen size={16} />}>
+                  References
+                </Tabs.Tab>
+                <Tabs.Tab value="llm-rules" leftSection={<Brain size={16} />}>
+                  LLM Rules
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -139,8 +145,17 @@ function App() {
                   <ChromeDebuggerPanel />
                 </Tabs.Panel>
               )}
+              
               <Tabs.Panel value="folder-structure" className="p-4">
                 <FolderStructurePanel />
+              </Tabs.Panel>
+              
+              <Tabs.Panel value="references" className="p-4">
+                <ReferencesPanel />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="llm-rules" className="p-4">
+                <LLMRulesPanel />
               </Tabs.Panel>
             </Tabs>
           </main>

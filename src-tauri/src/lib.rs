@@ -104,7 +104,10 @@ use services::project_structure::{
     generate_structure_text,
     is_valid_path
 };
-
+use services::references::{
+    load_references,
+    save_references
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -204,7 +207,9 @@ pub fn run() {
             open_chrome_in_terminal,
             get_project_structure,
             generate_structure_text,
-            is_valid_path
+            is_valid_path,
+            load_references,
+            save_references            
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -24,3 +24,9 @@ pub mod chrome_debugger;
 
 // Project Structure service
 pub mod project_structure;
+
+// References service
+pub mod references;
+
+// LLM Rules service
+pub mod llm_rules;
