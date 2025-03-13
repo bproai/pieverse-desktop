@@ -1,10 +1,10 @@
 {
   "name": "pieverse-diff-extension",
   "displayName": "PieVerse Diff Extension",
-  "description": "VS Code extension for interacting with PieVerse Desktop application",
+  "description": "Extension for viewing and managing diff suggestions from PieVerse",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
@@ -16,93 +16,68 @@
   "contributes": {
     "commands": [
       {
-        "command": "pieverse-diff.connect",
-        "title": "Connect to PieVerse",
-        "icon": "$(radio-tower)"
+        "command": "pieverse-diff.focus",
+        "title": "Focus PieVerse Sidebar"
       },
       {
-        "command": "pieverse-diff.setWebSocketUrl",
-        "title": "Set PieVerse WebSocket URL",
-        "icon": "$(gear)"
+        "command": "pieverse-diff.connect",
+        "title": "Connect to PieVerse"
       },
       {
         "command": "pieverse-diff.showDiff",
-        "title": "Show PieVerse Diff",
-        "icon": "$(diff)"
+        "title": "Show PieVerse Diff"
       },
       {
-        "command": "pieverse-diff.focus",
-        "title": "Focus PieVerse Panel",
-        "icon": "$(comment-discussion)"
+        "command": "pieverse-diff.setWebSocketUrl",
+        "title": "Set PieVerse WebSocket URL"
       },
       {
         "command": "pieverse-diff.clearMessages",
-        "title": "Clear PieVerse Messages",
-        "icon": "$(clear-all)"
+        "title": "Clear PieVerse Messages"
+      },
+      {
+        "command": "pieverse-diff.acceptChanges",
+        "title": "Accept PieVerse Suggested Changes"
+      },
+      {
+        "command": "pieverse-diff.rejectChanges",
+        "title": "Reject PieVerse Suggested Changes"
+      },
+      {
+        "command": "pieverse-diff.selectivelyApplyChanges",
+        "title": "Apply PieVerse Changes Selectively"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "pieverseDiffContainer",
+          "id": "pieverse-diff",
           "title": "PieVerse",
           "icon": "resources/pieverse-icon.svg"
         }
       ]
     },
     "views": {
-      "pieverseDiffContainer": [
+      "pieverse-diff": [
         {
-          "type": "webview",
           "id": "pieverseDiffView",
-          "name": "PieVerse Dashboard"
-        }
-      ]
-    },
-    "menus": {
-      "view/title": [
-        {
-          "command": "pieverse-diff.connect",
-          "when": "view == pieverseDiffView",
-          "group": "navigation@1"
-        },
-        {
-          "command": "pieverse-diff.setWebSocketUrl",
-          "when": "view == pieverseDiffView",
-          "group": "navigation@2"
-        },
-        {
-          "command": "pieverse-diff.clearMessages",
-          "when": "view == pieverseDiffView",
-          "group": "navigation@3"
-        }
-      ],
-      "commandPalette": [
-        {
-          "command": "pieverse-diff.connect",
-          "group": "PieVerse"
-        },
-        {
-          "command": "pieverse-diff.focus",
-          "group": "PieVerse"
-        },
-        {
-          "command": "pieverse-diff.setWebSocketUrl",
-          "group": "PieVerse"
-        },
-        {
-          "command": "pieverse-diff.showDiff",
-          "when": "false"
+          "name": "PieVerse",
+          "type": "webview"
         }
       ]
     },
     "configuration": {
-      "title": "PieVerse Diff Extension",
+      "title": "PieVerse Diff",
       "properties": {
         "pieverse-diff.websocketUrl": {
           "type": "string",
           "default": "ws://localhost:3001",
-          "description": "WebSocket URL for connecting to PieVerse Desktop"
+          "description": "WebSocket URL for connecting to PieVerse server"
+        },
+        "pieverse-diff.createBackupFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "Create backup files when accepting changes (set to false if you use version control like Git)"
         }
       }
     }
@@ -115,27 +90,27 @@
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@types/vscode": "^1.98.0",
-    "@types/ws": "^8.18.0",
-    "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
-    "eslint": "^9.21.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.7.3",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "20.2.5",
+    "@types/vscode": "^1.80.0",
+    "@types/ws": "^8.5.5",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.41.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "ts-loader": "^9.4.3",
+    "typescript": "^5.1.3",
+    "webpack": "^5.85.0",
+    "webpack-cli": "^5.1.1"
   },
   "dependencies": {
-    "bufferutil": "^4.0.9",
-    "utf-8-validate": "^6.0.5",
-    "ws": "^8.18.1"
+    "ws": "^8.13.0"
   }
 }

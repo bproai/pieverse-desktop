@@ -7,19 +7,167 @@ import { icons } from '../utils/icons';
 /**
  * Get the complete HTML content for the integrated panel
  */
-export function getCompletePanelHtml(cssUri: string): string {
+export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup: boolean): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PieVerse</title>
+  <title>PieVerse Settings</title>
   <link href="${cssUri}" rel="stylesheet" />
-  <style>${getPanelStyles()}</style>
+  <style>
+    :root {
+      --panel-width: 100%;
+      --panel-height: 100vh;
+    }
+    
+    body {
+      font-family: var(--vscode-font-family);
+      padding: 20px;
+      color: var(--vscode-foreground);
+      background-color: var(--vscode-editor-background);
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      font-weight: normal;
+      color: var(--vscode-editor-foreground);
+      border-bottom: 1px solid var(--vscode-panel-border);
+      padding-bottom: 8px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+    
+    input[type="text"], 
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      background-color: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border);
+      border-radius: 2px;
+    }
+    
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    
+    button {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-radius: 2px;
+      margin-right: 10px;
+    }
+    
+    button:hover {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+    
+    .button-container {
+      margin-top: 20px;
+      display: flex;
+    }
+    
+    .success-message {
+      color: var(--vscode-testing-iconPassed);
+      font-size: 0.9rem;
+      margin-top: 10px;
+      visibility: hidden;
+    }
+    
+    .description {
+      font-size: 0.85rem;
+      color: var(--vscode-descriptionForeground);
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-  ${getPanelBodyHtml()}
-  <script>${getPanelScript()}</script>
+  <h2>PieVerse Settings</h2>
+  
+  <div class="form-group">
+    <label for="wsUrl">WebSocket URL</label>
+    <input type="text" id="wsUrl" value="${wsUrl}" />
+    <div class="description">
+      The WebSocket URL to connect to the PieVerse server.
+      Default is ws://localhost:3001
+    </div>
+  </div>
+  
+  <div class="form-group">
+    <div class="checkbox-label">
+      <input type="checkbox" id="createBackup" ${createBackup ? 'checked' : ''} />
+      <label for="createBackup">Create backup files when accepting changes</label>
+    </div>
+    <div class="description">
+      When checked, a backup of the original file will be created before applying suggested changes.
+      Not needed if you use version control like Git.
+    </div>
+  </div>
+  
+  <div class="button-container">
+    <button id="saveBtn">Save Settings</button>
+    <button id="cancelBtn">Cancel</button>
+  </div>
+  
+  <div id="successMessage" class="success-message">
+    Settings saved successfully!
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+    const wsUrlInput = document.getElementById('wsUrl');
+    const createBackupCheck = document.getElementById('createBackup');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const successMessage = document.getElementById('successMessage');
+    
+    // Save settings
+    saveBtn.addEventListener('click', () => {
+      vscode.postMessage({
+        command: 'saveSettings',
+        settings: {
+          wsUrl: wsUrlInput.value,
+          createBackup: createBackupCheck.checked
+        }
+      });
+      
+      // Show success message
+      successMessage.style.visibility = 'visible';
+      setTimeout(() => {
+        successMessage.style.visibility = 'hidden';
+      }, 3000);
+    });
+    
+    // Cancel and close
+    cancelBtn.addEventListener('click', () => {
+      vscode.postMessage({
+        command: 'cancelSettings'
+      });
+    });
+  </script>
 </body>
 </html>`;
 }

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ExtensionGlobals } from '../extension';
 import { fileExists } from '../utils/fileUtils';
+import { getSettingsPanelHtml } from '../webview/htmlContent';
 
 /**
  * Register all commands for the extension
@@ -236,25 +237,57 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
   // Command to set WebSocket URL
   context.subscriptions.push(
     vscode.commands.registerCommand('pieverse-diff.setWebSocketUrl', async () => {
+      // Create and show the settings panel
+      const panel = vscode.window.createWebviewPanel(
+        'pieverse-settings',
+        'PieVerse Settings',
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true
+        }
+      );
+
+      // Get current settings
       const config = vscode.workspace.getConfiguration('pieverse-diff');
-      const currentUrl = config.get<string>('websocketUrl') || 'ws://localhost:3001';
-      
-      const url = await vscode.window.showInputBox({
-        prompt: 'Enter PieVerse WebSocket URL',
-        value: currentUrl,
-        placeHolder: 'ws://localhost:3001'
-      });
-      
-      if (url) {
-        await config.update('websocketUrl', url, true);
-        vscode.window.showInformationMessage(`WebSocket URL updated to ${url}`);
-        
-        // Update connection status
-        globals.sidebarProvider.updateConnectionStatus('disconnected');
-        
-        // Reconnect with new URL
-        globals.webSocketService.connect(url, globals, context);
-      }
+      const wsUrl = config.get<string>('websocketUrl') || 'ws://localhost:3001';
+      const createBackup = config.get<boolean>('createBackupFiles', false);
+
+      // Get style sheet path
+      const cssUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'resources', 'style.css')
+      );
+
+      // Set the HTML content
+      panel.webview.html = getSettingsPanelHtml(cssUri.toString(), wsUrl, createBackup);
+
+      // Handle messages from the webview
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          switch (message.command) {
+            case 'saveSettings':
+              if (message.settings) {
+                await config.update('websocketUrl', message.settings.wsUrl, true);
+                await config.update('createBackupFiles', message.settings.createBackup, true);
+                vscode.window.showInformationMessage('PieVerse settings saved');
+                
+                // Reconnect with new URL
+                globals.webSocketService.connect(message.settings.wsUrl, globals, context);
+                
+                // Update connection status
+                globals.sidebarProvider.updateConnectionStatus('connecting');
+                
+                setTimeout(() => panel.dispose(), 1000);
+              }
+              break;
+            case 'cancelSettings':
+              panel.dispose();
+              break;
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
     })
   );
 
