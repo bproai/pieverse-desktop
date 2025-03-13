@@ -31,14 +31,14 @@
         "icon": "$(diff)"
       },
       {
-        "command": "pieverse-diff.openPanel",
-        "title": "Open PieVerse Panel",
+        "command": "pieverse-diff.focus",
+        "title": "Focus PieVerse Panel",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "pieverse-diff.openChat",
-        "title": "Open PieVerse Chat",
-        "icon": "$(comment)"
+        "command": "pieverse-diff.clearMessages",
+        "title": "Clear PieVerse Messages",
+        "icon": "$(clear-all)"
       }
     ],
     "viewsContainers": {
@@ -53,6 +53,7 @@
     "views": {
       "pieverseDiffContainer": [
         {
+          "type": "webview",
           "id": "pieverseDiffView",
           "name": "PieVerse Dashboard"
         }
@@ -66,12 +67,12 @@
           "group": "navigation@1"
         },
         {
-          "command": "pieverse-diff.openPanel",
+          "command": "pieverse-diff.setWebSocketUrl",
           "when": "view == pieverseDiffView",
           "group": "navigation@2"
         },
         {
-          "command": "pieverse-diff.setWebSocketUrl",
+          "command": "pieverse-diff.clearMessages",
           "when": "view == pieverseDiffView",
           "group": "navigation@3"
         }
@@ -82,7 +83,7 @@
           "group": "PieVerse"
         },
         {
-          "command": "pieverse-diff.openPanel",
+          "command": "pieverse-diff.focus",
           "group": "PieVerse"
         },
         {
@@ -118,7 +119,6 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/jquery": "^3.5.32",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.98.0",

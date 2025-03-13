@@ -3,42 +3,48 @@ import { DiffTreeDataProvider } from './tree/diffTreeProvider';
 import { registerCommands } from './commands/registerCommands';
 import { WebSocketService } from './services/webSocketService';
 import { ensureResourcesExist } from './utils/fileUtils';
+import { PieVerseSidebarProvider } from './webview/sidebarPanel';
 
 // Global variables accessible throughout the extension
 export interface ExtensionGlobals {
   statusBarItem: vscode.StatusBarItem;
-  pieVersePanel: vscode.WebviewPanel | undefined;
   webSocketService: WebSocketService;
   treeDataProvider: DiffTreeDataProvider;
+  sidebarProvider: PieVerseSidebarProvider;
 }
 
 // Create and initialize the extension globals
-const globals: ExtensionGlobals = {
-  statusBarItem: vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100),
-  pieVersePanel: undefined,
-  webSocketService: new WebSocketService(),
-  treeDataProvider: new DiffTreeDataProvider()
-};
-
 export function activate(context: vscode.ExtensionContext) {
   console.log('PieVerse Diff Extension activated.');
   
   // Ensure resources exist
   ensureResourcesExist(context);
 
+  // Initialize sidebar provider
+  const sidebarProvider = new PieVerseSidebarProvider(context.extensionUri, {} as ExtensionGlobals, context);
+
+  // Create and initialize the extension globals
+  const globals: ExtensionGlobals = {
+    statusBarItem: vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100),
+    webSocketService: new WebSocketService(),
+    treeDataProvider: new DiffTreeDataProvider(),
+    sidebarProvider: sidebarProvider
+  };
+  
+  // Update the sidebarProvider with the globals reference
+  (sidebarProvider as any)._globals = globals;
+
   // Initialize status bar item
   globals.statusBarItem.text = "$(radio-tower) PieVerse";
-  globals.statusBarItem.command = 'pieverse-diff.openPanel';
-  globals.statusBarItem.tooltip = "Open PieVerse Panel";
+  globals.statusBarItem.command = 'pieverse-diff.focus';
+  globals.statusBarItem.tooltip = "Show PieVerse Panel";
   globals.statusBarItem.show();
   context.subscriptions.push(globals.statusBarItem);
 
-  // Register the tree data provider
-  const treeView = vscode.window.registerTreeDataProvider(
-    "pieverseDiffView", 
-    globals.treeDataProvider
+  // Register the sidebar provider
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('pieverseDiffView', sidebarProvider)
   );
-  context.subscriptions.push(treeView);
 
   // Register all commands
   registerCommands(context, globals);
@@ -52,18 +58,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  // Close the WebSocket connection if active
-  globals.webSocketService.disconnect();
-  
-  // Dispose of the status bar item
-  if (globals.statusBarItem) {
-    globals.statusBarItem.dispose();
-  }
-  
-  // Dispose of the panel if it exists
-  if (globals.pieVersePanel) {
-    globals.pieVersePanel.dispose();
-  }
-  
-  console.log('PieVerse Diff Extension deactivated.');
+  // Nothing to clean up that wouldn't be cleaned up automatically
 }

@@ -22,13 +22,8 @@ export class WebSocketService {
     globals.statusBarItem.text = "$(sync~spin) PieVerse";
     globals.statusBarItem.tooltip = "PieVerse: Connecting...";
     
-    // Update panel if open
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'connectionStatus',
-        status: 'connecting'
-      });
-    }
+    // Update sidebar status
+    globals.sidebarProvider.updateConnectionStatus('connecting');
     
     try {
       // Create new WebSocket connection
@@ -90,16 +85,11 @@ export class WebSocketService {
     
     // Update tree view to show connected status
     globals.treeDataProvider.updateDiffItems([
-      new DiffTreeItem(`Connected to ${wsUrl}`)  // Change "Disconnected" to "Connected"
+      new DiffTreeItem(`Connected to ${wsUrl}`)
     ]);
     
-    // Update panel if open
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'connectionStatus',
-        status: 'connected'
-      });
-    }
+    // Update sidebar status
+    globals.sidebarProvider.updateConnectionStatus('connected');
     
     // Clear any existing reconnect interval
     if (this.wsReconnectInterval) {
@@ -146,16 +136,11 @@ export class WebSocketService {
     
     // Update tree view to show disconnected status
     globals.treeDataProvider.updateDiffItems([
-      new DiffTreeItem(`Disconnected from ${wsUrl}`)  // Remove undefined parameter
+      new DiffTreeItem(`Disconnected from ${wsUrl}`)
     ]);
     
-    // Update panel if open
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'connectionStatus',
-        status: 'disconnected'
-      });
-    }
+    // Update sidebar status
+    globals.sidebarProvider.updateConnectionStatus('disconnected');
     
     // Try to reconnect if not at max attempts
     if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS && !this.wsReconnectInterval) {
@@ -183,13 +168,8 @@ export class WebSocketService {
           globals.statusBarItem.text = "$(error) PieVerse";
           globals.statusBarItem.tooltip = "PieVerse: Failed to connect";
           
-          // Update panel if open
-          if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-            globals.pieVersePanel.webview.postMessage({
-              command: 'connectionStatus',
-              status: 'disconnected'
-            });
-          }
+          // Update sidebar status
+          globals.sidebarProvider.updateConnectionStatus('disconnected');
           
           vscode.window.showErrorMessage(
             `Failed to connect to PieVerse after ${this.MAX_RECONNECT_ATTEMPTS} attempts. Please check if the server is running.`
@@ -208,13 +188,8 @@ export class WebSocketService {
     console.error('WebSocket error:', error);
     vscode.window.showErrorMessage(`WebSocket error: ${error.message}`);
     
-    // Update panel if open
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'connectionStatus',
-        status: 'disconnected'
-      });
-    }
+    // Update sidebar status
+    globals.sidebarProvider.updateConnectionStatus('disconnected');
   }
 
   /**
@@ -227,17 +202,12 @@ export class WebSocketService {
     const errorMessage = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`Failed to connect to PieVerse: ${errorMessage}`);
     
-    // Update panel if open
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'connectionStatus',
-        status: 'disconnected'
-      });
-    }
+    // Update sidebar status
+    globals.sidebarProvider.updateConnectionStatus('disconnected');
     
     // Update tree view to show connection error
     globals.treeDataProvider.updateDiffItems([
-      new DiffTreeItem(`Connection error: ${errorMessage}`)  // Remove undefined parameter
+      new DiffTreeItem(`Connection error: ${errorMessage}`)
     ]);
   }
 
@@ -245,34 +215,7 @@ export class WebSocketService {
    * Handle chat messages
    */
   private handleChatMessage(jsonData: any, globals: ExtensionGlobals): void {
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({ 
-        command: 'receiveMessage', 
-        text: jsonData.content,
-        sender: 'PieVerse'
-      });
-      
-      // If panel isn't open, show notification with option to open it
-      if (!globals.pieVersePanel.visible) {
-        vscode.window.showInformationMessage(
-          `New message from PieVerse: ${jsonData.content}`, 
-          'Open Panel'
-        ).then(selection => {
-          if (selection === 'Open Panel') {
-            vscode.commands.executeCommand('pieverse-diff.openPanel');
-          }
-        });
-      }
-    } else {
-      // If panel doesn't exist, show notification with option to open it
-      vscode.window.showInformationMessage(
-        `New message from PieVerse: ${jsonData.content}`, 
-        'Open Panel'
-      ).then(selection => {
-        if (selection === 'Open Panel') {
-          vscode.commands.executeCommand('pieverse-diff.openPanel');
-        }
-      });
-    }
+    // Add message to chat panel in sidebar
+    globals.sidebarProvider.addChatMessage(jsonData.content, 'PieVerse');
   }
 }

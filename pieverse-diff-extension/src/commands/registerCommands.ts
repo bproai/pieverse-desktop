@@ -1,25 +1,15 @@
 import * as vscode from 'vscode';
 import { ExtensionGlobals } from '../extension';
-import { createPieVersePanel } from '../webview/panelView';
 import { fileExists } from '../utils/fileUtils';
 
 /**
  * Register all commands for the extension
  */
 export function registerCommands(context: vscode.ExtensionContext, globals: ExtensionGlobals): void {
-  // Register command to open integrated panel
+  // Register focus command
   context.subscriptions.push(
-    vscode.commands.registerCommand('pieverse-diff.openPanel', () => {
-      if (globals.pieVersePanel) {
-        globals.pieVersePanel.reveal();
-      } else {
-        globals.pieVersePanel = createPieVersePanel(context, globals);
-        globals.pieVersePanel.onDidDispose(
-          () => { globals.pieVersePanel = undefined; },
-          null,
-          context.subscriptions
-        );
-      }
+    vscode.commands.registerCommand('pieverse-diff.focus', () => {
+      vscode.commands.executeCommand('pieverseDiffView.focus');
     })
   );
 
@@ -31,14 +21,6 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       
       globals.webSocketService.connect(wsUrl, globals, context);
       vscode.window.showInformationMessage(`Connecting to PieVerse at ${wsUrl}...`);
-      
-      // If panel is open, update its status
-      if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-        globals.pieVersePanel.webview.postMessage({
-          command: 'connectionStatus',
-          status: 'connecting'
-        });
-      }
     })
   );
 
@@ -86,6 +68,17 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
     })
   );
 
+  // Command to clear messages
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.clearMessages', () => {
+      if (globals.sidebarProvider.view?.webview) {
+        globals.sidebarProvider.view.webview.postMessage({
+          command: 'clearMessages'
+        });
+      }
+    })
+  );
+
   // Command to set WebSocket URL
   context.subscriptions.push(
     vscode.commands.registerCommand('pieverse-diff.setWebSocketUrl', async () => {
@@ -102,24 +95,12 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
         await config.update('websocketUrl', url, true);
         vscode.window.showInformationMessage(`WebSocket URL updated to ${url}`);
         
-        // Update panel if open
-        if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-          globals.pieVersePanel.webview.postMessage({
-            command: 'connectionStatus',
-            status: 'disconnected'
-          });
-        }
+        // Update connection status
+        globals.sidebarProvider.updateConnectionStatus('disconnected');
         
         // Reconnect with new URL
         globals.webSocketService.connect(url, globals, context);
       }
-    })
-  );
-
-  // Make the original commands point to the new panel
-  context.subscriptions.push(
-    vscode.commands.registerCommand('pieverse-diff.openChat', () => {
-      vscode.commands.executeCommand('pieverse-diff.openPanel');
     })
   );
 }

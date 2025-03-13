@@ -5,6 +5,7 @@ import * as os from 'os';
 import { fileExists } from '../utils/fileUtils';
 import { ExtensionGlobals } from '../extension';
 import { DiffTreeItem } from '../tree/diffTreeProvider';
+
 /**
  * Handle suggested updates from the PieVerse server
  */
@@ -79,32 +80,12 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
       `PieVerse: ${suggestion.description || 'Suggested Update'}`
     );
     
-    // Update the panel with the suggestion
-    if (globals.pieVersePanel && globals.pieVersePanel.webview) {
-      globals.pieVersePanel.webview.postMessage({
-        command: 'receiveDiffSuggestion',
-        fileName,
-        filePath: suggestion.originalFile,
-        description: suggestion.description || 'Suggested code changes'
-      });
-    }
-    
-    // Show notification only if panel is not visible
-    if (!globals.pieVersePanel || !globals.pieVersePanel.visible) {
-      vscode.window.showInformationMessage(
-        `Received suggested changes for ${fileName}`,
-        'View Diff'
-      ).then(selection => {
-        if (selection === 'View Diff') {
-          vscode.commands.executeCommand(
-            'vscode.diff', 
-            originalUri, 
-            tempUri, 
-            `PieVerse: ${suggestion.description || 'Suggested Update'}`
-          );
-        }
-      });
-    }
+    // Update the sidebar with the suggestion
+    globals.sidebarProvider.addDiffSuggestion(
+      fileName,
+      suggestion.originalFile,
+      suggestion.description || 'Suggested code changes'
+    );
   } catch (error) {
     console.error('Error processing suggested update:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
