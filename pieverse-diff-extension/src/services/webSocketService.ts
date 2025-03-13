@@ -103,25 +103,40 @@ export class WebSocketService {
    */
   private onMessage(data: WebSocket.Data, globals: ExtensionGlobals, context: vscode.ExtensionContext): void {
     console.log('Received data from PieVerse:', data);
+    
+    // Add these debug lines
+    if (Buffer.isBuffer(data)) {
+      console.log('Data is a Buffer, contents as string:', data.toString());
+    }
+    
     const dataStr = data.toString();
+    console.log('Data as string:', dataStr);
     
     try {
       // Try to parse as JSON to determine message type
       const jsonData = JSON.parse(dataStr);
+      console.log('Successfully parsed JSON data:', jsonData);
       
       if (jsonData.type === 'chat') {
         this.handleChatMessage(jsonData, globals);
       } else if (jsonData.originalFile && jsonData.suggestedContent) {
         // Handle as diff suggestion
+        console.log('Handling as diff suggestion with original file:', jsonData.originalFile);
         handleSuggestedUpdate(jsonData, globals, context);
+      } else {
+        console.log('Unknown message format:', jsonData);
       }
     } catch (e) {
       // If not valid JSON or doesn't have expected format,
-      // try handling as a diff suggestion
+      console.error('Error parsing JSON:', e);
+      
+      // Try handling as a direct diff suggestion
       try {
-        handleSuggestedUpdate(JSON.parse(dataStr), globals, context);
+        const parsedData = JSON.parse(dataStr);
+        console.log('Attempting to handle as raw diff data:', parsedData);
+        handleSuggestedUpdate(parsedData, globals, context);
       } catch (parseError) {
-        console.error('Error parsing message:', parseError);
+        console.error('Error handling as raw diff data:', parseError);
       }
     }
   }

@@ -122,7 +122,8 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
             return;
           case 'showDiff':
             if (message.filePath) {
-              vscode.commands.executeCommand('pieverse-diff.showDiff', message.filePath);
+              // Use the better command that has debug info
+              vscode.commands.executeCommand('pieverse-diff.showSingleDiff', message.filePath);
             }
             return;
         }
@@ -563,6 +564,7 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
                             const regex = /File: (.*?)(?:\\n|$)/;
                             const match = text.match(regex);
                             if (match && match[1]) {
+                                // Use the filePath in the message directly, not an extracted one
                                 vscode.postMessage({
                                     command: 'showDiff',
                                     filePath: match[1].trim()
@@ -664,7 +666,7 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
                             break;
                         
                         case 'receiveDiffSuggestion':
-                            const diffText = \`File: \${message.fileName}
+                            const diffText = \`File: \${message.filePath}
 Description: \${message.description || 'No description provided'}\`;
                             addSystemMessage(diffText, 'diff-suggestion');
                             break;

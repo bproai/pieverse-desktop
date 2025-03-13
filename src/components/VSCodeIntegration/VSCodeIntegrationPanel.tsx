@@ -137,26 +137,66 @@ const VSCodeIntegrationPanel: React.FC = () => {
 
     setLoading(true);
     try {
+      // Create the diff request object
       const diffRequest: CodeDiffRequest = {
         originalFile,
         suggestedContent,
         description
       };
       
-      await core.invoke('send_code_diff_to_vscode', { diffRequest });
+      // Debug logging
+      console.log('Sending diff request with:', JSON.stringify(diffRequest, null, 2));
       
-      notifications.show({
-        title: 'Success',
-        message: 'Diff sent to VS Code extension',
-        color: 'green'
-      });
+      // First check if the server is running
+      const isRunning = await core.invoke('get_vscode_ws_status') as [boolean, number];
+      console.log('Server status before sending diff:', isRunning);
+      
+      try {
+        // Try to invoke the command with verbose logging
+        console.log('Invoking send_code_diff_to_vscode with request:', diffRequest);
+        await core.invoke('send_code_diff_to_vscode', { 
+          diffRequest: {
+            original_file: originalFile,
+            suggested_content: suggestedContent,
+            description
+          }
+        });
+        
+        notifications.show({
+          title: 'Success',
+          message: 'Diff sent to VS Code extension',
+          color: 'green'
+        });
+      } catch (commandError: any) {
+        // More detailed error logging
+        console.error('Invoke error details:', {
+          message: commandError.message,
+          stack: commandError.stack,
+          fullError: commandError
+        });
+        
+        // Show error notification
+        notifications.show({
+          title: 'Error',
+          message: `Failed to send diff: ${commandError}`,
+          color: 'red'
+        });
+        
+        // Show a more detailed error message to help debugging
+        setError(`Detailed error: ${JSON.stringify({
+          message: commandError.message || commandError.toString(),
+          errorType: typeof commandError,
+          diffRequest
+        }, null, 2)}`);
+      }
     } catch (error: any) {
-      console.error('Error sending diff to VS Code:', error);
+      console.error('Error in sendTestDiff function:', error);
       notifications.show({
         title: 'Error',
-        message: `Failed to send diff: ${error}`,
+        message: `Failed to prepare diff: ${error}`,
         color: 'red'
       });
+      setError(`Error preparing diff request: ${error.toString()}`);
     } finally {
       setLoading(false);
     }
@@ -252,6 +292,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
               <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
                 Chat
               </Tabs.Tab>
+              <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
+                Debug
+              </Tabs.Tab>
             </Tabs.List>
 
             <Tabs.Panel value="diff" p="md">
@@ -296,6 +339,85 @@ const VSCodeIntegrationPanel: React.FC = () => {
             
             <Tabs.Panel value="chat" p="md">
               <VSCodeChat isServerRunning={status.isRunning} />
+            </Tabs.Panel>
+            
+            <Tabs.Panel value="debug" p="md">
+              <Card withBorder p="md" mt="md">
+                <Text weight={600} mb="md">Debug Information</Text>
+                <Stack spacing="md">
+                  <Alert 
+                    icon={<AlertCircle size={16} />} 
+                    color="blue" 
+                    title="Debug Mode"
+                  >
+                    This panel shows debug information to help diagnose connection issues.
+                  </Alert>
+                  
+                  <Text size="sm" fw={600}>Current Request Payload:</Text>
+                  <Code block>
+                    {JSON.stringify({
+                      originalFile,
+                      suggestedContent: suggestedContent.length > 100 
+                        ? suggestedContent.substring(0, 100) + '...' 
+                        : suggestedContent,
+                      description
+                    }, null, 2)}
+                  </Code>
+                  
+                  <Text size="sm" fw={600}>Connection Status:</Text>
+                  <Code block>
+                    {JSON.stringify(status, null, 2)}
+                  </Code>
+                  
+                  {error && (
+                    <>
+                      <Text size="sm" fw={600} color="red">Error Details:</Text>
+                      <Code block>
+                        {error}
+                      </Code>
+                    </>
+                  )}
+                  
+                  <Group>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const wsStatus = await core.invoke('get_vscode_ws_status');
+                          setError(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
+                        } catch (e: any) {
+                          setError(`Failed to get status: ${e.toString()}`);
+                        }
+                      }}
+                    >
+                      Check WebSocket Status
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      color="yellow"
+                      onClick={async () => {
+                        try {
+                          // Just invoke the send_code_diff_to_vscode command directly with test data
+                          const testData = {
+                            diffRequest: {
+                              originalFile: "/test/file.js",
+                              suggestedContent: "// Test content",
+                              description: "Test description"
+                            }
+                          };
+                          await core.invoke('send_code_diff_to_vscode', testData);
+                          setError(`Test diff sent successfully with: ${JSON.stringify(testData, null, 2)}`);
+                        } catch (e: any) {
+                          setError(`Failed to send test diff: ${e.toString()}`);
+                        }
+                      }}
+                    >
+                      Send Test Data
+                    </Button>
+                  </Group>
+                </Stack>
+              </Card>
             </Tabs.Panel>
           </Tabs>
           
