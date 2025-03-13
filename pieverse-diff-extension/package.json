@@ -1,7 +1,9 @@
 {
   "name": "pieverse-diff-extension",
+  "publisher": "reason-one-ai",
   "displayName": "PieVerse Diff Extension",
   "description": "Extension for viewing and managing diff suggestions from PieVerse",
+  "icon": "icon.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.80.0"
