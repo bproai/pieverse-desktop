@@ -101,6 +101,9 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
         console.log(`Showing diff between ${originalUri.toString()} and ${tempUri.toString()}`);
         console.log(`Description: ${description}`);
         
+        // First, save the current diff URIs so diffActionsService can access them
+        globals.diffActionsService.setCurrentDiff(originalUri, tempUri, description || 'Suggested Changes');
+        
         // Use executeCommand with correct parameters and title
         await vscode.commands.executeCommand(
           'vscode.diff',
@@ -108,6 +111,11 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
           tempUri,
           `PieVerse: ${description}`
         );
+
+        // Explicitly show the diff actions after a short delay to ensure the diff view is fully loaded
+        setTimeout(() => {
+          vscode.commands.executeCommand('pieverse-diff.showDiffActions');
+        }, 500);
       } catch (error) {
         console.error('Error in showSingleDiff:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -162,12 +170,21 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
           const tempUri = vscode.Uri.parse(diffPairs[filePath].temp);
           console.log(`Found in diffPairs. Original: ${fileUri.toString()}, Temp: ${tempUri.toString()}`);
           
-          vscode.commands.executeCommand(
+          // Set the URIs in diffActionsService before showing diff
+          globals.diffActionsService.setCurrentDiff(fileUri, tempUri, diffPairs[filePath].desc);
+          
+          await vscode.commands.executeCommand(
             'vscode.diff',
             fileUri,
             tempUri,
             `PieVerse: ${diffPairs[filePath].desc}`
           );
+          
+          // Explicitly show the diff actions
+          setTimeout(() => {
+            vscode.commands.executeCommand('pieverse-diff.showDiffActions');
+          }, 500);
+          
           return;
         }
         
@@ -179,7 +196,20 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
         console.log(`Temp URI from workspaceState: ${tempUri?.toString()}`);
         
         if (tempUri) {
-          vscode.commands.executeCommand('vscode.diff', fileUri, tempUri, 'PieVerse: Suggested Changes');
+          // Set the URIs in diffActionsService before showing diff
+          globals.diffActionsService.setCurrentDiff(fileUri, tempUri, 'Suggested Changes');
+          
+          await vscode.commands.executeCommand(
+            'vscode.diff',
+            fileUri, 
+            tempUri, 
+            'PieVerse: Suggested Changes'
+          );
+          
+          // Explicitly show the diff actions
+          setTimeout(() => {
+            vscode.commands.executeCommand('pieverse-diff.showDiffActions');
+          }, 500);
         } else {
           console.log('No suggested changes found for this file');
           vscode.window.showWarningMessage('No suggested changes available for this file');
@@ -225,6 +255,17 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
         // Reconnect with new URL
         globals.webSocketService.connect(url, globals, context);
       }
+    })
+  );
+
+  // Register specific command to show diff actions
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.showDiffActions', () => {
+      globals.diffActionsService.setCurrentDiff(
+        vscode.Uri.parse(context.globalState.get<string>('pieverseDiffOriginalUri') || ''),
+        vscode.Uri.parse(context.globalState.get<string>('pieverseDiffTempUri') || ''),
+        context.globalState.get<string>('pieverseDiffDescription') || 'Suggested Changes'
+      );
     })
   );
 }

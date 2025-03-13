@@ -22,3 +22,9 @@ A Visual Studio Code extension to help you view and merge code differences inspi
 5. To package the extension for distribution, run:
    ```bash
    vsce package
+
+## Future Work
+
+1. 
+2. 
+3. 

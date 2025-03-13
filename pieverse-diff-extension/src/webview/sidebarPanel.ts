@@ -82,6 +82,19 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Add a system message to the view
+   */
+  public addSystemMessage(text: string, type: string = 'info'): void {
+    if (this._view) {
+      this._view.webview.postMessage({
+        command: 'addSystemMessage',
+        text: text,
+        type: type
+      });
+    }
+  }
+
+  /**
    * Add a diff suggestion to the view
    */
   public addDiffSuggestion(fileName: string, filePath: string, description: string): void {
@@ -276,6 +289,14 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
           
           .diff-suggestion {
             border-left-color: var(--vscode-gitDecoration-addedResourceForeground);
+          }
+          
+          .changes-accepted {
+            border-left-color: var(--vscode-testing-iconPassed);
+          }
+          
+          .changes-rejected {
+            border-left-color: var(--vscode-testing-iconFailed);
           }
           
           .diff-suggestion .view-button {
@@ -647,6 +668,46 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
                     }
                 });
                 
+                // Function to add a system message directly
+                function addSystemMessageDirect(text, type = 'info', timestamp = new Date()) {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('system-message');
+                    
+                    if (type !== 'info') {
+                        messageElement.classList.add(type);
+                    }
+                    
+                    const header = document.createElement('div');
+                    header.classList.add('message-header');
+                    
+                    const typeSpan = document.createElement('span');
+                    if (type === 'diff-suggestion') {
+                        typeSpan.textContent = 'Diff Suggestion';
+                    } else if (type === 'changes-accepted') {
+                        typeSpan.textContent = 'Changes Accepted';
+                    } else if (type === 'changes-rejected') {
+                        typeSpan.textContent = 'Changes Rejected';
+                    } else {
+                        typeSpan.textContent = 'System';
+                    }
+                    
+                    const timeSpan = document.createElement('span');
+                    timeSpan.textContent = formatTime(timestamp);
+                    
+                    header.appendChild(typeSpan);
+                    header.appendChild(timeSpan);
+                    
+                    const content = document.createElement('div');
+                    content.classList.add('message-content');
+                    content.textContent = text;
+                    
+                    messageElement.appendChild(header);
+                    messageElement.appendChild(content);
+                    
+                    systemContainer.appendChild(messageElement);
+                    systemContainer.scrollTop = systemContainer.scrollHeight;
+                }
+                
                 // Handle messages from the extension
                 window.addEventListener('message', event => {
                     const message = event.data;
@@ -658,7 +719,7 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
                         
                         case 'connectionStatus':
                             updateConnectionStatus(message.status);
-                            addSystemMessage(\`Connection \${message.status}\`);
+                            addSystemMessage("Connection " + message.status);
                             break;
                         
                         case 'connectionAttempt':
@@ -666,9 +727,13 @@ export class PieVerseSidebarProvider implements vscode.WebviewViewProvider {
                             break;
                         
                         case 'receiveDiffSuggestion':
-                            const diffText = \`File: \${message.filePath}
-Description: \${message.description || 'No description provided'}\`;
+                            const diffText = "File: " + message.filePath + 
+                                "\\nDescription: " + (message.description || 'No description provided');
                             addSystemMessage(diffText, 'diff-suggestion');
+                            break;
+                            
+                        case 'addSystemMessage':
+                            addSystemMessageDirect(message.text, message.type);
                             break;
                     }
                 });

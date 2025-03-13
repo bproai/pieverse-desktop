@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { DiffTreeDataProvider } from './tree/diffTreeProvider';
 import { registerCommands } from './commands/registerCommands';
 import { WebSocketService } from './services/webSocketService';
+import { DiffActionsService } from './services/diffActionsService';
 import { ensureResourcesExist } from './utils/fileUtils';
 import { PieVerseSidebarProvider } from './webview/sidebarPanel';
 
@@ -11,6 +12,7 @@ export interface ExtensionGlobals {
   webSocketService: WebSocketService;
   treeDataProvider: DiffTreeDataProvider;
   sidebarProvider: PieVerseSidebarProvider;
+  diffActionsService: DiffActionsService;
 }
 
 // Create and initialize the extension globals
@@ -28,7 +30,8 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem: vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100),
     webSocketService: new WebSocketService(),
     treeDataProvider: new DiffTreeDataProvider(),
-    sidebarProvider: sidebarProvider
+    sidebarProvider: sidebarProvider,
+    diffActionsService: {} as DiffActionsService
   };
   
   // Update the sidebarProvider with the globals reference
@@ -40,6 +43,9 @@ export function activate(context: vscode.ExtensionContext) {
   globals.statusBarItem.tooltip = "Show PieVerse Panel";
   globals.statusBarItem.show();
   context.subscriptions.push(globals.statusBarItem);
+
+  // Initialize diff actions service
+  globals.diffActionsService = new DiffActionsService(context, globals);
 
   // Register the sidebar provider
   context.subscriptions.push(
