@@ -176,7 +176,20 @@ const Avatar = () => {
       // Close the context menu
       setContextMenu({ ...contextMenu, visible: false });
     }
-  };  
+  };
+
+  const handleCopyButtonClick = () => {
+    if (intentResponse) {
+      navigator.clipboard.writeText(intentResponse)
+        .then(() => {
+          setShowCopyFeedback(true);
+          setTimeout(() => setShowCopyFeedback(false), 2000);
+        })
+        .catch(err => {
+          console.error('Failed to copy text: ', err);
+        });
+    }
+  };
 
 
   const logResponseData = (message) => {
@@ -1498,21 +1511,51 @@ const Avatar = () => {
           }}
         >
 
-          <button 
-            className="corner-close-button"
-            onClick={() => {
-              setShowHelp(false);
-              if (audioUrl) {
-                URL.revokeObjectURL(audioUrl);
-                setAudioUrl(null);
-              }
-              setRecordedAudioData(null);
-              setAudioChunks([]);
-              clearClipboardImage();
-            }}
-          >
-            ✕
-          </button>
+          <div className="panel-controls">
+            <button 
+              className="copy-button"
+              onClick={handleCopyButtonClick}
+              title="Copy response"
+              style={{
+                position: 'absolute',
+                right: '15px',
+                top: '-1.2px',
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '25px',
+                height: '25px',
+                opacity: '0.7'
+              }}
+            >
+              {/* Simple copy icon made with inline SVG */}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="9" height="9" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M6 6H13V13H6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </button>
+
+            <button 
+              className="corner-close-button"
+              onClick={() => {
+                setShowHelp(false);
+                if (audioUrl) {
+                  URL.revokeObjectURL(audioUrl);
+                  setAudioUrl(null);
+                }
+                setRecordedAudioData(null);
+                setAudioChunks([]);
+                clearClipboardImage();
+              }}
+            >
+              ✕
+            </button>
+          </div>
 
           <div className="help-content">
             <h2>Hello!</h2>
