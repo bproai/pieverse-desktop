@@ -25,6 +25,41 @@ import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import VSCodeChat from './VSCodeChat';
+import Editor, { loader } from '@monaco-editor/react';
+loader.config({
+  paths: {
+    vs: './monaco-editor/vs'
+  }
+});
+
+const getLanguageFromExtension = (ext: string): string => {
+  switch (ext.toLowerCase()) {
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'py':
+      return 'python';
+    case 'html':
+      return 'html';
+    case 'css':
+      return 'css';
+    case 'json':
+      return 'json';
+    case 'md':
+      return 'markdown';
+    default:
+      return 'plaintext';
+  }
+};
+
+interface CodeEditorProps {
+  code: string;
+  fileExtension: string; // e.g., "js", "py", "html", etc.
+  onChange: (value: string) => void;
+}
 
 interface VSCodeStatus {
   isRunning: boolean;
@@ -274,6 +309,10 @@ const VSCodeIntegrationPanel: React.FC = () => {
     }
   };
 
+  const language = originalFile
+  ? getLanguageFromExtension(originalFile.split('.').pop() || 'plaintext')
+  : 'markdown';
+
 // Modify the component return statement to consolidate the cards and give more space to Suggested Content
 
 // First, remove the bottom card entirely and integrate its content into the top section
@@ -422,15 +461,18 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     onChange={(e) => setDescription(e.currentTarget.value)}
                   />
                   
-                  <Textarea
-                    label="Suggested Content"
-                    description="New content to be displayed in the diff view"
-                    placeholder="// Your suggested code here"
+                  <Editor
+                    key={language} // forces re-mount when language changes
+                    height="300px"
+                    language={language} // or use language instead of defaultLanguage
                     value={suggestedContent}
-                    onChange={(e) => setSuggestedContent(e.currentTarget.value)}
-                    minRows={8}
-                    maxRows={15}
-                    autosize
+                    onChange={(value) => setSuggestedContent(value || '')}
+                    options={{
+                      wordWrap: 'on',
+                      minimap: { enabled: false },
+                      automaticLayout: true,
+                      fontSize: 14
+                    }}
                   />
                   
                   <Group position="apart">
