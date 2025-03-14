@@ -178,6 +178,12 @@ const Avatar = () => {
     }
   };
 
+  const handleClearContent = () => {
+    if (intentResponse) {
+      setIntentResponse('');
+    }
+  };
+
   const handleCopyButtonClick = () => {
     if (intentResponse) {
       navigator.clipboard.writeText(intentResponse)
@@ -1518,7 +1524,7 @@ const Avatar = () => {
               title="Copy response"
               style={{
                 position: 'absolute',
-                right: '15px',
+                right: '35px',
                 top: '-1.2px',
                 background: 'transparent',
                 border: 'none',
@@ -1537,6 +1543,34 @@ const Avatar = () => {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="9" height="9" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M6 6H13V13H6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </button>
+
+            <button 
+              className="clear-button"
+              onClick={handleClearContent}
+              title="Clear response"
+              style={{
+                position: 'absolute',
+                right: '15px',
+                top: '-1.2px',
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '25px',
+                height: '25px',
+                opacity: '0.7'
+              }}
+            >
+              {/* Simple eraser/clear icon made with inline SVG */}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4L4 2L14 12L12 14L2 4Z" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M2 14H12" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </button>
 
