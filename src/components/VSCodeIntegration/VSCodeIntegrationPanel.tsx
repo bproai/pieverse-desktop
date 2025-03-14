@@ -13,10 +13,11 @@ import {
   Switch,
   Code,
   Textarea,
-  Tabs
+  Tabs,
+  Tooltip
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode } from 'lucide-react';
+import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X } from 'lucide-react';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
@@ -45,6 +46,16 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [suggestedContent, setSuggestedContent] = useState<string>('');
   const [description, setDescription] = useState<string>('Suggested change');
 
+  const resetSuggestedContent = () => {
+    setSuggestedContent('');
+  };
+
+  const resetForm = () => {
+    setOriginalFile('');
+    setSuggestedContent('');
+    setDescription('Suggested change');
+  };
+  
   // Fetch current server status
   const fetchStatus = async () => {
     try {
@@ -326,13 +337,37 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     minRows={5}
                   />
                   
-                  <Button
-                    onClick={sendTestDiff}
-                    loading={loading}
-                    disabled={!status.isRunning}
-                  >
-                    Send Test Diff
-                  </Button>
+                  <Group position="apart">
+                    <Button
+                      onClick={sendTestDiff}
+                      loading={loading}
+                      disabled={!status.isRunning}
+                      title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
+                    >
+                      Send Test Diff
+                    </Button>
+                    
+                    <Group spacing="xs">
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        onClick={resetSuggestedContent}
+                        leftSection={<X size={14} />}
+                        size="sm"
+                      >
+                        Clear Content Only
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        color="gray"
+                        onClick={resetForm}
+                        leftSection={<Eraser size={14} />}
+                      >
+                        Reset All Fields
+                      </Button>
+                    </Group>
+                  </Group>
                 </Stack>
               </Card>
             </Tabs.Panel>
