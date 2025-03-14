@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PieVerse Prompt Pro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <img src="logo.svg" alt="PieVerse Logo">
+      </div>
+      <div class="header-text">Your AI Assistant Playbook</div>
+      <div class="header-actions">
+        <button id="pullPrompts" class="icon-button" title="Pull prompts from local API">
+          <span class="refresh-icon">↻</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="category-label">Writing & Analysis</div>
+    <div class="playbook-section">
+      <div class="playbook-card" data-prompt="Please provide a comprehensive analysis of the following text, focusing on key themes, arguments, and supporting evidence:">
+        <div>
+          <div class="playbook-title">Deep Analysis</div>
+          <div class="playbook-description">Analyze text for themes and arguments</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+
+      <div class="playbook-card" data-prompt="Please summarize the main points of the following text in a clear and concise manner:">
+        <div>
+          <div class="playbook-title">Quick Summary</div>
+          <div class="playbook-description">Get key points and takeaways</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+    </div>
+
+    <div class="category-label">Finance & Markets</div>
+    <div class="playbook-section">
+      <div class="playbook-card" data-prompt="Please analyze today's market movements and explain the key factors driving the changes. Consider macroeconomic factors, sector-specific news, and any significant company announcements:">
+        <div>
+          <div class="playbook-title">Market Analysis</div>
+          <div class="playbook-description">Understand market movements</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+
+      <div class="playbook-card" data-prompt="Please help me polish and professionalize the following financial analysis or report while maintaining its key insights and data:">
+        <div>
+          <div class="playbook-title">Financial Writing</div>
+          <div class="playbook-description">Enhance financial communication</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+    </div>
+
+    <div class="category-label">Code & Development</div>
+    <div class="playbook-section">
+      <div class="playbook-card" data-prompt="Please write clean, well-documented code that accomplishes the following:">
+        <div>
+          <div class="playbook-title">Code Generation</div>
+          <div class="playbook-description">Get production-ready code</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+
+      <div class="playbook-card" data-prompt="Please review the following code and suggest improvements for better performance, readability, and maintainability:">
+        <div>
+          <div class="playbook-title">Code Review</div>
+          <div class="playbook-description">Get expert code feedback</div>
+        </div>
+        <span class="action-icon">→</span>
+      </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+  </div>
+
+  <!-- Add Custom Prompt Modal -->
+  <div class="modal" id="addCustomModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Custom Prompt</h3>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="addPromptForm">
+          <div class="form-group">
+            <label for="promptTitle">Title</label>
+            <input type="text" id="promptTitle" required placeholder="e.g., Technical Review">
+          </div>
+          <div class="form-group">
+            <label for="promptCategory">Category</label>
+            <input type="text" id="promptCategory" required placeholder="e.g., CODE & DEVELOPMENT">
+          </div>
+          <div class="form-group">
+            <label for="promptText">Prompt</label>
+            <textarea id="promptText" required rows="5" placeholder="Enter your prompt text here..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="cancelButton">Cancel</button>
+            <button type="submit">Save Prompt</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+    
+  <!-- API Connection Help Modal -->
+  <div class="modal" id="apiHelpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>API Connection Help</h3>
+        <span class="close-modal close-help-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="help-content">
+          <h4>To connect to the local API:</h4>
+          <ol>
+            <li>Ensure your API server is running on localhost:3030</li>
+            <li>The API should respond to GET requests at <code>/api/prompts</code></li>
+            <li>Response format should match the expected schema</li>
+          </ol>
+          
+          <h4>Common issues:</h4>
+          <ul>
+            <li>Server not running - Check that your local API server has started</li>
+            <li>Wrong port - Verify the server is using port 3030</li>
+            <li>CORS issues - Ensure the API allows CORS with headers:
+              <pre><code>Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST
+Access-Control-Allow-Headers: Content-Type</code></pre>
+            </li>
+          </ul>
+          
+          <div class="api-test-button-container">
+            <button id="testApiButton">Test API Connection</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <span class="close-modal close-settings-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="form-group">
+            <label for="apiHost">API Host</label>
+            <input type="text" id="apiHost" required placeholder="localhost">
+            <small class="form-help">Enter the hostname without http:// prefix</small>
+          </div>
+          <div class="form-group">
+            <label for="apiPort">API Port</label>
+            <input type="number" id="apiPort" required placeholder="3030" min="1" max="65535">
+          </div>
+          <div class="settings-group">
+            <h4>Connection Info</h4>
+            <p class="settings-info">
+              Your API will be accessed at: <code>http://<span id="previewHost">localhost</span>:<span id="previewPort">3030</span>/api/prompts</code>
+            </p>
+          </div>
+          
+          <!-- Auto-submit toggle -->
+          <div class="form-group toggle-group">
+            <div class="toggle-label">
+              <label for="autoSubmitToggle">Auto-submit prompts</label>
+              <small class="form-help">When enabled, prompts will be automatically submitted after insertion</small>
+            </div>
+            <div class="toggle-control">
+              <label class="switch">
+                <input type="checkbox" id="autoSubmitToggle">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Search button toggle -->
+          <div class="form-group toggle-group">
+            <div class="toggle-label">
+              <label for="searchToggle">Enable search button</label>
+              <small class="form-help">When enabled, search button will be toggled active in AI assistants</small>
+            </div>
+            <div class="toggle-control">
+              <label class="switch">
+                <input type="checkbox" id="searchToggle">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group toggle-group">
+            <div class="toggle-label">
+              <label for="trackQA">Track Questions & Answers</label>
+              <small class="form-help">When enabled, tracks all submitted prompts and responses</small>
+            </div>
+            <div class="toggle-control">
+              <label class="switch">
+                <input type="checkbox" id="trackQA">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="close-settings-modal">Cancel</button>
+            <button type="submit">Save Settings</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="#" id="addCustom">Add Custom</a>
+    <a href="#" id="settings">Settings</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
