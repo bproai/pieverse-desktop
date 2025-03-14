@@ -1,0 +1,511 @@
+/* styles.css */
+
+body {
+  width: 360px;
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  background: #000000;
+  color: #ffffff;
+}
+
+.container {
+  padding: c0;
+}
+
+.header {
+  text-align: center;
+  padding: 16px;
+  background: #111111;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+}
+
+.header-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  background: rgba(255,255,255,0.1);
+  color: #ffffff;
+}
+
+.refresh-icon {
+  font-size: 16px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(255,255,255,0.1));
+}
+
+.header-text {
+  font-size: 14px;
+  color: #666666;
+  margin-top: 8px;
+}
+
+.playbook-section {
+  padding: 8px 12px;
+}
+
+.playbook-card {
+  background: #111111;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.playbook-card:hover {
+  background: #222222;
+  transform: translateY(-2px);
+}
+
+.playbook-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.playbook-description {
+  font-size: 12px;
+  color: #666666;
+  margin-top: 4px;
+}
+
+.category-label {
+  font-size: 11px;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 4px;
+  padding: 0 12px;
+}
+
+.action-icon {
+  color: #666666;
+  font-size: 20px;
+}
+
+.playbook-card:hover .action-icon {
+  color: #ffffff;
+}
+
+/* API prompt styling */
+.playbook-card.api-prompt {
+  border-left: 2px solid #007aff;
+}
+
+.footer {
+  font-size: 12px;
+  color: #666666;
+  text-align: center;
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.footer a {
+  color: #666666;
+  text-decoration: none;
+  margin: 0 8px;
+}
+
+.footer a:hover {
+  color: #ffffff;
+}
+
+.notification {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.1);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.notification.show {
+  opacity: 1;
+}
+
+.notification.error {
+  background: rgba(255,59,48,0.1);
+  color: #ff3b30;
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.85);
+  z-index: 100;
+  overflow: auto;
+}
+
+.modal.active {
+  display: block;
+}
+
+.modal-content {
+  background-color: #111111;
+  margin: 15px auto;
+  border-radius: 8px;
+  width: 85%;
+  max-width: 320px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.close-modal {
+  color: #666666;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close-modal:hover {
+  color: #ffffff;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #666666;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: #222222;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #ffffff;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #666666;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.form-actions button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+}
+
+.form-actions button[type="submit"] {
+  background-color: #007aff;
+  color: white;
+}
+
+.form-actions button[type="button"] {
+  background-color: transparent;
+  color: #666666;
+}
+
+.form-actions button:hover {
+  opacity: 0.9;
+}
+
+/* Help modal styles */
+.help-content {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-content h4 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.help-content h4:first-child {
+  margin-top: 0;
+}
+
+.help-content ol, 
+.help-content ul {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.help-content li {
+  margin-bottom: 6px;
+  color: #bbbbbb;
+}
+
+.help-content code {
+  background: #222222;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.help-content pre {
+  background: #222222;
+  padding: 8px;
+  border-radius: 4px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.help-content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: block;
+  line-height: 1.4;
+}
+
+.api-test-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+#testApiButton {
+  background-color: #2c2c2c;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+#testApiButton:hover {
+  background-color: #3a3a3a;
+}
+
+/* Additional Styles for Settings Modal */
+.settings-group {
+  margin-top: 20px;
+  margin-bottom: 16px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.settings-group h4 {
+  font-size: 13px;
+  margin: 0 0 8px 0;
+  color: #999999;
+  font-weight: 500;
+}
+
+.settings-info {
+  font-size: 12px;
+  color: #888888;
+  line-height: 1.4;
+  margin: 4px 0;
+}
+
+.settings-info code {
+  background: #222222;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #cccccc;
+}
+
+.form-help {
+  font-size: 11px;
+  color: #666666;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Make number inputs look better */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Live preview styling */
+#previewHost, #previewPort {
+  color: #ffffff;
+}
+
+/* Add to styles.css */
+
+.card-actions {
+  display: flex;
+  align-items: center;
+}
+
+.delete-icon {
+  color: #666666;
+  font-size: 22px;
+  margin-right: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.delete-icon:hover {
+  color: #ff3b30;
+}
+
+.playbook-card:hover .delete-icon {
+  color: #999999;
+}
+
+.playbook-card:hover .delete-icon:hover {
+  color: #ff3b30;
+}
+
+/* Toggle switch styles - Add these at the end of your styles.css file */
+.toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.toggle-label {
+  flex: 1;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #333333;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #666666;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #007aff;
+}
+
+input:checked + .slider:before {
+  background-color: white;
+  transform: translateX(22px);
+}
+
+.slider.round {
+  border-radius: 22px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
