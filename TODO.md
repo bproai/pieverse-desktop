@@ -50,6 +50,8 @@ This document outlines tasks, features, and improvements planned for PieVerse De
 - [ ] Polish prompt editing and management interfaces.
 - [ ] Integrate version control for prompt revisions.
 - [ ] Enhance filtering, search, and bulk operations.
+- [ ] Optimize UI workflows for switching between AI engine modes.
+- [ ] **Update VS Code Integration Panel:** Integrate dynamic Monaco Editor language detection to automatically adjust syntax highlighting based on the loaded file type.
 
 ### Trend Analysis & Signal Detection
 - [ ] Improve trend spike detection algorithms.

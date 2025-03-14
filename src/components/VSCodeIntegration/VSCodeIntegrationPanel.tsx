@@ -15,10 +15,11 @@ import {
   Textarea,
   Tabs,
   Tooltip,
-  ActionIcon
+  ActionIcon,
+  Collapse
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder } from 'lucide-react';
+import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
@@ -83,6 +84,17 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [originalFile, setOriginalFile] = useState<string>('');
   const [suggestedContent, setSuggestedContent] = useState<string>('');
   const [description, setDescription] = useState<string>('Suggested change');
+
+  const [isConnectionOpen, setIsConnectionOpen] = useState(true);
+
+
+  useEffect(() => {
+    // Force a resize event when the connection panel visibility changes
+    // This helps the Monaco editor recalculate its dimensions
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 300); // Short delay to allow the collapse animation to finish
+  }, [isConnectionOpen]);
 
   const browseForFile = async () => {
     try {
@@ -319,8 +331,18 @@ const VSCodeIntegrationPanel: React.FC = () => {
 // Then increase the height of the Suggested Content textarea
 
   return (
-    <div className="vscode-integration-panel">
-      <Card shadow="sm" p="lg" radius="md" withBorder>
+    <div
+      className="vscode-integration-panel"
+      style={{ height: isConnectionOpen ? 'calc(100vh)' : 'calc(100%+10px)',
+        display: 'flex', flexDirection: 'column', padding: '0 0 8px 0' }}
+    >
+      <Card
+        shadow="sm"
+        p="lg"
+        radius="md"
+        withBorder
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', height:  isConnectionOpen ? 'calc(100%)' : 'calc(100% + 20px)'}}
+      >
         <Card.Section p="md" className="border-b">
           <Group position="apart">
             <Group>
@@ -337,145 +359,186 @@ const VSCodeIntegrationPanel: React.FC = () => {
         </Card.Section>
         
         <Stack spacing="md" mt="md">
-          <Alert 
-            icon={<AlertCircle size={16} />} 
-            color="blue" 
-            title="VS Code Extension Connection"
-          >
-            <Text size="sm">
-              Configure the connection to the VS Code diff-extension. Make sure you have the PieVerse Diff Extension installed in VS Code and 
-              that it's configured to connect to the correct WebSocket port.
-            </Text>
-            
-            <Text size="sm" mt="md" fw={600}>
-              VS Code Extension Settings:
-            </Text>
-            <Code block size="xs">
-              {`{"pieverse-diff.websocketUrl": "ws://localhost:${status.port}"}`}
-            </Code>
-          </Alert>
-          
+          <Group position="apart" style={{ cursor: 'pointer' }} onClick={() => setIsConnectionOpen(!isConnectionOpen)}>
+            <Text size="sm" fw={600}>VS Code Extension Connection</Text>
+            <ActionIcon variant="transparent">
+              {isConnectionOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </ActionIcon>
+          </Group>
+
+          <Collapse in={isConnectionOpen}>
+            <div>
+              <Alert 
+                icon={<AlertCircle size={16} />} 
+                color="blue" 
+                title="VS Code Extension Connection"
+              >
+                <Text size="sm">
+                  Configure the connection to the VS Code diff-extension. Make sure you have the PieVerse Diff Extension installed in VS Code and 
+                  that it's configured to connect to the correct WebSocket port.
+                </Text>
+                
+                <Text size="sm" mt="md" fw={600}>
+                  VS Code Extension Settings:
+                </Text>
+                <Code block size="xs">
+                  {`{"pieverse-diff.websocketUrl": "ws://localhost:${status.port}"}`}
+                </Code>
+              </Alert>
+
+              {/* WebSocket Port and Server Control Group */}
+              <Group align="end" mt="md">
+                <NumberInput
+                  label="WebSocket Port"
+                  description="Port for VS Code extension to connect to"
+                  value={port}
+                  onChange={(val) => setPort(val || 3001)}
+                  min={1024}
+                  max={65535}
+                  disabled={status.isRunning}
+                />
+                
+                {!status.isRunning ? (
+                  <Button 
+                    onClick={startServer}
+                    loading={loading}
+                    leftSection={<RefreshCw size={14} />}
+                  >
+                    Start Server
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={stopServer}
+                    loading={loading}
+                    color="red"
+                    leftSection={<AlertCircle size={14} />}
+                  >
+                    Stop Server
+                  </Button>
+                )}
+                
+                <Button 
+                  variant="outline"
+                  onClick={fetchStatus}
+                  leftSection={<RefreshCw size={14} />}
+                >
+                  Refresh Status
+                </Button>
+              </Group>
+
+              {status.isRunning && (
+                <Alert 
+                  icon={<CheckCircle size={16} />} 
+                  color="green" 
+                  title="Server Running"
+                  mt="md"
+                >
+                  VS Code server is running on port {status.port}. Connect your VS Code extension to ws://localhost:{status.port}
+                </Alert>
+              )}
+            </div>
+          </Collapse>
+
           {error && (
             <Alert color="red" title="Error" icon={<AlertCircle size={16} />}>
               {error}
             </Alert>
           )}
           
-          <Group align="end">
-            <NumberInput
-              label="WebSocket Port"
-              description="Port for VS Code extension to connect to"
-              value={port}
-              onChange={(val) => setPort(val || 3001)}
-              min={1024}
-              max={65535}
-              disabled={status.isRunning}
-            />
-            
-            {!status.isRunning ? (
-              <Button 
-                onClick={startServer}
-                loading={loading}
-                leftSection={<RefreshCw size={14} />}
-              >
-                Start Server
-              </Button>
-            ) : (
-              <Button 
-                onClick={stopServer}
-                loading={loading}
-                color="red"
-                leftSection={<AlertCircle size={14} />}
-              >
-                Stop Server
-              </Button>
-            )}
-            
-            <Button 
-              variant="outline"
-              onClick={fetchStatus}
-              leftSection={<RefreshCw size={14} />}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Tabs
+              defaultValue="diff"
+              value={activeTab}
+              onChange={setActiveTab}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
             >
-              Refresh Status
-            </Button>
-          </Group>
-          
-          {status.isRunning && (
-            <Alert 
-              icon={<CheckCircle size={16} />} 
-              color="green" 
-              title="Server Running"
-            >
-              VS Code server is running on port {status.port}. Connect your VS Code extension to ws://localhost:{status.port}
-            </Alert>
-          )}
-          
-          <Tabs defaultValue="diff" value={activeTab} onChange={setActiveTab}>
-            <Tabs.List>
-              <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
-                Test Diff
-              </Tabs.Tab>
-              <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
-                Chat
-              </Tabs.Tab>
-              <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
-                Debug
-              </Tabs.Tab>
-            </Tabs.List>
+              <Tabs.List>
+                <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
+                  Test Diff
+                </Tabs.Tab>
+                <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
+                  Chat
+                </Tabs.Tab>
+                <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
+                  Debug
+                </Tabs.Tab>
+              </Tabs.List>
 
-            <Tabs.Panel value="diff" p="md">
-              <Card withBorder p="md" mt="md">
-                <Text weight={600} mb="md">Test VS Code Diff</Text>
-                <Stack spacing="md">
-                  <TextInput
-                    label="Original File Path"
-                    description="Path to the original file that will be modified"
-                    placeholder="/path/to/your/file.js"
-                    value={originalFile}
-                    onChange={(e) => setOriginalFile(e.currentTarget.value)}
-                    rightSection={
-                      <ActionIcon
-                        onClick={browseForFile}
-                        variant="subtle"
-                        size="lg"
-                        title="Browse for file"
-                        style={{ marginRight: '8px' }}
-                        color="blue"
-                      >
-                        <Folder size={16} />
-                      </ActionIcon>
-                    }
-                    rightSectionWidth={50}
-                    styles={{
-                      rightSection: {
-                        pointerEvents: 'auto'
-                      }
-                    }}
-                  />
+              <Tabs.Panel value="diff" p="md" style={{ flex: 1 }}>
+                <Card
+                  withBorder
+                  p="lg"
+                  mt="md"
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    height: isConnectionOpen ? 'calc(100% - 15px)' : 'calc(100% + 10px)',
+                    flex: 1,
+                    transition: 'height 0.3s ease'
+                  }}
+                >
+                    {/* Card contents remain the same... */}
+                  <Text weight={600} mb="md">Test VS Code Diff</Text>
                   
-                  <TextInput
-                    label="Description"
-                    description="Description of the proposed change"
-                    placeholder="Refactor function for better performance"
-                    value={description}
-                    onChange={(e) => setDescription(e.currentTarget.value)}
-                  />
+                  {/* Fixed-height section for inputs */}
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <Stack spacing="sm">
+                      <TextInput
+                        label="Original File Path"
+                        description="Path to the original file that will be modified"
+                        placeholder="/path/to/your/file.js"
+                        value={originalFile}
+                        onChange={(e) => setOriginalFile(e.currentTarget.value)}
+                        rightSection={
+                          <ActionIcon
+                            onClick={browseForFile}
+                            variant="subtle"
+                            size="lg"
+                            title="Browse for file"
+                            style={{ marginRight: '8px' }}
+                            color="blue"
+                          >
+                            <Folder size={16} />
+                          </ActionIcon>
+                        }
+                        rightSectionWidth={50}
+                        styles={{ rightSection: { pointerEvents: 'auto' } }}
+                      />
+                      
+                      <TextInput
+                        label="Description"
+                        description="Description of the proposed change"
+                        placeholder="Refactor function for better performance"
+                        value={description}
+                        onChange={(e) => setDescription(e.currentTarget.value)}
+                      />
+                    </Stack>
+                  </div>
                   
-                  <Editor
-                    key={language} // forces re-mount when language changes
-                    height="300px"
-                    language={language} // or use language instead of defaultLanguage
-                    value={suggestedContent}
-                    onChange={(value) => setSuggestedContent(value || '')}
-                    options={{
-                      wordWrap: 'on',
-                      minimap: { enabled: false },
-                      automaticLayout: true,
-                      fontSize: 14
-                    }}
-                  />
-                  
-                  <Group position="apart">
+                  {/* Editor that takes available space but allows room for buttons */}
+                  <div style={{ 
+                    flex: 1, 
+                    minHeight: '200px',
+                    height: isConnectionOpen ? 'auto' : 'auto', // Adjust this value based on your layout
+                    transition: 'height 0.3s ease'
+                  }}>
+                    <Editor
+                      key={language}
+                      height="95%"
+                      language={language}
+                      value={suggestedContent}
+                      onChange={(value) => setSuggestedContent(value || '')}
+                      options={{
+                        wordWrap: 'on',
+                        minimap: { enabled: false },
+                        automaticLayout: true,
+                        fontSize: 14
+                      }}
+                    />
+                  </div>
+                                  
+                  {/* Button group with minimal margin to maximize editor space */}
+                  <Group position="apart" mt="12px">
                     <Button
                       onClick={sendTestDiff}
                       loading={loading}
@@ -506,93 +569,96 @@ const VSCodeIntegrationPanel: React.FC = () => {
                       </Button>
                     </Group>
                   </Group>
-                </Stack>
-              </Card>
-            </Tabs.Panel>
-            
-            <Tabs.Panel value="chat" p="md">
-              <VSCodeChat isServerRunning={status.isRunning} />
-            </Tabs.Panel>
-            
-            <Tabs.Panel value="debug" p="md">
-              <Card withBorder p="md" mt="md">
-                <Text weight={600} mb="md">Debug Information</Text>
-                <Stack spacing="md">
-                  <Alert 
-                    icon={<AlertCircle size={16} />} 
-                    color="blue" 
-                    title="Debug Mode"
-                  >
-                    This panel shows debug information to help diagnose connection issues.
-                  </Alert>
-                  
-                  <Text size="sm" fw={600}>Current Request Payload:</Text>
-                  <Code block>
-                    {JSON.stringify({
-                      originalFile,
-                      suggestedContent: suggestedContent.length > 100 
-                        ? suggestedContent.substring(0, 100) + '...' 
-                        : suggestedContent,
-                      description
-                    }, null, 2)}
-                  </Code>
-                  
-                  <Text size="sm" fw={600}>Connection Status:</Text>
-                  <Code block>
-                    {JSON.stringify(status, null, 2)}
-                  </Code>
-                  
-                  {error && (
-                    <>
-                      <Text size="sm" fw={600} color="red">Error Details:</Text>
-                      <Code block>
-                        {error}
-                      </Code>
-                    </>
-                  )}
-                  
-                  <Group>
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        try {
-                          const wsStatus = await core.invoke('get_vscode_ws_status');
-                          setError(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
-                        } catch (e: any) {
-                          setError(`Failed to get status: ${e.toString()}`);
-                        }
-                      }}
+                </Card>
+              </Tabs.Panel>
+
+
+
+              
+              <Tabs.Panel value="chat" p="md">
+                <VSCodeChat isServerRunning={status.isRunning} />
+              </Tabs.Panel>
+              
+              <Tabs.Panel value="debug" p="md">
+                <Card withBorder p="md" mt="md">
+                  <Text weight={600} mb="md">Debug Information</Text>
+                  <Stack spacing="md">
+                    <Alert 
+                      icon={<AlertCircle size={16} />} 
+                      color="blue" 
+                      title="Debug Mode"
                     >
-                      Check WebSocket Status
-                    </Button>
+                      This panel shows debug information to help diagnose connection issues.
+                    </Alert>
                     
-                    <Button
-                      variant="outline"
-                      color="yellow"
-                      onClick={async () => {
-                        try {
-                          // Just invoke the send_code_diff_to_vscode command directly with test data
-                          const testData = {
-                            diffRequest: {
-                              originalFile: "/test/file.js",
-                              suggestedContent: "// Test content",
-                              description: "Test description"
-                            }
-                          };
-                          await core.invoke('send_code_diff_to_vscode', testData);
-                          setError(`Test diff sent successfully with: ${JSON.stringify(testData, null, 2)}`);
-                        } catch (e: any) {
-                          setError(`Failed to send test diff: ${e.toString()}`);
-                        }
-                      }}
-                    >
-                      Send Test Data
-                    </Button>
-                  </Group>
-                </Stack>
-              </Card>
-            </Tabs.Panel>
-          </Tabs>
+                    <Text size="sm" fw={600}>Current Request Payload:</Text>
+                    <Code block>
+                      {JSON.stringify({
+                        originalFile,
+                        suggestedContent: suggestedContent.length > 100 
+                          ? suggestedContent.substring(0, 100) + '...' 
+                          : suggestedContent,
+                        description
+                      }, null, 2)}
+                    </Code>
+                    
+                    <Text size="sm" fw={600}>Connection Status:</Text>
+                    <Code block>
+                      {JSON.stringify(status, null, 2)}
+                    </Code>
+                    
+                    {error && (
+                      <>
+                        <Text size="sm" fw={600} color="red">Error Details:</Text>
+                        <Code block>
+                          {error}
+                        </Code>
+                      </>
+                    )}
+                    
+                    <Group>
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const wsStatus = await core.invoke('get_vscode_ws_status');
+                            setError(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
+                          } catch (e: any) {
+                            setError(`Failed to get status: ${e.toString()}`);
+                          }
+                        }}
+                      >
+                        Check WebSocket Status
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        color="yellow"
+                        onClick={async () => {
+                          try {
+                            // Just invoke the send_code_diff_to_vscode command directly with test data
+                            const testData = {
+                              diffRequest: {
+                                originalFile: "/test/file.js",
+                                suggestedContent: "// Test content",
+                                description: "Test description"
+                              }
+                            };
+                            await core.invoke('send_code_diff_to_vscode', testData);
+                            setError(`Test diff sent successfully with: ${JSON.stringify(testData, null, 2)}`);
+                          } catch (e: any) {
+                            setError(`Failed to send test diff: ${e.toString()}`);
+                          }
+                        }}
+                      >
+                        Send Test Data
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Card>
+              </Tabs.Panel>
+            </Tabs>
+          </div>
         </Stack>
       </Card>
     </div>

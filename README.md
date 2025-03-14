@@ -70,6 +70,7 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
   - **Multiple Content Types:** HTML, Markdown, plain text with newlines, and JSON.
   - **Dark/Light Mode:** Full theme support with optimized syntax highlighting.
   - **Syntax Detection:** Automatic content type detection for seamless workflow.
+  - **Dynamic Syntax Highlighting:** The integrated Monaco Editor automatically detects the file type and applies appropriate syntax highlighting (e.g., JavaScript, Python, HTML, Markdown) based on the file extension.
 - Intelligent handling of newlines and data attributes.
 - Preview and edit content from various sources with easy file loading capabilities.
 
