@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, Text, Button, Group, Tabs, Divider, Badge } from '@mantine/core';
 import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 import HtmlRenderer from './HtmlRenderer';
 
 interface HtmlRendererPanelProps {
@@ -29,7 +30,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         const filePath = selected;
         
         // Use Tauri to read the file
-        const fileContent = await window.__TAURI__.fs.readTextFile(filePath);
+        const fileContent = await readTextFile(filePath);
         setHtmlContent(fileContent);
         
         // Extract just the filename from the path

@@ -14,13 +14,16 @@ import {
   Code,
   Textarea,
   Tabs,
-  Tooltip
+  Tooltip,
+  ActionIcon
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X } from 'lucide-react';
+import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder } from 'lucide-react';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
+import { open } from '@tauri-apps/plugin-dialog';
+import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import VSCodeChat from './VSCodeChat';
 
 interface VSCodeStatus {
@@ -45,6 +48,64 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [originalFile, setOriginalFile] = useState<string>('');
   const [suggestedContent, setSuggestedContent] = useState<string>('');
   const [description, setDescription] = useState<string>('Suggested change');
+
+  const browseForFile = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: 'Select Original File',
+        filters: [{
+          name: 'All Files',
+          extensions: ['*']
+        }, {
+          name: 'Text Files',
+          extensions: ['txt', 'md', 'js', 'ts', 'html', 'css', 'json', 'py', 'jsx', 'tsx']
+        }, {
+          name: 'Source Code',
+          extensions: ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'c', 'cpp', 'cs', 'go', 'rs', 'rb']
+        }]
+      });
+      
+      if (selected && typeof selected === 'string') {
+        console.log('Selected file:', selected);
+        setOriginalFile(selected);
+        
+        // Load the file content into Suggested Content using Tauri 2.0 API
+        try {
+          const fileExists = await exists(selected);
+          if (!fileExists) {
+            throw new Error(`File does not exist: ${selected}`);
+          }
+          
+          const fileContent = await readTextFile(selected);
+          setSuggestedContent(fileContent);
+          
+          notifications.show({
+            title: 'Success',
+            message: `File loaded successfully: ${selected.split('/').pop()}`,
+            color: 'green'
+          });
+        } catch (readError) {
+          console.error('Error reading file content:', readError);
+          notifications.show({
+            title: 'Error',
+            message: `Could not read file content: ${readError}`,
+            color: 'red'
+          });
+        }
+      } else {
+        console.log('No file selected or multiple selection returned', selected);
+      }
+    } catch (error) {
+      console.error('Error selecting file:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to open file browser: ${error}`,
+        color: 'red'
+      });
+    }
+  };
 
   const resetSuggestedContent = () => {
     setSuggestedContent('');
@@ -213,6 +274,11 @@ const VSCodeIntegrationPanel: React.FC = () => {
     }
   };
 
+// Modify the component return statement to consolidate the cards and give more space to Suggested Content
+
+// First, remove the bottom card entirely and integrate its content into the top section
+// Then increase the height of the Suggested Content textarea
+
   return (
     <div className="vscode-integration-panel">
       <Card shadow="sm" p="lg" radius="md" withBorder>
@@ -237,7 +303,17 @@ const VSCodeIntegrationPanel: React.FC = () => {
             color="blue" 
             title="VS Code Extension Connection"
           >
-            Configure the connection to the VS Code diff-extension. Make sure you have the PieVerse Diff Extension installed in VS Code.
+            <Text size="sm">
+              Configure the connection to the VS Code diff-extension. Make sure you have the PieVerse Diff Extension installed in VS Code and 
+              that it's configured to connect to the correct WebSocket port.
+            </Text>
+            
+            <Text size="sm" mt="md" fw={600}>
+              VS Code Extension Settings:
+            </Text>
+            <Code block size="xs">
+              {`{"pieverse-diff.websocketUrl": "ws://localhost:${status.port}"}`}
+            </Code>
           </Alert>
           
           {error && (
@@ -318,6 +394,24 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     placeholder="/path/to/your/file.js"
                     value={originalFile}
                     onChange={(e) => setOriginalFile(e.currentTarget.value)}
+                    rightSection={
+                      <ActionIcon
+                        onClick={browseForFile}
+                        variant="subtle"
+                        size="lg"
+                        title="Browse for file"
+                        style={{ marginRight: '8px' }}
+                        color="blue"
+                      >
+                        <Folder size={16} />
+                      </ActionIcon>
+                    }
+                    rightSectionWidth={50}
+                    styles={{
+                      rightSection: {
+                        pointerEvents: 'auto'
+                      }
+                    }}
                   />
                   
                   <TextInput
@@ -334,7 +428,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     placeholder="// Your suggested code here"
                     value={suggestedContent}
                     onChange={(e) => setSuggestedContent(e.currentTarget.value)}
-                    minRows={5}
+                    minRows={8}
+                    maxRows={15}
+                    autosize
                   />
                   
                   <Group position="apart">
@@ -455,23 +551,6 @@ const VSCodeIntegrationPanel: React.FC = () => {
               </Card>
             </Tabs.Panel>
           </Tabs>
-          
-          <Card withBorder p="md">
-            <Text weight={600} mb="md">VS Code Extension Integration</Text>
-            <Text size="sm">
-              To use this feature, make sure you have the PieVerse Diff Extension installed in VS Code and 
-              that it's configured to connect to the correct WebSocket port.
-            </Text>
-            
-            <Text size="sm" mt="md" fw={600}>
-              VS Code Extension Settings:
-            </Text>
-            <Code block>
-              {`{
-  "pieverse-diff.websocketUrl": "ws://localhost:${status.port}"
-}`}
-            </Code>
-          </Card>
         </Stack>
       </Card>
     </div>
