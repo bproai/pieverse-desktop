@@ -89,6 +89,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
 
   const [colorScheme, setColorScheme] = useState<'light' | 'dark'>('light');
 
+  const [statusInfo, setStatusInfo] = useState<string | null>(null);
 
   useEffect(() => {
     // Force a resize event when the connection panel visibility changes
@@ -654,6 +655,18 @@ const VSCodeIntegrationPanel: React.FC = () => {
                       This panel shows debug information to help diagnose connection issues.
                     </Alert>
                     
+                    {statusInfo && (
+                      <Alert 
+                        color="blue" 
+                        title="Status Information" 
+                        icon={<CheckCircle size={16} />}
+                        withCloseButton
+                        onClose={() => setStatusInfo(null)}
+                      >
+                        {statusInfo}
+                      </Alert>
+                    )}
+
                     <Text size="sm" fw={600}>Current Request Payload:</Text>
                     <Code block>
                       {JSON.stringify({
@@ -685,9 +698,11 @@ const VSCodeIntegrationPanel: React.FC = () => {
                         onClick={async () => {
                           try {
                             const wsStatus = await core.invoke('get_vscode_ws_status');
-                            setError(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
+                            setStatusInfo(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
+                            setError(null); // Clear any existing errors
                           } catch (e: any) {
                             setError(`Failed to get status: ${e.toString()}`);
+                            setStatusInfo(null);
                           }
                         }}
                       >
