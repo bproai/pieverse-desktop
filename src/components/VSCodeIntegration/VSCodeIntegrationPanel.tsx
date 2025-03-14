@@ -156,6 +156,42 @@ const VSCodeIntegrationPanel: React.FC = () => {
     }
   };
 
+  const validateAndLoadFile = async (filePath: string) => {
+    if (!filePath.trim()) return;
+    
+    try {
+      console.log('Validating file path:', filePath);
+      
+      // Check if file exists using Tauri's FS API
+      const fileExists = await exists(filePath);
+      if (!fileExists) {
+        notifications.show({
+          title: 'Error',
+          message: `File does not exist: ${filePath}`,
+          color: 'red'
+        });
+        return;
+      }
+      
+      // If file exists, load its content
+      const fileContent = await readTextFile(filePath);
+      setSuggestedContent(fileContent);
+      
+      notifications.show({
+        title: 'Success',
+        message: `File loaded successfully: ${filePath.split('/').pop() || filePath.split('\\').pop()}`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error validating or loading file:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Could not load file: ${error}`,
+        color: 'red'
+      });
+    }
+  };
+
   const resetSuggestedContent = () => {
     setSuggestedContent('');
   };
@@ -509,6 +545,21 @@ const VSCodeIntegrationPanel: React.FC = () => {
                         placeholder="/path/to/your/file.js"
                         value={originalFile}
                         onChange={(e) => setOriginalFile(e.currentTarget.value)}
+                        onBlur={() => {
+                          if (originalFile.trim()) {
+                            validateAndLoadFile(originalFile);
+                          }
+                        }}
+                        onPaste={(e) => {
+                          // Allow default paste behavior to update the input value
+                          setTimeout(() => {
+                            // Check if the pasted content looks like a file path
+                            const value = e.currentTarget.value;
+                            if (value && (value.includes('/') || value.includes('\\'))) {
+                              validateAndLoadFile(value);
+                            }
+                          }, 100);
+                        }}
                         rightSection={
                           <ActionIcon
                             onClick={browseForFile}
