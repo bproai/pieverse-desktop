@@ -49,7 +49,7 @@ A Visual Studio Code extension to help you view and merge code differences inspi
 4. Press `F5` to open a new Extension Development Host window and test the extension.
 5. To package the extension for distribution, run:
    ```bash
-   vsce package
+   yes | vsce package
    ```
 6. To install the packaged extension, run:
    ```bash
