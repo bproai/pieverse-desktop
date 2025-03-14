@@ -247,7 +247,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
       await core.invoke('start_vscode_ws_server', { port });
       notifications.show({
         title: 'Success',
-        message: `VS Code WebSocket server started on port ${port}`,
+        message: `VS Code WebSocket server started. Connect your extension to ws://localhost:${port}`,
         color: 'green'
       });
       setStatus({ isRunning: true, port: port });
@@ -446,7 +446,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
               <Group align="end" mt="md">
                 <NumberInput
                   label="WebSocket Port"
-                  description="Port for VS Code extension to connect to"
+                  description={status.isRunning 
+                    ? `Active connection URL: ws://localhost:${status.port}`
+                    : "Port for VS Code extension to connect to"}
                   value={port}
                   onChange={(val) => setPort(val || 3001)}
                   min={1024}
@@ -481,17 +483,6 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   Refresh Status
                 </Button>
               </Group>
-
-              {status.isRunning && (
-                <Alert 
-                  icon={<CheckCircle size={16} />} 
-                  color="green" 
-                  title="Server Running"
-                  mt="md"
-                >
-                  VS Code server is running on port {status.port}. Connect your VS Code extension to ws://localhost:{status.port}
-                </Alert>
-              )}
             </div>
           </Collapse>
 
