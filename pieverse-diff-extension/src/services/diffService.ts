@@ -7,6 +7,62 @@ import { ExtensionGlobals } from '../extension';
 import { DiffTreeItem } from '../tree/diffTreeProvider';
 
 /**
+ * Check if a file path is within any of the open workspace folders
+ */
+function isFileInWorkspace(filePath: string): boolean {
+  if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+    console.log("No workspace folders open, returning false");
+    return false;
+  }
+
+  // Try to make filePath absolute if it's not already
+  let absoluteFilePath = filePath;
+  try {
+    if (!path.isAbsolute(filePath)) {
+      absoluteFilePath = path.resolve(filePath);
+    }
+    absoluteFilePath = path.normalize(absoluteFilePath);
+  } catch (error) {
+    console.log(`Error normalizing path: ${error}`);
+    // Continue with original path if there's an error
+    absoluteFilePath = filePath;
+  }
+  
+  console.log(`Checking if file ${absoluteFilePath} is in any workspace folder`);
+  
+  // Check each workspace folder
+  for (const folder of vscode.workspace.workspaceFolders) {
+    const folderPath = folder.uri.fsPath;
+    
+    try {
+      // Get absolute normalized path of workspace folder
+      const normalizedFolderPath = path.normalize(folderPath);
+      console.log(`Checking workspace folder: ${normalizedFolderPath}`);
+      
+      // Check if file path starts with workspace folder path (direct child)
+      if (absoluteFilePath.startsWith(normalizedFolderPath + path.sep) || 
+          absoluteFilePath === normalizedFolderPath) {
+        console.log(`File ${absoluteFilePath} is in workspace folder ${normalizedFolderPath}`);
+        return true;
+      }
+      
+      // Also try to find it as a relative path within the workspace
+      const relativePossiblePath = path.join(normalizedFolderPath, filePath);
+      if (fs.existsSync(relativePossiblePath)) {
+        console.log(`File found as relative path: ${relativePossiblePath}`);
+        return true;
+      }
+    } catch (error) {
+      console.log(`Error checking workspace folder ${folderPath}: ${error}`);
+      // Continue with next folder
+    }
+  }
+
+  console.log(`File ${absoluteFilePath} is NOT in any workspace folder`);
+  return false;
+}
+
+/**
  * Handle suggested updates from the PieVerse server
  */
 export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals, context: vscode.ExtensionContext) {
@@ -41,7 +97,12 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
     // Extract file extension for proper language identification
     const fileExtension = fileName?.split('.').pop() || 'js';
     
-    // Add to tree view
+    // Check if the file is within the current workspace - with extra logging
+    console.log(`Current workspace folders: ${JSON.stringify(vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath))}`);
+    const isInWorkspace = isFileInWorkspace(suggestion.originalFile);
+    console.log(`File ${fileName} is ${isInWorkspace ? '' : 'NOT '}in current workspace`);
+    
+    // Add to tree view whether in workspace or not
     globals.treeDataProvider.addDiffItem(
       new DiffTreeItem(`${fileName}: ${shortDesc}`, suggestion.originalFile)
     );
@@ -76,7 +137,7 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
     let originalUri: vscode.Uri | undefined;
     
     // First try to find the file in the workspace
-    if (vscode.workspace.workspaceFolders) {
+    if (vscode.workspace.workspaceFolders && isInWorkspace) {
       for (const folder of vscode.workspace.workspaceFolders) {
         const possibleUri = vscode.Uri.joinPath(folder.uri, suggestion.originalFile);
         console.log(`Trying workspace path: ${possibleUri.fsPath}`);
@@ -87,7 +148,7 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
           break;
         } catch (e) {
           console.log(`File not found in workspace folder: ${possibleUri.fsPath}`);
-          // File not found in this workspace folder, continue searching
+          // Continue looking
         }
       }
     }
@@ -122,17 +183,28 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
       suggestion.description || 'Suggested code changes'
     );
 
-    // Display notification instead of automatically opening diff
-    vscode.window.showInformationMessage(
-      `Received suggested changes for ${fileName}`, 
-      'View Diff'
-    ).then(selection => {
-      if (selection === 'View Diff') {
-        console.log("View Diff button clicked");
-        // Only open the diff view when the user clicks "View Diff"
-        vscode.commands.executeCommand('pieverse-diff.showSingleDiff', suggestion.originalFile);
-      }
-    });
+    // Only display notification if the file is within the current workspace
+    if (isInWorkspace) {
+      console.log(`Showing notification for ${fileName} as it's in the current workspace`);
+      vscode.window.showInformationMessage(
+        `Received suggested changes for ${fileName}`, 
+        'View Diff'
+      ).then(selection => {
+        if (selection === 'View Diff') {
+          console.log("View Diff button clicked");
+          // Only open the diff view when the user clicks "View Diff"
+          vscode.commands.executeCommand('pieverse-diff.showSingleDiff', suggestion.originalFile);
+        }
+      });
+    } else {
+      console.log(`Skipping notification for ${fileName} as it's NOT in the current workspace`);
+      
+      // Add a system message to the sidebar instead
+      globals.sidebarProvider.addSystemMessage(
+        `Received diff for ${fileName} (not in current workspace)`,
+        'info'
+      );
+    }
     
   } catch (error) {
     console.error('Error processing suggested update:', error);
