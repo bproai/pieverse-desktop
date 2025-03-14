@@ -87,6 +87,8 @@ const VSCodeIntegrationPanel: React.FC = () => {
 
   const [isConnectionOpen, setIsConnectionOpen] = useState(true);
 
+  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>('light');
+
 
   useEffect(() => {
     // Force a resize event when the connection panel visibility changes
@@ -177,6 +179,24 @@ const VSCodeIntegrationPanel: React.FC = () => {
       setError(error.toString());
     }
   };
+
+  useEffect(() => {
+    // Check if your application has a way to detect dark mode
+    // This is an example - adapt it to your app's dark mode detection method
+    const isDarkMode = document.body.classList.contains('dark-mode') || 
+                       window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    setColorScheme(isDarkMode ? 'dark' : 'light');
+    
+    // Optional: listen for changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setColorScheme(e.matches ? 'dark' : 'light');
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Load status on component mount
   useEffect(() => {
@@ -528,6 +548,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                       language={language}
                       value={suggestedContent}
                       onChange={(value) => setSuggestedContent(value || '')}
+                      theme={colorScheme === 'dark' ? 'vs-dark' : 'light'} // Add this line
                       options={{
                         wordWrap: 'on',
                         minimap: { enabled: false },
