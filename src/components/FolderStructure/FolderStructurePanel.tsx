@@ -763,6 +763,15 @@ const FolderStructurePanel: React.FC = () => {
               <Tabs.Panel value="llm" pt="xs">
                 <Group position="apart" mb="md" p="md">
                   <Text weight={600}>LLM Context</Text>
+                  <ActionIcon
+                    color={copiedText ? "green" : "blue"}
+                    variant="light"
+                    onClick={copyToClipboard}
+                    title="Copy as Markdown"
+                    size="md"
+                  >
+                    {copiedText ? <Check size={16} /> : <Copy size={16} />}
+                  </ActionIcon>
                 </Group>
                 <div style={{ padding: '0 16px 16px 16px' }}>
                   <Textarea
