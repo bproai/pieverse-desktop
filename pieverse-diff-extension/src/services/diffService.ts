@@ -185,17 +185,34 @@ export function handleSuggestedUpdate(suggestion: any, globals: ExtensionGlobals
 
     // Only display notification if the file is within the current workspace
     if (isInWorkspace) {
-      console.log(`Showing notification for ${fileName} as it's in the current workspace`);
-      vscode.window.showInformationMessage(
-        `Received suggested changes for ${fileName}`, 
-        'View Diff'
-      ).then(selection => {
-        if (selection === 'View Diff') {
-          console.log("View Diff button clicked");
-          // Only open the diff view when the user clicks "View Diff"
-          vscode.commands.executeCommand('pieverse-diff.showSingleDiff', suggestion.originalFile);
-        }
-      });
+      // Get auto-open diff setting
+      const config = vscode.workspace.getConfiguration('pieverse-diff');
+      const autoOpenDiff = config.get<boolean>('autoOpenDiff', true);
+      console.log(`autoOpenDiff setting is ${autoOpenDiff}`);
+
+      if (autoOpenDiff) {
+        // Automatically open the diff view
+        console.log(`Auto-opening diff for ${fileName}`);
+        vscode.commands.executeCommand('pieverse-diff.showSingleDiff', suggestion.originalFile);
+        
+        // Show a notification that diff was automatically opened
+        vscode.window.showInformationMessage(
+          `Automatically opened diff for ${fileName}`
+        );
+      } else {
+        // Show the notification with View Diff button
+        console.log(`Showing notification for ${fileName} as it's in the current workspace`);
+        vscode.window.showInformationMessage(
+          `Received suggested changes for ${fileName}`, 
+          'View Diff'
+        ).then(selection => {
+          if (selection === 'View Diff') {
+            console.log("View Diff button clicked");
+            // Only open the diff view when the user clicks "View Diff"
+            vscode.commands.executeCommand('pieverse-diff.showSingleDiff', suggestion.originalFile);
+          }
+        });
+      }
     } else {
       console.log(`Skipping notification for ${fileName} as it's NOT in the current workspace`);
       

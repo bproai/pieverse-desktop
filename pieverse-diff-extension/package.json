@@ -80,6 +80,11 @@
           "type": "boolean",
           "default": false,
           "description": "Create backup files when accepting changes (set to false if you use version control like Git)"
+        },
+        "pieverse-diff.autoOpenDiff": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open diff view when receiving suggested changes"
         }
       }
     }

@@ -252,6 +252,7 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       const config = vscode.workspace.getConfiguration('pieverse-diff');
       const wsUrl = config.get<string>('websocketUrl') || 'ws://localhost:3001';
       const createBackup = config.get<boolean>('createBackupFiles', false);
+      const autoOpenDiff = config.get<boolean>('autoOpenDiff', true);      
 
       // Get style sheet path
       const cssUri = panel.webview.asWebviewUri(
@@ -259,7 +260,7 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       );
 
       // Set the HTML content
-      panel.webview.html = getSettingsPanelHtml(cssUri.toString(), wsUrl, createBackup);
+      panel.webview.html = getSettingsPanelHtml(cssUri.toString(), wsUrl, createBackup, autoOpenDiff);
 
       // Handle messages from the webview
       panel.webview.onDidReceiveMessage(
@@ -269,6 +270,7 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
               if (message.settings) {
                 await config.update('websocketUrl', message.settings.wsUrl, true);
                 await config.update('createBackupFiles', message.settings.createBackup, true);
+                await config.update('autoOpenDiff', message.settings.autoOpenDiff, true);
                 vscode.window.showInformationMessage('PieVerse settings saved');
                 
                 // Reconnect with new URL

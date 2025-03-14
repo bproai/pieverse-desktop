@@ -7,7 +7,7 @@ import { icons } from '../utils/icons';
 /**
  * Get the complete HTML content for the integrated panel
  */
-export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup: boolean): string {
+export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup: boolean, autoOpenDiff: boolean = true): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,6 +126,17 @@ export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup
       Not needed if you use version control like Git.
     </div>
   </div>
+
+  <div class="form-group">
+    <div class="checkbox-label">
+      <input type="checkbox" id="autoOpenDiff" ${autoOpenDiff ? 'checked' : ''} />
+      <label for="autoOpenDiff">Automatically open diff view</label>
+    </div>
+    <div class="description">
+      When checked, diff views will automatically open when receiving suggested changes.
+      When unchecked, you'll receive a notification with a "View Diff" button instead.
+    </div>
+  </div>
   
   <div class="button-container">
     <button id="saveBtn">Save Settings</button>
@@ -140,6 +151,7 @@ export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup
     const vscode = acquireVsCodeApi();
     const wsUrlInput = document.getElementById('wsUrl');
     const createBackupCheck = document.getElementById('createBackup');
+    const autoOpenDiffCheck = document.getElementById('autoOpenDiff');
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const successMessage = document.getElementById('successMessage');
@@ -150,7 +162,8 @@ export function getSettingsPanelHtml(cssUri: string, wsUrl: string, createBackup
         command: 'saveSettings',
         settings: {
           wsUrl: wsUrlInput.value,
-          createBackup: createBackupCheck.checked
+          createBackup: createBackupCheck.checked,
+          autoOpenDiff: autoOpenDiffCheck.checked
         }
       });
       
