@@ -117,6 +117,15 @@ use services::vscode_ws::{
     send_chat_to_vscode
 };
 
+use services::file_service::{
+    get_file_info,
+    search_files,
+    copy_directory,
+    read_text_file_secure,
+    write_text_file_secure,
+    generate_file_tree
+};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Create and initialize the trend spike service
@@ -212,7 +221,7 @@ pub fn run() {
             take_screenshot,
             take_screenshot_to_clipboard,
             save_clipboard_image,
-            update_system_appearance,
+            // update_system_appearance,
             fetch_chrome_targets,
             open_chrome_in_terminal,
             get_project_structure,
@@ -224,59 +233,65 @@ pub fn run() {
             stop_vscode_ws_server,
             get_vscode_ws_status,
             send_code_diff_to_vscode,
-            send_chat_to_vscode
+            send_chat_to_vscode,
+            get_file_info,
+            search_files,
+            copy_directory,
+            read_text_file_secure,
+            write_text_file_secure,
+            generate_file_tree
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
-#[tauri::command]
-fn update_system_appearance(dark: bool) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
-  {
-    // First, try with Cocoa API
-    unsafe {
-      use cocoa::appkit::NSApp;
-      use cocoa::base::{id, nil};
-      use cocoa::foundation::NSString;
-      use objc::{class, msg_send, sel, sel_impl};
+// #[tauri::command]
+// fn update_system_appearance(dark: bool) -> Result<(), String> {
+//   #[cfg(target_os = "macos")]
+//   {
+//     // First, try with Cocoa API
+//     unsafe {
+//       use cocoa::appkit::NSApp;
+//       use cocoa::base::{id, nil};
+//       use cocoa::foundation::NSString;
+//       use objc::{class, msg_send, sel, sel_impl};
       
-      let app: id = NSApp();
+//       let app: id = NSApp();
       
-      let appearance_name = if dark { "NSAppearanceNameDarkAqua" } else { "NSAppearanceNameAqua" };
-      println!("Updating appearance to: {}", appearance_name);
+//       let appearance_name = if dark { "NSAppearanceNameDarkAqua" } else { "NSAppearanceNameAqua" };
+//       println!("Updating appearance to: {}", appearance_name);
       
-      let ns_string_class = class!(NSString);
-      let ns_appearance_name: id = msg_send![ns_string_class, stringWithUTF8String:appearance_name.as_ptr()];
+//       let ns_string_class = class!(NSString);
+//       let ns_appearance_name: id = msg_send![ns_string_class, stringWithUTF8String:appearance_name.as_ptr()];
       
-      let nsappearance_class = class!(NSAppearance);
-      let appearance: id = msg_send![nsappearance_class, appearanceNamed:ns_appearance_name];
+//       let nsappearance_class = class!(NSAppearance);
+//       let appearance: id = msg_send![nsappearance_class, appearanceNamed:ns_appearance_name];
       
-      let _: () = msg_send![app, setAppearance:appearance];
+//       let _: () = msg_send![app, setAppearance:appearance];
       
-      let windows: id = msg_send![app, windows];
-      let count: usize = msg_send![windows, count];
+//       let windows: id = msg_send![app, windows];
+//       let count: usize = msg_send![windows, count];
       
-      println!("Found {} windows to update", count);
-      for i in 0..count {
-        let window: id = msg_send![windows, objectAtIndex:i];
-        let _: () = msg_send![window, setAppearance:appearance];
-        println!("Updated window at index {}", i);
-      }
-    }
+//       println!("Found {} windows to update", count);
+//       for i in 0..count {
+//         let window: id = msg_send![windows, objectAtIndex:i];
+//         let _: () = msg_send![window, setAppearance:appearance];
+//         println!("Updated window at index {}", i);
+//       }
+//     }
     
-    // Then also try with AppleScript as a backup approach
-    // This will affect the entire system appearance which will include our window
-    use std::process::Command;
+//     // Then also try with AppleScript as a backup approach
+//     // This will affect the entire system appearance which will include our window
+//     use std::process::Command;
     
-    let script = format!("tell application \"System Events\" to tell appearance preferences to set dark mode to {}", 
-                        if dark { "true" } else { "false" });
+//     let script = format!("tell application \"System Events\" to tell appearance preferences to set dark mode to {}", 
+//                         if dark { "true" } else { "false" });
     
-    match Command::new("osascript").arg("-e").arg(script).output() {
-      Ok(_) => println!("System appearance updated via AppleScript"),
-      Err(e) => println!("Failed to update system appearance via AppleScript: {}", e)
-    }
-  }
+//     match Command::new("osascript").arg("-e").arg(script).output() {
+//       Ok(_) => println!("System appearance updated via AppleScript"),
+//       Err(e) => println!("Failed to update system appearance via AppleScript: {}", e)
+//     }
+//   }
   
-  Ok(())
-}
+//   Ok(())
+// }

@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -19,6 +19,7 @@ import FolderStructurePanel from './components/FolderStructure/FolderStructurePa
 import { ReferencesPanel } from './components/References';
 import { LLMRulesPanel } from './components/LLMRules';
 import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
+import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -110,6 +111,9 @@ function App() {
                 <Tabs.Tab value="vscode" leftSection={<Brackets size={16} />}>
                   VS Code Integration
                 </Tabs.Tab>
+                <Tabs.Tab value="filesystem" leftSection={<HardDrive size={16} />}>
+                  File System
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -164,6 +168,9 @@ function App() {
 
               <Tabs.Panel value="vscode" className="p-4">
                 <VSCodeIntegrationPanel />
+              </Tabs.Panel>
+              <Tabs.Panel value="filesystem" className="p-4">
+                <FileSystemPanel />
               </Tabs.Panel>
             </Tabs>           
           </main>

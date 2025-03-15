@@ -502,7 +502,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
             >
               <Tabs.List>
                 <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
-                  Test Diff
+                  Diff
                 </Tabs.Tab>
                 <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
                   Chat
@@ -520,20 +520,21 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    height: isConnectionOpen ? 'calc(100% - 15px)' : 'calc(100% + 10px)',
+                    height: isConnectionOpen ? 'calc(100% - 15px)' : 'calc(100% + 9px)',
                     flex: 1,
                     transition: 'height 0.3s ease'
                   }}
                 >
-                    {/* Card contents remain the same... */}
-                  <Text weight={600} mb="md">Test VS Code Diff</Text>
-                  
+                    {/* Card contents remain the same... */}                  
                   {/* Fixed-height section for inputs */}
                   <div style={{ marginBottom: '0.75rem' }}>
                     <Stack spacing="sm">
                       <TextInput
-                        label="Original File Path"
-                        description="Path to the original file that will be modified"
+                        label={
+                          <Tooltip label="Path to the original file that will be modified">
+                            <Text size="sm" style={{ cursor: 'help' }}>Original File Path</Text>
+                          </Tooltip>
+                        }
                         placeholder="/path/to/your/file.js"
                         value={originalFile}
                         onChange={(e) => setOriginalFile(e.currentTarget.value)}
@@ -569,8 +570,11 @@ const VSCodeIntegrationPanel: React.FC = () => {
                       />
                       
                       <TextInput
-                        label="Description"
-                        description="Description of the proposed change"
+                        label={
+                          <Tooltip label="Description of the proposed change">
+                            <Text size="sm" style={{ cursor: 'help' }}>Description</Text>
+                          </Tooltip>
+                        }
                         placeholder="Refactor function for better performance"
                         value={description}
                         onChange={(e) => setDescription(e.currentTarget.value)}
@@ -581,13 +585,13 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   {/* Editor that takes available space but allows room for buttons */}
                   <div style={{ 
                     flex: 1, 
-                    minHeight: '200px',
+                    minHeight: '150px',
                     height: isConnectionOpen ? 'auto' : 'auto', // Adjust this value based on your layout
                     transition: 'height 0.3s ease'
                   }}>
                     <Editor
                       key={language}
-                      height="95%"
+                      height={isConnectionOpen ? 'calc(97% + 6px)' : 'calc(93% + 10px)'}
                       language={language}
                       value={suggestedContent}
                       onChange={(value) => setSuggestedContent(value || '')}
@@ -609,7 +613,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                       disabled={!status.isRunning}
                       title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
                     >
-                      Send Test Diff
+                      Send Diff
                     </Button>
                     
                     <Group spacing="xs">

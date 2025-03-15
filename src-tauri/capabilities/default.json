@@ -26,6 +26,13 @@
       ]
     },
     "clipboard-manager:default",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    "fs:allow-write-file",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-copy-file",
+    "fs:allow-create",
+    "fs:allow-mkdir",
+    "dialog:allow-confirm"
   ]
 }

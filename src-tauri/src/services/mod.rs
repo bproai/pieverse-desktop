@@ -33,3 +33,5 @@ pub mod llm_rules;
 
 // VS Code integration service
 pub mod vscode_ws;
+
+pub mod file_service;
