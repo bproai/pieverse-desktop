@@ -355,13 +355,59 @@ This script compares the first commit to the latest HEAD, generating a detailed 
 
 For end users, we maintain a curated changelog that focuses on significant features and improvements.
 
+
 ## Debugging & Monitoring
+
+### Network Monitoring
 
 During development, it can be helpful to continuously monitor the network connections on a specific port. For example, to monitor connections on port **3501**, you can use the following command:
 
 ```bash
 watch -n 1 "netstat -an | grep 3501"
+```
 
+### MCP Inspector
+
+MCP Inspector is a developer tool for testing and debugging MCP servers. It provides a user-friendly interface to monitor incoming connections, inspect MCP messages, and view detailed logs of interactions between your MCP server and clients.
+
+#### Installation
+
+You can install MCP Inspector globally via npm:
+
+```bash
+npm install -g mcp-inspector
+```
+
+Alternatively, if you prefer to work from source, clone the repository and install its dependencies:
+
+```bash
+git clone https://github.com/modelcontextprotocol/inspector.git
+cd inspector
+npm install
+```
+
+#### Running MCP Inspector
+
+Once installed, launch MCP Inspector using one of the following methods:
+
+**Global Installation:**
+```bash
+mcp-inspector
+```
+
+**Using npx with custom port:**
+```bash
+SERVER_PORT=3501 npx @modelcontextprotocol/inspector
+```
+
+**From Source:**
+```bash
+npm start
+```
+
+MCP Inspector will start a web server (commonly on port 3000 by default, or your specified port) and open a web interface where you can monitor your MCP server's connections, view incoming JSON-RPC messages, and debug issues in real time. 
+
+> **Note:** Ensure your MCP server is running (for example, on port 3500 or as configured) so that MCP Inspector can connect to it and display the relevant information.
 
 
 ## 📄 License
