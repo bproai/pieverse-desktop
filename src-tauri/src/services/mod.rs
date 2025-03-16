@@ -35,3 +35,5 @@ pub mod llm_rules;
 pub mod vscode_ws;
 
 pub mod file_service;
+
+pub mod claude_mcp_service;

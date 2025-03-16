@@ -355,6 +355,15 @@ This script compares the first commit to the latest HEAD, generating a detailed 
 
 For end users, we maintain a curated changelog that focuses on significant features and improvements.
 
+## Debugging & Monitoring
+
+During development, it can be helpful to continuously monitor the network connections on a specific port. For example, to monitor connections on port **3501**, you can use the following command:
+
+```bash
+watch -n 1 "netstat -an | grep 3501"
+
+
+
 ## 📄 License
 [MIT License](LICENSE)
 

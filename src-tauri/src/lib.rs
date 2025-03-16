@@ -126,6 +126,17 @@ use services::file_service::{
     generate_file_tree
 };
 
+use services::claude_mcp_service::{
+    ClaudeMcpState,
+    start_claude_mcp_server,
+    stop_claude_mcp_server,
+    get_claude_mcp_status,
+    add_claude_mcp_directory,
+    remove_claude_mcp_directory
+};
+
+use async_stream::stream;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Create and initialize the trend spike service
@@ -163,6 +174,7 @@ pub fn run() {
         .manage(ApiServerState::default())
         .manage(trend_spike_service)
         .manage(VSCodeWebSocketState::new())
+        .manage(ClaudeMcpState::new())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -239,7 +251,12 @@ pub fn run() {
             copy_directory,
             read_text_file_secure,
             write_text_file_secure,
-            generate_file_tree
+            generate_file_tree,
+            start_claude_mcp_server,
+            stop_claude_mcp_server,
+            get_claude_mcp_status,
+            add_claude_mcp_directory,
+            remove_claude_mcp_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

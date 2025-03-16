@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Bot } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -20,6 +20,7 @@ import { ReferencesPanel } from './components/References';
 import { LLMRulesPanel } from './components/LLMRules';
 import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
 import FileSystemPanel from './components/FileSystem/FileSystemPanel';
+import { ClaudeMCPPanel } from './components/ClaudeMCP';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -114,6 +115,9 @@ function App() {
                 <Tabs.Tab value="filesystem" leftSection={<HardDrive size={16} />}>
                   File System
                 </Tabs.Tab>
+                <Tabs.Tab value="claude-mcp" leftSection={<Bot size={16} />}>
+                  Claude MCP
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -172,6 +176,9 @@ function App() {
               <Tabs.Panel value="filesystem" className="p-4">
                 <FileSystemPanel />
               </Tabs.Panel>
+              <Tabs.Panel value="claude-mcp" className="p-4">
+                <ClaudeMCPPanel />
+              </Tabs.Panel>             
             </Tabs>           
           </main>
 
