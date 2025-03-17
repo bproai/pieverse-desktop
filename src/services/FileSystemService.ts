@@ -6,7 +6,9 @@ import {
   readTextFile,
   writeTextFile,
   copyFile,
-  readDir
+  readDir,
+  create,
+  mkdir
 } from '@tauri-apps/plugin-fs';
 import * as path from '@tauri-apps/api/path';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
@@ -104,15 +106,26 @@ class FileSystemService {
   }
 
   /**
+ * Create a new file (without any content)
+ */
+async createFile(filePath: string): Promise<boolean> {
+    try {
+      // Use create function to create an empty file
+      await create(filePath);
+      return true;
+    } catch (error) {
+      console.error(`Error creating file: ${error}`);
+      return false;
+    }
+  }
+
+  /**
    * Create a directory (and parent directories if needed)
    */
   async createDirectory(dirPath: string, recursive: boolean = true): Promise<boolean> {
     try {
-      // Use core.invoke with the proper plugin command format
-      await core.invoke('plugin:fs|create_dir', { 
-        path: dirPath, 
-        recursive 
-      });
+      // Use the correct function name 'create' instead of 'createDir'
+      await mkdir(dirPath, { recursive });
       return true;
     } catch (error) {
       console.error(`Error creating directory: ${error}`);

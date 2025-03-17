@@ -194,7 +194,7 @@ const FileOperations: React.FC = () => {
     
     try {
       const newFilePath = `${currentPath}/${newFileName}`;
-      const success = await FileSystemService.writeTextFile(newFilePath, '');
+      const success = await FileSystemService.createFile(newFilePath);
       
       if (success) {
         showOperationResult(true, 'File created', newFileName);
@@ -428,17 +428,17 @@ const FileOperations: React.FC = () => {
         </Alert>
       )}
       
-      <Tabs value={activeTab} onTabChange={(value) => setActiveTab(value as string)} mt="md">
+      <Tabs value={activeTab} onChange={setActiveTab} mt="md">
         <Tabs.List>
-          <Tabs.Tab value="read-write" leftSection={<FileText size={16} />}>
-            Read & Write
-          </Tabs.Tab>
-          <Tabs.Tab value="directory" leftSection={<Folder size={16} />}>
-            Directory Operations
-          </Tabs.Tab>
-          <Tabs.Tab value="management" leftSection={<PenTool size={16} />}>
-            File Management
-          </Tabs.Tab>
+            <Tabs.Tab value="read-write" icon={<FileText size={16} />}>
+                Read & Write
+            </Tabs.Tab>
+            <Tabs.Tab value="directory" icon={<Folder size={16} />}>
+                Directory Operations
+            </Tabs.Tab>
+            <Tabs.Tab value="management" icon={<PenTool size={16} />}>
+                File Management
+            </Tabs.Tab>
         </Tabs.List>
         
         <Tabs.Panel value="read-write" pt="md">

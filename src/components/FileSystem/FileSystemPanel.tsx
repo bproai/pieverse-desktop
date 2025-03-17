@@ -34,18 +34,18 @@ const FileSystemPanel: React.FC = () => {
         </Group>
       </Card.Section>
       
-      <Tabs value={activeTab} onTabChange={(value) => setActiveTab(value as string)} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Tabs value={activeTab} onChange={setActiveTab} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Tabs.List>
-          <Tabs.Tab value="operations" leftSection={<FileText size={16} />}>
-            File Operations
-          </Tabs.Tab>
-          <Tabs.Tab value="quick-access" leftSection={<Folder size={16} />}>
-            Quick Access
-          </Tabs.Tab>
-          <Tabs.Tab value="structure" leftSection={<FolderTree size={16} />}>
-            Project Structure
-          </Tabs.Tab>
-        </Tabs.List>
+            <Tabs.Tab value="operations" icon={<FileText size={16} />}>
+                File Operations
+            </Tabs.Tab>
+            <Tabs.Tab value="quick-access" icon={<Folder size={16} />}>
+                Quick Access
+            </Tabs.Tab>
+            <Tabs.Tab value="structure" icon={<FolderTree size={16} />}>
+                Project Structure
+            </Tabs.Tab>
+          </Tabs.List>
         
         <Tabs.Panel value="operations" style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
           <FileOperations />
