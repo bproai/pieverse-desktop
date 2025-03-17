@@ -149,6 +149,21 @@ export class WebSocketService {
       console.log('Successfully parsed JSON data:', jsonData);
       
       if (jsonData.type === 'chat') {
+        try {
+          // Try to parse the content as JSON to see if it's a command
+          const contentJson = JSON.parse(jsonData.content);
+          console.log('Successfully parsed jsonData.content data:', contentJson);
+          if (contentJson.type === 'requestDiagnostics') {
+            console.log('Received diagnostics request via chat');
+            if (globals.diagnosticsService) {
+              globals.diagnosticsService.sendAllDiagnostics();
+            }
+            return;
+          }
+        } catch (e) {
+          // Not valid JSON, treat as normal chat message
+        }
+
         this.handleChatMessage(jsonData, globals);
       } else if (jsonData.type === 'requestDiagnostics') {
         // Handle explicit diagnostics request

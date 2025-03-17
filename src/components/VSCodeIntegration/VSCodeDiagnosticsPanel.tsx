@@ -171,7 +171,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>
       <Card.Section p="md" className="border-b">
-        <Group position="apart">
+        <Group justify="apart">
           <Group>
             <FileText size={20} />
             <Text size="xl" fw={700}>VS Code Diagnostics</Text>
@@ -195,14 +195,14 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
         </Group>
       </Card.Section>
       
-      <Stack spacing="md" mt="md">
+      <Stack gap="md" mt="md">
         {error && (
           <Alert color="red" title="Error" icon={<AlertCircle size={16} />} withCloseButton onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
         
-        <Group position="apart">
+        <Group justify="apart">
           <TextInput
             placeholder="Filter by filename..."
             value={filter}
@@ -276,7 +276,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                     </Group>
                   </Accordion.Control>
                   <Accordion.Panel>
-                    <Stack spacing="xs">
+                    <Stack gap="xs">
                       <Text size="xs" color="dimmed">{fileDiag.file}</Text>
                       {fileDiag.diagnostics.map((diag, diagIndex) => (
                         <Card 
@@ -291,7 +291,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                             }`
                           }}
                         >
-                          <Group position="apart">
+                          <Group justify="apart">
                             <Badge color={getSeverityColor(diag.severity)}>
                               {getSeverityText(diag.severity)}
                             </Badge>
