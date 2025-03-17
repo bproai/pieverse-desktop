@@ -342,6 +342,12 @@ async fn process_messages(
                                         }));
                                     }
                                 }
+                                else if msg_type == "terminalEvent" {
+                                    // Handle terminal events
+                                    println!("Received terminal event from VS Code");
+                                    // Forward the terminal event to the frontend
+                                    let _ = app.emit("vscode-terminal-event", json);
+                                }
                             }
                         }
                     }

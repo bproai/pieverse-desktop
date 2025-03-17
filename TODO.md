@@ -99,6 +99,22 @@ This initiative will not only improve PieVerse development efficiency but can al
 - [ ] Enhance filtering, search, and bulk operations.
 - [ ] Optimize UI workflows for switching between AI engine modes.
 - [ ] **Update VS Code Integration Panel:** Integrate dynamic Monaco Editor language detection to automatically adjust syntax highlighting based on the loaded file type.
+- [ ] **Expand VS Code Integration Features:**
+  - [ ] **Code Actions/Quick Fixes Panel:** Integrate with ESLint, TypeScript, and language servers to suggest and apply fixes.
+  - [ ] **Hover Information Integration:** Show documentation and type information on hover.
+  - [ ] **IntelliSense/Code Completion:** Provide completion suggestions with documentation.
+  - [ ] **Document Symbols Browser:** Implement tree view of classes, functions, and other symbols.
+  - [ ] **References Finder:** Track where specific symbols are used throughout the codebase.
+  - [ ] **File Search Integration:** Add powerful search capabilities across files.
+  - [ ] **Git Information Panel:** Display changes, blame annotations, and history visualization.
+  - [ ] **Terminal Output Viewer:** Show results from commands run in the integrated terminal.
+  - [ ] **Tasks/Build Results Viewer:** Display output from build tasks and automated processes.
+  - [ ] **Problems View:** Create a consolidated view of all diagnostics across the workspace.
+  - [ ] **Test Results Dashboard:** Visualize outcomes of test runs and coverage information.
+  - [ ] **Debugging Information Panel:** Show breakpoints, call stacks, and variables.
+  - [ ] **Extensions Recommendations:** Suggest extensions based on workspace content.
+  - [ ] **Type Hierarchy Viewer:** Visualize inheritance hierarchies for supported languages.
+  - [ ] **Call Hierarchy Analyzer:** Create visual representation of function call relationships.
 
 ### Trend Analysis & Signal Detection
 - [ ] Improve trend spike detection algorithms.

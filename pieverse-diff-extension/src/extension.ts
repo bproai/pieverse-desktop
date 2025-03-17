@@ -5,6 +5,7 @@ import { registerCommands } from './commands/registerCommands';
 import { WebSocketService } from './services/webSocketService';
 import { DiffActionsService } from './services/diffActionsService';
 import { DiagnosticsService } from './services/diagnosticsService';
+import { TerminalService } from './services/terminalService'; // Add terminal service import
 import { ensureResourcesExist } from './utils/fileUtils';
 import { PieVerseSidebarProvider } from './webview/sidebarPanel';
 
@@ -15,7 +16,8 @@ export interface ExtensionGlobals {
   treeDataProvider: DiffTreeDataProvider;
   sidebarProvider: PieVerseSidebarProvider;
   diffActionsService: DiffActionsService;
-  diagnosticsService: DiagnosticsService; // Added diagnosticsService
+  diagnosticsService: DiagnosticsService;
+  terminalService?: TerminalService; // Add terminal service
 }
 
 // Create and initialize the extension globals
@@ -35,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
     treeDataProvider: new DiffTreeDataProvider(),
     sidebarProvider: sidebarProvider,
     diffActionsService: {} as DiffActionsService,
-    diagnosticsService: {} as DiagnosticsService // Initial placeholder
+    diagnosticsService: {} as DiagnosticsService
   };
   
   // Update the sidebarProvider with the globals reference
@@ -53,6 +55,9 @@ export function activate(context: vscode.ExtensionContext) {
   
   // Initialize diagnostics service
   globals.diagnosticsService = new DiagnosticsService(context, globals);
+  
+  // Initialize terminal service
+  globals.terminalService = new TerminalService(context, globals);
 
   // Register the sidebar provider
   context.subscriptions.push(

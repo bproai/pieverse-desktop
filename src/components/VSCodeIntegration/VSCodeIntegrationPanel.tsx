@@ -19,7 +19,7 @@ import {
   Collapse
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
@@ -27,6 +27,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import VSCodeChat from './VSCodeChat';
 import VSCodeDiagnosticsPanel from './VSCodeDiagnosticsPanel';
+import VSCodeTerminalPanel from './VSCodeTerminalPanel';
 import Editor, { loader } from '@monaco-editor/react';
 loader.config({
   paths: {
@@ -511,6 +512,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 <Tabs.Tab value="diagnostics" leftSection={<AlertCircle size={16} />}>
                   Diagnostics
                 </Tabs.Tab>
+                <Tabs.Tab value="terminal" leftSection={<Terminal size={16} />}>
+                  Terminal
+                </Tabs.Tab>
                 <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
                   Debug
                 </Tabs.Tab>
@@ -650,6 +654,10 @@ const VSCodeIntegrationPanel: React.FC = () => {
 
               <Tabs.Panel value="diagnostics" p="md">
                 <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="terminal" p="md">
+                <VSCodeTerminalPanel isServerRunning={status.isRunning} />
               </Tabs.Panel>
               
               <Tabs.Panel value="debug" p="md">

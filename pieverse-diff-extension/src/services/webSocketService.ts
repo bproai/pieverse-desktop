@@ -160,6 +160,20 @@ export class WebSocketService {
             }
             return;
           }
+          else if (contentJson.type === 'showTerminal') {
+            // Handle terminal commands
+            if (globals.terminalService) {
+              globals.terminalService.handleWebSocketMessage(contentJson);
+            }
+            return;
+          }
+          else if (contentJson.type === 'executeTerminalCommand') {
+            console.log('Received execute terminal command via chat');
+            if (globals.terminalService) {
+              globals.terminalService.handleWebSocketMessage(contentJson);
+            }
+            return;
+          }
         } catch (e) {
           // Not valid JSON, treat as normal chat message
         }
@@ -169,6 +183,11 @@ export class WebSocketService {
         // Handle explicit diagnostics request
         if (globals.diagnosticsService) {
           globals.diagnosticsService.sendAllDiagnostics();
+        }
+      } else if (jsonData.type === 'executeTerminalCommand' || jsonData.type === 'showTerminal') {
+        // Handle terminal commands
+        if (globals.terminalService) {
+          globals.terminalService.handleWebSocketMessage(jsonData);
         }
       } else if (jsonData.originalFile && jsonData.suggestedContent) {
         // Handle as diff suggestion

@@ -313,4 +313,12 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       }
     })
   );
+
+  // Register terminal commands (terminal integration)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.openTerminal', () => {
+      vscode.commands.executeCommand('pieverse-diff.showTerminal');
+      vscode.window.showInformationMessage('PieVerse Terminal opened');
+    })
+  );
 }
