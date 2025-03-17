@@ -48,6 +48,20 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Digital double functionality for representation in meetings, social settings, and more.
 - Support for different UI workflows and record/playback capabilities for non-realtime modes.
 
+### 🧮 Claude MCP Integration
+- Native support for the Model Context Protocol (MCP) for advanced Claude AI interactions
+- Integrated development environment for building and testing MCP applications
+- Seamless directory integration for providing context to Claude models
+- Real-time conversation management with enhanced context handling
+- Efficient management of multiple Claude instances with different contexts
+
+### 🧪 Enhanced LLM Developer Assistance
+- Advanced problem-solving journey capture system that records complete developer-LLM interactions
+- Chain-of-thought reasoning framework to improve technical troubleshooting capabilities
+- Specialized fine-tuning pipeline for domain-specific LLM adaptation to your tech stack
+- Comprehensive knowledge management system for overriding outdated or conflicting information
+- Technical reasoning visualization and debugging tools for transparent problem-solving
+
 ### 🎨 Creative Workspace
 - Interactive environment for brainstorming, drafting, and refining creative projects.
 - Adaptive tools and inspiring prompts to foster "meta creation" and "meta invention."
@@ -341,6 +355,8 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
   Added HTML Renderer for visualizing and editing HTML content in multiple formats.
 - **v0.3.2:**
   Enhanced Document Renderer with Markdown support, syntax highlighting, and <span class="user-style-normal">special tag handling</span>.
+- **v0.4.0:**
+  Added Enhanced LLM Developer Assistance with problem-solving journey capture and specialized fine-tuning capabilities.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 
