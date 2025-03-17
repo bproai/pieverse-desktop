@@ -26,6 +26,7 @@ import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import VSCodeChat from './VSCodeChat';
+import VSCodeDiagnosticsPanel from './VSCodeDiagnosticsPanel';
 import Editor, { loader } from '@monaco-editor/react';
 loader.config({
   paths: {
@@ -507,6 +508,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
                   Chat
                 </Tabs.Tab>
+                <Tabs.Tab value="diagnostics" leftSection={<AlertCircle size={16} />}>
+                  Diagnostics
+                </Tabs.Tab>
                 <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
                   Debug
                 </Tabs.Tab>
@@ -639,12 +643,13 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   </Group>
                 </Card>
               </Tabs.Panel>
-
-
-
               
               <Tabs.Panel value="chat" p="md">
                 <VSCodeChat isServerRunning={status.isRunning} />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="diagnostics" p="md">
+                <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} />
               </Tabs.Panel>
               
               <Tabs.Panel value="debug" p="md">

@@ -332,6 +332,15 @@ async fn process_messages(
                                             "sender": "vscode"
                                         }));
                                     }
+                                } else if msg_type == "diagnostics" {
+                                    // Handle diagnostics messages
+                                    if let Some(data) = json.get("data") {
+                                        println!("Received diagnostics data from VS Code");
+                                        // Forward the diagnostics data to the frontend
+                                        let _ = app.emit("vscode-diagnostics", serde_json::json!({
+                                            "data": data
+                                        }));
+                                    }
                                 }
                             }
                         }
