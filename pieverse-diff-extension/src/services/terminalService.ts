@@ -74,9 +74,13 @@ export class TerminalService {
           
           // Now, write the command directly to the shell process and add a marker for tracking completion
           if (this.shellProcess) {
-            this.shellProcess.write(command);
-            // Add a special echo that will help us track when the command completes
-            this.shellProcess.write('; echo "CMD_END_${?}_' + this.activeCommandId + '"\r');
+            this.shellProcess.write(command + '\r');
+
+            setTimeout(() => {
+              if (this.shellProcess) {
+                this.shellProcess.write(`echo "CMD_END_$?_${this.activeCommandId}"\r`);
+              }
+            }, 100);
           } else {
             console.error('Shell process is not available');
             return { success: false, error: 'Shell process not available' };
