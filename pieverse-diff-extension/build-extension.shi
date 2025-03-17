@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Set up Node.js 20 in the PATH
+#export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+
+# Verify Node version
+echo "Using Node.js version:"
+node --version
+
+# Clean up old builds
+rm -rf node_modules/node-pty
+rm -rf dist
+
+# Clean install dependencies
+npm ci
+
+# Build extension
+npm run vscode:prepublish
+
+# Package the extension
+yes | vsce package

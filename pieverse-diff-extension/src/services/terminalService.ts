@@ -1,9 +1,11 @@
 // src/services/terminalService.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { spawn } from 'child_process';
 import * as fs from 'fs';
 import { ExtensionGlobals } from '../extension';
+
+// Import node-pty correctly
+import * as nodePty from 'node-pty';
 
 /**
  * Service to handle terminal functionality
@@ -14,6 +16,7 @@ export class TerminalService {
   private pieVerseTerminal: vscode.Terminal | null = null;
   private activeCommandId: string | null = null;
   private activeCommand = '';
+  private shellProcess: nodePty.IPty | null = null;
   
   constructor(context: vscode.ExtensionContext, globals: ExtensionGlobals) {
     this.context = context;
@@ -48,27 +51,36 @@ export class TerminalService {
     this.context.subscriptions.push(
       vscode.commands.registerCommand('pieverse-diff.executeInTerminal', async (params: string | { command: string, id?: string }) => {
         try {
-          const { command, id } = typeof params === 'string' 
+          const { command, id } = typeof params === 'string'
             ? { command: params, id: undefined }
             : params;
           
-          // Make sure terminal exists and is shown
+          // Ensure that our custom terminal is available.
           if (!this.pieVerseTerminal || this.pieVerseTerminal.exitStatus !== undefined) {
             await vscode.commands.executeCommand('pieverse-diff.showTerminal');
           } else {
             this.pieVerseTerminal.show();
           }
           
-          // Send the command to the terminal character by character
-          for (const char of command) {
-            // Small delay to ensure characters are processed in order
-            await new Promise(resolve => setTimeout(resolve, 5));
-            vscode.commands.executeCommand('workbench.action.terminal.sendSequence', { text: char });
-          }
+          // Store the active command info for events
+          this.activeCommandId = id || Date.now().toString();
+          this.activeCommand = command;
           
-          // Send Enter to execute
-          await new Promise(resolve => setTimeout(resolve, 10));
-          vscode.commands.executeCommand('workbench.action.terminal.sendSequence', { text: '\r' });
+          // Send command started event
+          this.sendTerminalEvent('commandStarted', {
+            id: this.activeCommandId,
+            command: this.activeCommand
+          });
+          
+          // Now, write the command directly to the shell process and add a marker for tracking completion
+          if (this.shellProcess) {
+            this.shellProcess.write(command);
+            // Add a special echo that will help us track when the command completes
+            this.shellProcess.write('; echo "CMD_END_${?}_' + this.activeCommandId + '"\r');
+          } else {
+            console.error('Shell process is not available');
+            return { success: false, error: 'Shell process not available' };
+          }
           
           return { success: true, command, id };
         } catch (error: any) {
@@ -86,208 +98,103 @@ export class TerminalService {
   private createPieVerseTerminal(): vscode.Terminal {
     // Create terminal write emitter
     const writeEmitter = new vscode.EventEmitter<string>();
-    
-    // Current working directory
+  
+    // Set current working directory
     let currentDirectory = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-    
+  
     // Create the pseudoterminal
-    const pty: vscode.Pseudoterminal = {
+    const terminal: vscode.Pseudoterminal = {
       onDidWrite: writeEmitter.event,
-      
+  
       open: () => {
-        // Initial terminal greeting
+        // Optional initial greeting
         writeEmitter.fire('🔌 PieVerse Terminal\r\n');
         writeEmitter.fire(`📁 ${currentDirectory}\r\n`);
-        writeEmitter.fire('$ ');
+  
+        // Determine the shell and its arguments.
+        // On Windows, use powershell; on macOS/Linux, use zsh as a login shell.
+        const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/zsh';
+        // Use '-l' to run zsh as a login shell (so .zshrc is sourced)
+        const shellArgs = process.platform === 'win32' ? ['-Command'] : ['-l'];
+  
+        try {
+          // Spawn a persistent shell process with node-pty:
+          this.shellProcess = nodePty.spawn(shell, shellArgs, {
+            cwd: currentDirectory,
+            env: process.env, // Inherit your environment variables
+            name: 'xterm-color', // Terminal type
+            cols: 80,
+            rows: 30
+          });
+
+          // Use onData to listen to output from node-pty
+          this.shellProcess.onData((data: string) => {
+            // Normalize line endings if needed
+            const normalizedData = this.normalizeLineEndings(data);
+            writeEmitter.fire(normalizedData);
+
+            // If we have an active command, capture its output
+            if (this.activeCommandId) {
+              // Check if this is a command completion marker
+              const match = normalizedData.match(/CMD_END_(\d+)_([^\r\n]+)/);
+              if (match) {
+                const exitCode = parseInt(match[1]);
+                const cmdId = match[2];
+                
+                // Command completed
+                this.sendTerminalEvent('commandCompleted', {
+                  id: cmdId,
+                  command: this.activeCommand,
+                  exitCode,
+                  success: exitCode === 0
+                });
+                
+                // Reset active command if this is the one we're tracking
+                if (cmdId === this.activeCommandId) {
+                  this.activeCommandId = null;
+                  this.activeCommand = '';
+                }
+              } else {
+                // Regular output chunk
+                this.sendTerminalEvent('outputChunk', {
+                  id: this.activeCommandId,
+                  text: normalizedData,
+                  isError: false // We can't distinguish between stdout/stderr with node-pty
+                });
+              }
+            }
+          });
+    
+          // When the shell exits, report it
+          this.shellProcess.onExit(({ exitCode }) => {
+            writeEmitter.fire(`\r\nShell exited with code ${exitCode}\r\n`);
+            this.sendTerminalEvent('terminalClosed');
+          });
+        } catch (error) {
+          console.error('Failed to spawn shell process:', error);
+          writeEmitter.fire(`\r\nError: Failed to start shell: ${error}\r\n`);
+        }
       },
-      
+  
       close: () => {
-        // Clean up if needed
+        if (this.shellProcess) {
+          this.shellProcess.kill();
+          this.shellProcess = null;
+        }
         this.sendTerminalEvent('terminalClosed');
       },
-      
-      // Handle input from the terminal UI
-      handleInput: async (data: string) => {
-        // Check for control characters
-        if (data === '\r') { // Enter key
-          // Echo the newline
-          writeEmitter.fire('\r\n');
-          
-          if (this.activeCommand.trim()) {
-            // Set command ID and store command
-            this.activeCommandId = Date.now().toString();
-            const fullCommand = this.activeCommand.trim();
-            
-            // Handle cd commands specially to track directory
-            if (fullCommand.startsWith('cd ')) {
-              try {
-                const targetDir = fullCommand.substring(3).trim();
-                let newDir: string;
-                
-                // Handle relative and absolute paths
-                if (path.isAbsolute(targetDir)) {
-                  newDir = targetDir;
-                } else {
-                  newDir = path.resolve(currentDirectory, targetDir);
-                }
-                
-                // Check if directory exists
-                if (fs.existsSync(newDir) && fs.statSync(newDir).isDirectory()) {
-                  currentDirectory = newDir;
-                  writeEmitter.fire(`📁 ${currentDirectory}\r\n`);
-                  writeEmitter.fire('$ ');
-                  
-                  // Notify PieVerse of directory change
-                  this.sendTerminalEvent('directoryChanged', {
-                    directory: currentDirectory
-                  });
-                } else {
-                  writeEmitter.fire(`cd: ${targetDir}: No such directory\r\n`);
-                  writeEmitter.fire('$ ');
-                }
-              } catch (error: any) {
-                writeEmitter.fire(`Error: ${error.message}\r\n`);
-                writeEmitter.fire('$ ');
-              }
-              
-              // Reset command
-              this.activeCommand = '';
-              return;
-            }
-            
-            // Send command started event
-            this.sendTerminalEvent('commandStarted', {
-              id: this.activeCommandId,
-              command: fullCommand,
-              directory: currentDirectory
-            });
-            
-            // Execute command
-            try {
-              // Determine shell to use
-              const shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
-              const shellArgs = process.platform === 'win32' ? ['-Command'] : ['-c'];
-              
-              const proc = spawn(shell, [...shellArgs, fullCommand], {
-                cwd: currentDirectory,
-                shell: true
-              });
-              
-              let outputText = '';
-              
-              // Capture standard output
-              proc.stdout.on('data', (data: Buffer) => {
-                const normalizedText = this.normalizeLineEndings(data.toString());
-                outputText += normalizedText;
-                writeEmitter.fire(normalizedText);
-                
-                // Send real-time update
-                this.sendTerminalEvent('outputChunk', {
-                  id: this.activeCommandId,
-                  text: normalizedText,
-                  isError: false
-                });
-              });
-              
-              // Capture error output
-              proc.stderr.on('data', (data: Buffer) => {
-                const normalizedText = this.normalizeLineEndings(data.toString());
-                outputText += normalizedText;
-                writeEmitter.fire(normalizedText);
-                
-                // Send real-time update
-                this.sendTerminalEvent('outputChunk', {
-                  id: this.activeCommandId,
-                  text: normalizedText,
-                  isError: true
-                });
-              });
-              
-              // Handle command completion
-              proc.on('close', (code: number | null) => {
-                // Send command completion event
-                this.sendTerminalEvent('commandCompleted', {
-                  id: this.activeCommandId,
-                  command: fullCommand,
-                  output: outputText,
-                  exitCode: code,
-                  success: code === 0
-                });
-                
-                // Reset for next command
-                writeEmitter.fire('\r\n$ ');
-                this.activeCommand = '';
-              });
-              
-              // Handle process errors
-              proc.on('error', (error: Error) => {
-                const errorMessage = this.normalizeLineEndings(`\r\nError: ${error.message}\r\n`);
-                writeEmitter.fire(errorMessage);
-                
-                // Send error event
-                this.sendTerminalEvent('commandError', {
-                  id: this.activeCommandId,
-                  command: fullCommand,
-                  error: error.message
-                });
-                
-                // Reset for next command
-                writeEmitter.fire('$ ');
-                this.activeCommand = '';
-              });
-            } catch (error: any) {
-              // Handle execution error
-              const errorMessage = this.normalizeLineEndings(`\r\nError: ${error.message}\r\n`);
-              writeEmitter.fire(errorMessage);
-              
-              // Send error event
-              this.sendTerminalEvent('commandError', {
-                id: this.activeCommandId,
-                command: fullCommand,
-                error: error.message
-              });
-              
-              // Reset for next command
-              writeEmitter.fire('$ ');
-              this.activeCommand = '';
-            }
-          } else {
-            // Empty command, just show prompt
-            writeEmitter.fire('$ ');
-          }
-        } else if (data === '\x7f' || data === '\x08') { // Backspace
-          if (this.activeCommand.length > 0) {
-            // Remove last character from command
-            this.activeCommand = this.activeCommand.slice(0, -1);
-            // Emulate backspace in terminal (move back, space, move back)
-            writeEmitter.fire('\b \b');
-          }
-        } else if (data === '\x03') { // Ctrl+C
-          writeEmitter.fire('^C\r\n');
-          
-          if (this.activeCommandId) {
-            // Send command canceled event
-            this.sendTerminalEvent('commandCanceled', {
-              id: this.activeCommandId,
-              command: this.activeCommand
-            });
-          }
-          
-          // Reset for next command
-          writeEmitter.fire('$ ');
-          this.activeCommand = '';
-        } else {
-          // Regular character input - add to command and echo
-          this.activeCommand += data;
-          writeEmitter.fire(data);
+  
+      handleInput: (data: string) => {
+        // Forward every input character to the shell's stdin.
+        if (this.shellProcess) {
+          this.shellProcess.write(data);
         }
       }
     };
-    
-    // Create and return the terminal
-    return vscode.window.createTerminal({ 
+  
+    return vscode.window.createTerminal({
       name: 'PieVerse Terminal',
-      pty
+      pty: terminal
     });
   }
   
