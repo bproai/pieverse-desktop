@@ -303,4 +303,14 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       );
     })
   );
+
+  // Register command to refresh diagnostics
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.refreshDiagnostics', () => {
+      if (globals.diagnosticsService) {
+        globals.diagnosticsService.sendAllDiagnostics();
+        vscode.window.showInformationMessage('PieVerse: Diagnostics refreshed');
+      }
+    })
+  );
 }

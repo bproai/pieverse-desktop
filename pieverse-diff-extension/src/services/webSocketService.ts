@@ -1,3 +1,4 @@
+// pieverse-diff-extension/src/services/webSocketService.ts
 import * as vscode from 'vscode';
 import WebSocket from 'ws';
 import { ExtensionGlobals } from '../extension';
@@ -70,6 +71,24 @@ export class WebSocketService {
     }
     return false;
   }
+  
+  /**
+   * Send arbitrary data to the WebSocket server
+   */
+  public sendData(data: any): boolean {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Check if WebSocket is currently connected
+   */
+  public isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
 
   /**
    * Handle WebSocket open event
@@ -96,6 +115,18 @@ export class WebSocketService {
       clearInterval(this.wsReconnectInterval);
       this.wsReconnectInterval = null;
     }
+    
+    // Send initial diagnostics when connection is established
+    // Use a slight delay to ensure the connection is fully established
+    if (globals.diagnosticsService) {
+      // Allow a brief delay before sending diagnostics
+      setTimeout(() => {
+        // Double check that we're still connected
+        if (this.isConnected()) {
+          globals.diagnosticsService.sendAllDiagnostics();
+        }
+      }, 1000);
+    }
   }
 
   /**
@@ -119,6 +150,11 @@ export class WebSocketService {
       
       if (jsonData.type === 'chat') {
         this.handleChatMessage(jsonData, globals);
+      } else if (jsonData.type === 'requestDiagnostics') {
+        // Handle explicit diagnostics request
+        if (globals.diagnosticsService) {
+          globals.diagnosticsService.sendAllDiagnostics();
+        }
       } else if (jsonData.originalFile && jsonData.suggestedContent) {
         // Handle as diff suggestion
         console.log('Handling as diff suggestion with original file:', jsonData.originalFile);

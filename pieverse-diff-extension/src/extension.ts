@@ -1,8 +1,10 @@
+// pieverse-diff-extension/src/extension.ts
 import * as vscode from 'vscode';
 import { DiffTreeDataProvider } from './tree/diffTreeProvider';
 import { registerCommands } from './commands/registerCommands';
 import { WebSocketService } from './services/webSocketService';
 import { DiffActionsService } from './services/diffActionsService';
+import { DiagnosticsService } from './services/diagnosticsService';
 import { ensureResourcesExist } from './utils/fileUtils';
 import { PieVerseSidebarProvider } from './webview/sidebarPanel';
 
@@ -13,6 +15,7 @@ export interface ExtensionGlobals {
   treeDataProvider: DiffTreeDataProvider;
   sidebarProvider: PieVerseSidebarProvider;
   diffActionsService: DiffActionsService;
+  diagnosticsService: DiagnosticsService; // Added diagnosticsService
 }
 
 // Create and initialize the extension globals
@@ -31,7 +34,8 @@ export function activate(context: vscode.ExtensionContext) {
     webSocketService: new WebSocketService(),
     treeDataProvider: new DiffTreeDataProvider(),
     sidebarProvider: sidebarProvider,
-    diffActionsService: {} as DiffActionsService
+    diffActionsService: {} as DiffActionsService,
+    diagnosticsService: {} as DiagnosticsService // Initial placeholder
   };
   
   // Update the sidebarProvider with the globals reference
@@ -46,6 +50,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize diff actions service
   globals.diffActionsService = new DiffActionsService(context, globals);
+  
+  // Initialize diagnostics service
+  globals.diagnosticsService = new DiagnosticsService(context, globals);
 
   // Register the sidebar provider
   context.subscriptions.push(
