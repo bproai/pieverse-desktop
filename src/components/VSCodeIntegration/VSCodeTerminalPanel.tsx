@@ -357,6 +357,8 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
             onKeyDown={(e) => e.key === 'Enter' && executeCommand()}
             rightSection={<Terminal size={16} />}
             style={{ flexGrow: 1 }}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
           
           <Button
@@ -386,7 +388,13 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
           </Button>
         </Group>
         
-        <ScrollArea style={{ height: 'calc(100vh - 250px)' }} viewportRef={scrollRef}>
+        <ScrollArea 
+          style={{ height: 'calc(70vh - 250px)' }} 
+          viewportRef={scrollRef}
+          scrollbarSize={8}
+          type="auto"
+          offsetScrollbars
+        >
           {commands.length === 0 ? (
             <Alert
               color="blue"

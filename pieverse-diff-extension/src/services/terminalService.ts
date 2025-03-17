@@ -17,6 +17,8 @@ export class TerminalService {
   private activeCommandId: string | null = null;
   private activeCommand = '';
   private shellProcess: nodePty.IPty | null = null;
+  private userInputBuffer = '';
+  private isReadingCommand = true;
   
   constructor(context: vscode.ExtensionContext, globals: ExtensionGlobals) {
     this.context = context;
@@ -136,36 +138,36 @@ export class TerminalService {
             // Normalize line endings if needed
             const normalizedData = this.normalizeLineEndings(data);
             writeEmitter.fire(normalizedData);
-
-            // If we have an active command, capture its output
-            if (this.activeCommandId) {
-              // Check if this is a command completion marker
-              const match = normalizedData.match(/CMD_END_(\d+)_([^\r\n]+)/);
-              if (match) {
-                const exitCode = parseInt(match[1]);
-                const cmdId = match[2];
-                
-                // Command completed
-                this.sendTerminalEvent('commandCompleted', {
-                  id: cmdId,
-                  command: this.activeCommand,
-                  exitCode,
-                  success: exitCode === 0
-                });
-                
-                // Reset active command if this is the one we're tracking
-                if (cmdId === this.activeCommandId) {
-                  this.activeCommandId = null;
-                  this.activeCommand = '';
-                }
-              } else {
-                // Regular output chunk
-                this.sendTerminalEvent('outputChunk', {
-                  id: this.activeCommandId,
-                  text: normalizedData,
-                  isError: false // We can't distinguish between stdout/stderr with node-pty
-                });
+          
+            // Check if this is a command completion marker
+            const match = normalizedData.match(/CMD_END_(\d+)_([^\r\n]+)/);
+            if (match) {
+              const exitCode = parseInt(match[1]);
+              const cmdId = match[2];
+              
+              // Command completed
+              this.sendTerminalEvent('commandCompleted', {
+                id: cmdId,
+                command: this.activeCommand,
+                exitCode,
+                success: exitCode === 0
+              });
+              
+              // Reset active command tracking
+              if (cmdId === this.activeCommandId) {
+                this.activeCommandId = null;
+                this.activeCommand = '';
+                this.isReadingCommand = true; // Ready to detect the next command
               }
+            } 
+            // If we have an active command, capture its output (not completion markers)
+            else if (this.activeCommandId && !normalizedData.includes('CMD_END_')) {
+              // Regular output chunk
+              this.sendTerminalEvent('outputChunk', {
+                id: this.activeCommandId,
+                text: normalizedData,
+                isError: false // We can't distinguish between stdout/stderr with node-pty
+              });
             }
           });
     
@@ -189,9 +191,51 @@ export class TerminalService {
       },
   
       handleInput: (data: string) => {
-        // Forward every input character to the shell's stdin.
+        // Forward input to the shell
         if (this.shellProcess) {
           this.shellProcess.write(data);
+          
+          // Track user input for command detection
+          if (this.isReadingCommand) {
+            // If Enter key is pressed, consider it the end of a command
+            if (data === '\r') {
+              // Check if we have a command to process
+              if (this.userInputBuffer.trim()) {
+                const command = this.userInputBuffer.trim();
+                
+                // Generate a command ID
+                this.activeCommandId = Date.now().toString();
+                this.activeCommand = command;
+                
+                // Send command started event
+                this.sendTerminalEvent('commandStarted', {
+                  id: this.activeCommandId,
+                  command: this.activeCommand
+                });
+                
+                // Start detecting command output
+                this.isReadingCommand = false;
+                
+                // After a small delay, send the tracking echo command
+                setTimeout(() => {
+                  if (this.shellProcess) {
+                    this.shellProcess.write(`echo "CMD_END_$?_${this.activeCommandId}"\r`);
+                  }
+                }, 100);
+              }
+              
+              // Reset buffer for next command
+              this.userInputBuffer = '';
+            } 
+            // Backspace/delete handling
+            else if (data === '\x7f' || data === '\x08') {
+              this.userInputBuffer = this.userInputBuffer.slice(0, -1);
+            } 
+            // Normal character input
+            else {
+              this.userInputBuffer += data;
+            }
+          }
         }
       }
     };
