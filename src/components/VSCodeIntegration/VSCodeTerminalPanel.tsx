@@ -411,7 +411,7 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
                     <Group>
                       <Text>{getStatusIcon(cmd.status)}</Text>
                       <Text fw={700} style={{ fontFamily: 'monospace' }}>
-                        $ {cmd.command}
+                        % {cmd.command}
                       </Text>
                     </Group>
                     <Group>
