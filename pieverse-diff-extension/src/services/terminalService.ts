@@ -177,28 +177,28 @@ export class TerminalService {
               
               // Capture standard output
               proc.stdout.on('data', (data: Buffer) => {
-                const text = data.toString();
-                outputText += text;
-                writeEmitter.fire(text);
+                const normalizedText = this.normalizeLineEndings(data.toString());
+                outputText += normalizedText;
+                writeEmitter.fire(normalizedText);
                 
                 // Send real-time update
                 this.sendTerminalEvent('outputChunk', {
                   id: this.activeCommandId,
-                  text: text,
+                  text: normalizedText,
                   isError: false
                 });
               });
               
               // Capture error output
               proc.stderr.on('data', (data: Buffer) => {
-                const text = data.toString();
-                outputText += text;
-                writeEmitter.fire(text);
+                const normalizedText = this.normalizeLineEndings(data.toString());
+                outputText += normalizedText;
+                writeEmitter.fire(normalizedText);
                 
                 // Send real-time update
                 this.sendTerminalEvent('outputChunk', {
                   id: this.activeCommandId,
-                  text: text,
+                  text: normalizedText,
                   isError: true
                 });
               });
@@ -221,7 +221,7 @@ export class TerminalService {
               
               // Handle process errors
               proc.on('error', (error: Error) => {
-                const errorMessage = `\r\nError: ${error.message}\r\n`;
+                const errorMessage = this.normalizeLineEndings(`\r\nError: ${error.message}\r\n`);
                 writeEmitter.fire(errorMessage);
                 
                 // Send error event
@@ -237,7 +237,7 @@ export class TerminalService {
               });
             } catch (error: any) {
               // Handle execution error
-              const errorMessage = `\r\nError: ${error.message}\r\n`;
+              const errorMessage = this.normalizeLineEndings(`\r\nError: ${error.message}\r\n`);
               writeEmitter.fire(errorMessage);
               
               // Send error event
@@ -291,6 +291,14 @@ export class TerminalService {
     });
   }
   
+  /**
+   * Normalize line endings to \r\n for proper terminal display
+   */
+  private normalizeLineEndings(text: string): string {
+    // Replace all lone \n with \r\n, but don't double-up existing \r\n
+    return text.replace(/\r?\n/g, '\r\n');
+  }
+
   /**
    * Sends a terminal event to the PieVerse app via WebSocket
    * @param eventType Type of terminal event
