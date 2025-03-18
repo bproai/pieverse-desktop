@@ -1,0 +1,613 @@
+// src/components/PuppeteerMCP/PuppeteerMCPPanel.tsx
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Text, 
+  Badge, 
+  Card, 
+  Group, 
+  Button, 
+  TextInput,
+  Switch,
+  ScrollArea,
+  Stack,
+  Alert,
+  Code,
+  Accordion,
+  ActionIcon,
+  Tooltip,
+  Select,
+  JsonInput
+} from '@mantine/core';
+import { 
+  Bot, 
+  RefreshCw, 
+  AlertCircle, 
+  Terminal,
+  Folder,
+  Globe,
+  ChevronDown,
+  ChevronUp,
+  Send,
+  Trash,
+  Plus,
+  Copy
+} from 'lucide-react';
+import { notifications } from '@mantine/notifications';
+
+// Tauri API imports
+import { core } from '@tauri-apps/api';
+import { listen, Event } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-dialog';
+
+interface MCPConfig {
+  command: string;
+  args: string[];
+}
+
+interface DirectoryConfig {
+  path: string;
+  name: string;
+  enabled: boolean;
+}
+
+interface ToolResult {
+  success: boolean;
+  result: any;
+  error: string | null;
+}
+
+const PuppeteerMCPPanel: React.FC = () => {
+  const [isServerRunning, setIsServerRunning] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [serverOutput, setServerOutput] = useState<string[]>([]);
+  const [allowedDirectories, setAllowedDirectories] = useState<DirectoryConfig[]>([]);
+  const [dockerCommand, setDockerCommand] = useState('docker');
+  const [dockerArgs, setDockerArgs] = useState('run -i --rm --init -e DOCKER_CONTAINER=true mcp/puppeteer');
+  const [advancedVisible, setAdvancedVisible] = useState(false);
+  const [availableTools, setAvailableTools] = useState<string[]>([]);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [toolArgs, setToolArgs] = useState('{}');
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new output arrives
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [serverOutput]);
+
+  // Get initial MCP server status
+  useEffect(() => {
+    checkServerStatus();
+    
+    // Listen for MCP server output
+    const unlistenOutput = listen('mcp-server-output', (event: Event<string>) => {
+      const output = event.payload;
+      setServerOutput(prev => [...prev, output]);
+      
+      // Check if this is a tools list
+      if (output.startsWith('Available tools:')) {
+        try {
+          const toolsStr = output.substring('Available tools:'.length).trim();
+          const tools = toolsStr.split(',').map(t => t.trim()).filter(t => t);
+          setAvailableTools(tools);
+          
+          if (tools.length > 0 && !selectedTool) {
+            setSelectedTool(tools[0]);
+          }
+        } catch (err) {
+          console.error('Error parsing tools:', err);
+        }
+      }
+    });
+    
+    // Listen for MCP server stopped event
+    const unlistenStopped = listen('mcp-server-stopped', () => {
+      setIsServerRunning(false);
+      setAvailableTools([]);
+      setSelectedTool(null);
+      notifications.show({
+        title: 'MCP Server Stopped',
+        message: 'The Puppeteer MCP server has stopped',
+        color: 'yellow'
+      });
+    });
+    
+    // Listen for tool results
+    const unlistenResults = listen('mcp-tool-result', (event: Event<ToolResult>) => {
+      const result = event.payload;
+      
+      if (!result.success && result.error) {
+        notifications.show({
+          title: 'Tool Execution Failed',
+          message: result.error,
+          color: 'red'
+        });
+      } else {
+        notifications.show({
+          title: 'Tool Execution Succeeded',
+          message: 'The tool was executed successfully',
+          color: 'green'
+        });
+      }
+    });
+    
+    // Cleanup event listeners
+    return () => {
+      unlistenOutput.then(fn => fn());
+      unlistenStopped.then(fn => fn());
+      unlistenResults.then(fn => fn());
+    };
+  }, [selectedTool]);
+
+  const checkServerStatus = async () => {
+    try {
+      const isRunning = await core.invoke<boolean>('get_puppeteer_mcp_status');
+      setIsServerRunning(isRunning);
+      
+      // Get allowed directories
+      const dirs = await core.invoke<DirectoryConfig[]>('get_puppeteer_mcp_directories');
+      setAllowedDirectories(dirs);
+      
+      // Get MCP configuration
+      const config = await core.invoke<MCPConfig>('get_puppeteer_mcp_config');
+      setDockerCommand(config.command);
+      setDockerArgs(config.args.join(' '));
+      
+      // If server is running, get available tools
+      if (isRunning) {
+        const tools = await core.invoke<string[]>('get_puppeteer_mcp_tools');
+        setAvailableTools(tools);
+        
+        if (tools.length > 0 && !selectedTool) {
+          setSelectedTool(tools[0]);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error checking MCP server status:', err);
+      setError(`Failed to check server status: ${err.toString()}`);
+    }
+  };
+
+  const startMCPServer = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Split docker args into array
+      const argsArray = dockerArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+      
+      // Update config first
+      await core.invoke('update_puppeteer_mcp_config', { 
+        config: {
+          command: dockerCommand,
+          args: argsArray 
+        }
+      });
+      
+      // Start the server
+      await core.invoke('start_puppeteer_mcp_server');
+      
+      setIsServerRunning(true);
+      notifications.show({
+        title: 'Success',
+        message: 'Puppeteer MCP server started successfully',
+        color: 'green'
+      });
+    } catch (err: any) {
+      console.error('Error starting MCP server:', err);
+      setError(`Failed to start server: ${err.toString()}`);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to start MCP server: ${err.toString()}`,
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopMCPServer = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await core.invoke('stop_puppeteer_mcp_server');
+      setIsServerRunning(false);
+      setAvailableTools([]);
+      setSelectedTool(null);
+      notifications.show({
+        title: 'Success',
+        message: 'Puppeteer MCP server stopped successfully',
+        color: 'blue'
+      });
+    } catch (err: any) {
+      console.error('Error stopping MCP server:', err);
+      setError(`Failed to stop server: ${err.toString()}`);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to stop MCP server: ${err.toString()}`,
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeTool = async () => {
+    if (!selectedTool) {
+      notifications.show({
+        title: 'Error',
+        message: 'Please select a tool to execute',
+        color: 'red'
+      });
+      return;
+    }
+    
+    try {
+      // Parse JSON arguments
+      let parsedArgs;
+      try {
+        parsedArgs = JSON.parse(toolArgs || '{}');
+      } catch (parseErr) {
+        notifications.show({
+          title: 'Invalid JSON',
+          message: 'Please enter valid JSON arguments',
+          color: 'red'
+        });
+        return;
+      }
+      
+      // Call the tool
+      await core.invoke('send_to_puppeteer_mcp', { 
+        tool: selectedTool,
+        args: parsedArgs
+      });
+      
+      // Set a loading message in the server output
+      setServerOutput(prev => [...prev, `Executing tool: ${selectedTool}...`]);
+      
+    } catch (err: any) {
+      console.error('Error executing tool:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to execute tool: ${err.toString()}`,
+        color: 'red'
+      });
+      
+      // Add error to server output
+      setServerOutput(prev => [...prev, `Error executing tool: ${err.toString()}`]);
+    }
+  };
+
+  const clearOutput = () => {
+    setServerOutput([]);
+  };
+
+  const browseDirectory = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Directory for MCP Access'
+      });
+      
+      if (selected && typeof selected === 'string') {
+        const dirName = selected.split(/[/\\]/).pop() || 'Unknown';
+        
+        await core.invoke('add_puppeteer_mcp_directory', { 
+          directory: selected, 
+          name: dirName 
+        });
+        
+        // Refresh directories after adding
+        const dirs = await core.invoke<DirectoryConfig[]>('get_puppeteer_mcp_directories');
+        setAllowedDirectories(dirs);
+        
+        notifications.show({
+          title: 'Directory Added',
+          message: `Added directory: ${dirName}`,
+          color: 'green'
+        });
+      }
+    } catch (err: any) {
+      console.error('Error browsing for directory:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to browse for directory: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
+  const toggleDirectory = async (index: number) => {
+    const updatedDirs = [...allowedDirectories];
+    updatedDirs[index].enabled = !updatedDirs[index].enabled;
+    
+    try {
+      await core.invoke('update_puppeteer_mcp_directory', { 
+        directory: updatedDirs[index].path,
+        enabled: updatedDirs[index].enabled
+      });
+      
+      // Refresh directories after toggling
+      const dirs = await core.invoke<DirectoryConfig[]>('get_puppeteer_mcp_directories');
+      setAllowedDirectories(dirs);
+    } catch (err: any) {
+      console.error('Error toggling directory:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to update directory: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
+  const removeDirectory = async (index: number) => {
+    const dirToRemove = allowedDirectories[index];
+    
+    try {
+      await core.invoke('remove_puppeteer_mcp_directory', { 
+        directory: dirToRemove.path 
+      });
+      
+      // Refresh directories after removing
+      const dirs = await core.invoke<DirectoryConfig[]>('get_puppeteer_mcp_directories');
+      setAllowedDirectories(dirs);
+      
+      notifications.show({
+        title: 'Directory Removed',
+        message: `Removed directory: ${dirToRemove.name}`,
+        color: 'blue'
+      });
+    } catch (err: any) {
+      console.error('Error removing directory:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to remove directory: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
+  const saveDockerConfig = async () => {
+    try {
+      // Split docker args into array
+      const argsArray = dockerArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+      
+      await core.invoke('update_puppeteer_mcp_config', { 
+        config: {
+          command: dockerCommand,
+          args: argsArray 
+        }
+      });
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Docker configuration saved successfully',
+        color: 'green'
+      });
+    } catch (err: any) {
+      console.error('Error saving docker configuration:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to save configuration: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
+  const copyOutput = () => {
+    navigator.clipboard.writeText(serverOutput.join('\n')).then(() => {
+      notifications.show({
+        title: 'Copied',
+        message: 'Server output copied to clipboard',
+        color: 'green'
+      });
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  };
+
+  return (
+    <Card shadow="sm" p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Card.Section p="md" className="border-b">
+        <Group position="apart">
+          <Group>
+            <Bot size={20} />
+            <Text size="xl" fw={700}>Puppeteer MCP</Text>
+          </Group>
+          <Badge 
+            color={isServerRunning ? 'green' : 'gray'}
+            variant="filled"
+          >
+            {isServerRunning ? 'Running' : 'Stopped'}
+          </Badge>
+        </Group>
+      </Card.Section>
+      
+      <Stack spacing="md" mt="md" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {error && (
+          <Alert color="red" title="Error" icon={<AlertCircle size={16} />} withCloseButton onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        
+        <Group position="apart">
+          {!isServerRunning ? (
+            <Button 
+              onClick={startMCPServer}
+              loading={loading}
+              leftSection={<Terminal size={14} />}
+            >
+              Start MCP Server
+            </Button>
+          ) : (
+            <Button 
+              onClick={stopMCPServer}
+              loading={loading}
+              color="red"
+              leftSection={<Terminal size={14} />}
+            >
+              Stop MCP Server
+            </Button>
+          )}
+          
+          <Button 
+            variant="outline"
+            onClick={checkServerStatus}
+            leftSection={<RefreshCw size={14} />}
+          >
+            Refresh Status
+          </Button>
+        </Group>
+        
+        {isServerRunning && availableTools.length > 0 && (
+          <Card withBorder p="xs" style={{ background: '#f9f9f9' }}>
+            <Text size="sm" fw={600} mb="xs">Execute Tool</Text>
+            <Stack spacing="sm">
+              <Select
+                label="Select Tool"
+                data={availableTools}
+                value={selectedTool}
+                onChange={setSelectedTool}
+              />
+              <JsonInput
+                label="Arguments (JSON)"
+                placeholder='{
+  "url": "https://example.com",
+  "selector": ".main-content"
+}'
+                value={toolArgs}
+                onChange={setToolArgs}
+                formatOnBlur
+                autosize
+                minRows={3}
+              />
+              <Button onClick={executeTool} leftSection={<Send size={14} />}>
+                Execute Tool
+              </Button>
+            </Stack>
+          </Card>
+        )}
+        
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <Group position="apart" mb="xs">
+            <Text size="sm" fw={600}>Server Output</Text>
+            <Group spacing="xs">
+              <Tooltip label="Copy Output">
+                <ActionIcon size="sm" onClick={copyOutput}>
+                  <Copy size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Clear Output">
+                <ActionIcon size="sm" color="red" onClick={clearOutput}>
+                  <Trash size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          </Group>
+          
+          <ScrollArea 
+            style={{ flex: 1, minHeight: '200px', border: '1px solid #eee', borderRadius: '4px' }}
+            viewportRef={scrollRef}
+            offsetScrollbars
+          >
+            <Code block style={{ whiteSpace: 'pre-wrap', padding: '10px' }}>
+              {serverOutput.length > 0 
+                ? serverOutput.join('\n') 
+                : 'No output yet. Start the server to see output here.'}
+            </Code>
+          </ScrollArea>
+        </div>
+        
+        <Group position="apart" style={{ cursor: 'pointer' }} onClick={() => setAdvancedVisible(!advancedVisible)}>
+          <Text size="sm" fw={600}>Advanced Configuration</Text>
+          <ActionIcon variant="transparent">
+            {advancedVisible ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </ActionIcon>
+        </Group>
+        
+        {advancedVisible && (
+          <Accordion defaultValue="directories">
+            <Accordion.Item value="directories">
+              <Accordion.Control icon={<Folder size={16} />}>
+                Allowed Directories
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack spacing="xs">
+                  <Text size="xs" color="dimmed">
+                    These directories will be accessible to the MCP client:
+                  </Text>
+                  
+                  {allowedDirectories.length === 0 ? (
+                    <Alert color="blue" title="No Directories">
+                      No directories have been added yet. Click 'Add Directory' to allow MCP access to a directory.
+                    </Alert>
+                  ) : (
+                    allowedDirectories.map((dir, index) => (
+                      <Group key={dir.path} position="apart">
+                        <Group>
+                          <Switch
+                            checked={dir.enabled}
+                            onChange={() => toggleDirectory(index)}
+                          />
+                          <Text size="sm" style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dir.name}: {dir.path}
+                          </Text>
+                        </Group>
+                        <ActionIcon color="red" onClick={() => removeDirectory(index)}>
+                          <Trash size={16} />
+                        </ActionIcon>
+                      </Group>
+                    ))
+                  )}
+                  
+                  <Button
+                    leftSection={<Plus size={16} />}
+                    onClick={browseDirectory}
+                    fullWidth
+                  >
+                    Add Directory
+                  </Button>
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+            
+            <Accordion.Item value="docker">
+              <Accordion.Control icon={<Globe size={16} />}>
+                Docker Configuration
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack spacing="xs">
+                  <TextInput
+                    label="Docker Command"
+                    placeholder="docker"
+                    value={dockerCommand}
+                    onChange={(e) => setDockerCommand(e.currentTarget.value)}
+                  />
+                  
+                  <TextInput
+                    label="Docker Arguments"
+                    placeholder="run -i --rm --init -e DOCKER_CONTAINER=true mcp/puppeteer"
+                    value={dockerArgs}
+                    onChange={(e) => setDockerArgs(e.currentTarget.value)}
+                  />
+                  
+                  <Button
+                    onClick={saveDockerConfig}
+                    leftSection={<RefreshCw size={14} />}
+                  >
+                    Save Docker Config
+                  </Button>
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+        )}
+      </Stack>
+    </Card>
+  );
+};
+
+export default PuppeteerMCPPanel;

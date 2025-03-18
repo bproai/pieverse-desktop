@@ -2,7 +2,7 @@
 name = "pieverse"
 version = "1.0.0"
 description = "πeVerse - Financial Data Analysis Tool"
-authors = ["you"]
+authors = ["Yunpeng Brian Pan"]
 edition = "2021"
 
 [lib]
@@ -54,3 +54,4 @@ tokio-stream = { version = "0.1.14", features = ["net", "sync"] }
 hyper = { version = "0.14", features = ["full"] }
 walkdir = "2.3"
 async-stream = "0.3"
+mcp-client = "0.1.0"

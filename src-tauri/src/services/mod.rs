@@ -37,3 +37,5 @@ pub mod vscode_ws;
 pub mod file_service;
 
 pub mod claude_mcp_service;
+
+pub mod puppeteer_mcp_service;

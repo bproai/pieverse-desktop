@@ -135,6 +135,22 @@ use services::claude_mcp_service::{
     remove_claude_mcp_directory
 };
 
+// Import Puppeteer MCP service
+use services::puppeteer_mcp_service::{
+    PuppeteerMcpState,
+    start_puppeteer_mcp_server,
+    stop_puppeteer_mcp_server,
+    get_puppeteer_mcp_status,
+    get_puppeteer_mcp_directories,
+    add_puppeteer_mcp_directory,
+    update_puppeteer_mcp_directory,
+    remove_puppeteer_mcp_directory,
+    get_puppeteer_mcp_config,
+    update_puppeteer_mcp_config,
+    send_to_puppeteer_mcp,
+    get_puppeteer_mcp_tools
+};
+
 use async_stream::stream;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -175,6 +191,7 @@ pub fn run() {
         .manage(trend_spike_service)
         .manage(VSCodeWebSocketState::new())
         .manage(ClaudeMcpState::new())
+        .manage(PuppeteerMcpState::new())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -256,7 +273,19 @@ pub fn run() {
             stop_claude_mcp_server,
             get_claude_mcp_status,
             add_claude_mcp_directory,
-            remove_claude_mcp_directory
+            remove_claude_mcp_directory,
+            // Puppeteer MCP commands
+            start_puppeteer_mcp_server,
+            stop_puppeteer_mcp_server,
+            get_puppeteer_mcp_status,
+            get_puppeteer_mcp_directories,
+            get_puppeteer_mcp_tools,
+            add_puppeteer_mcp_directory,
+            update_puppeteer_mcp_directory,
+            remove_puppeteer_mcp_directory,
+            get_puppeteer_mcp_config,
+            update_puppeteer_mcp_config,
+            send_to_puppeteer_mcp
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Bot } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Bot, Globe } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -21,6 +21,7 @@ import { LLMRulesPanel } from './components/LLMRules';
 import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
 import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 import { ClaudeMCPPanel } from './components/ClaudeMCP';
+import { PuppeteerMCPPanel } from './components/PuppeteerMCP';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -118,6 +119,9 @@ function App() {
                 <Tabs.Tab value="claude-mcp" leftSection={<Bot size={16} />}>
                   Claude MCP
                 </Tabs.Tab>
+                <Tabs.Tab value="puppeteer-mcp" leftSection={<Globe size={16} />}>
+                  Puppeteer MCP
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -178,7 +182,10 @@ function App() {
               </Tabs.Panel>
               <Tabs.Panel value="claude-mcp" className="p-4">
                 <ClaudeMCPPanel />
-              </Tabs.Panel>             
+              </Tabs.Panel>
+              <Tabs.Panel value="puppeteer-mcp" className="p-4">
+                <PuppeteerMCPPanel />
+              </Tabs.Panel>                
             </Tabs>           
           </main>
 
