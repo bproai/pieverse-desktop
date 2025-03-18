@@ -137,36 +137,49 @@ export class TerminalService {
           this.shellProcess.onData((data: string) => {
             // Normalize line endings if needed
             const normalizedData = this.normalizeLineEndings(data);
+            
+            // Always write to terminal
             writeEmitter.fire(normalizedData);
           
-            // Check if this is a command completion marker
-            const match = normalizedData.match(/CMD_END_(\d+)_([^\r\n]+)/);
-            if (match) {
-              const exitCode = parseInt(match[1]);
-              const cmdId = match[2];
-              
-              // Command completed
-              this.sendTerminalEvent('commandCompleted', {
-                id: cmdId,
-                command: this.activeCommand,
-                exitCode,
-                success: exitCode === 0
-              });
-              
-              // Reset active command tracking
-              if (cmdId === this.activeCommandId) {
-                this.activeCommandId = null;
-                this.activeCommand = '';
-                this.isReadingCommand = true; // Ready to detect the next command
+            // Check if this contains our hidden marker pattern 
+            if (normalizedData.includes("CMD_END_") && normalizedData.includes(this.activeCommandId || '')) {
+              // Extract exit code from the marker
+              const match = normalizedData.match(/CMD_END_(\d+)_([^\r\n]+)/);
+              if (match) {
+                const exitCode = parseInt(match[1]);
+                const cmdId = match[2];
+                
+                // Command completed
+                this.sendTerminalEvent('commandCompleted', {
+                  id: cmdId,
+                  command: this.activeCommand,
+                  exitCode,
+                  success: exitCode === 0
+                });
+                
+                // Reset tracking state
+                if (cmdId === this.activeCommandId) {
+                  this.activeCommandId = null;
+                  this.activeCommand = '';
+                  this.isReadingCommand = true;
+                }
               }
-            } 
-            // If we have an active command, capture its output (not completion markers)
-            else if (this.activeCommandId && !normalizedData.includes('CMD_END_')) {
-              // Regular output chunk
+              
+              // Don't forward marker-related output to app
+              return;
+            }
+            
+            // For regular command output (not containing marker-related content)
+            if (this.activeCommandId && 
+                !normalizedData.includes("CMD_END_") && 
+                !normalizedData.includes("echo -n $?") &&
+                !normalizedData.includes("cat /tmp/cmd_status")) {
+                
+              // Send regular output to app
               this.sendTerminalEvent('outputChunk', {
                 id: this.activeCommandId,
                 text: normalizedData,
-                isError: false // We can't distinguish between stdout/stderr with node-pty
+                isError: false
               });
             }
           });

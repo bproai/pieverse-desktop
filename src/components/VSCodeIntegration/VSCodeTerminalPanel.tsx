@@ -43,6 +43,42 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  const stripAnsi = (text: string) => {
+    if (!text) return '';
+    
+    // First, remove all ANSI escape sequences
+    let cleaned = text
+      .replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
+      .replace(/\u001b\][0-9;]*[a-zA-Z]/g, '')
+      .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
+      .replace(/\[K/g, '')
+      .replace(/\[m/g, '')
+      .replace(/\[1m|\[7m/g, '');  // Additional formatting codes
+  
+    // Extract just the meaningful content
+    // Find lines that look like paths or command output (not prompts or control sequences)
+    const lines = cleaned.split('\n');
+    
+    // Skip the first line entirely (it usually contains the command itself)
+    const linesWithoutFirst = lines.length > 1 ? lines.slice(1) : lines;
+    
+    // Filter out lines that are just prompts, control chars, or empty
+    const contentLines = linesWithoutFirst.filter(line => {
+      const trimmed = line.trim();
+      // Skip empty lines
+      if (!trimmed) return false;
+      // Skip lines with shell prompts
+      if (trimmed === '%' || trimmed.includes('(base)') || trimmed.match(/%\s*$/)) return false;
+      // Skip lines with our control commands
+      if (trimmed.includes('CMD_END_') || trimmed.includes('echo "CMD_END_')) return false;
+      
+      return true;
+    });
+  
+    // Join the remaining content lines
+    return contentLines.join('\n').trim();
+  };
+
   // Listen for terminal events from VS Code
   useEffect(() => {
     const unlisten = listen('vscode-terminal-event', (event) => {
@@ -433,7 +469,7 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
                     </Group>
                   </Group>
                   <Code block style={{ maxHeight: '300px', overflow: 'auto' }}>
-                    {cmd.output || (cmd.status === 'running' ? 'Running...' : 'No output')}
+                    {stripAnsi(cmd.output) || (cmd.status === 'running' ? 'Running...' : 'No output')}
                   </Code>
                 </Card>
               ))}
