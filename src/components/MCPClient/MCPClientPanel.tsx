@@ -1,4 +1,4 @@
-// src/components/PuppeteerMCP/PuppeteerMCPPanel.tsx
+// src/components/MCPClient/MCPClientPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Text, 
@@ -56,7 +56,7 @@ interface ToolResult {
   error: string | null;
 }
 
-const PuppeteerMCPPanel: React.FC = () => {
+const MCPClientPanel: React.FC = () => {
   const [isServerRunning, setIsServerRunning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -415,7 +415,7 @@ const PuppeteerMCPPanel: React.FC = () => {
         <Group position="apart">
           <Group>
             <Bot size={20} />
-            <Text size="xl" fw={700}>Puppeteer MCP</Text>
+            <Text size="xl" fw={700}>Puppeteer (or other) MCP Server</Text>
           </Group>
           <Badge 
             color={isServerRunning ? 'green' : 'gray'}
@@ -610,4 +610,4 @@ const PuppeteerMCPPanel: React.FC = () => {
   );
 };
 
-export default PuppeteerMCPPanel;
+export default MCPClientPanel;

@@ -135,8 +135,8 @@ use services::claude_mcp_service::{
     remove_claude_mcp_directory
 };
 
-// Import Puppeteer MCP service
-use services::puppeteer_mcp_service::{
+// Import MCP client service
+use services::mcp_client_service::{
     PuppeteerMcpState,
     start_puppeteer_mcp_server,
     stop_puppeteer_mcp_server,

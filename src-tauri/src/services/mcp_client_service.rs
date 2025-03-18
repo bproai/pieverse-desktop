@@ -1,4 +1,4 @@
-// src-tauri/src/services/puppeteer_mcp_service.rs
+// src-tauri/src/services/mcp_client_service.rs
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::time::Duration;

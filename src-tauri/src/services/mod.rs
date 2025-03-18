@@ -38,4 +38,4 @@ pub mod file_service;
 
 pub mod claude_mcp_service;
 
-pub mod puppeteer_mcp_service;
+pub mod mcp_client_service;

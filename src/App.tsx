@@ -21,7 +21,7 @@ import { LLMRulesPanel } from './components/LLMRules';
 import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
 import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 import { ClaudeMCPPanel } from './components/ClaudeMCP';
-import { PuppeteerMCPPanel } from './components/PuppeteerMCP';
+import { MCPClientPanel } from './components/MCPClient';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -117,10 +117,10 @@ function App() {
                   File System
                 </Tabs.Tab>
                 <Tabs.Tab value="claude-mcp" leftSection={<Bot size={16} />}>
-                  Claude MCP
+                  MCP Server
                 </Tabs.Tab>
                 <Tabs.Tab value="puppeteer-mcp" leftSection={<Globe size={16} />}>
-                  Puppeteer MCP
+                  MCP Client
                 </Tabs.Tab>
               </Tabs.List>
 
@@ -184,7 +184,7 @@ function App() {
                 <ClaudeMCPPanel />
               </Tabs.Panel>
               <Tabs.Panel value="puppeteer-mcp" className="p-4">
-                <PuppeteerMCPPanel />
+                <MCPClientPanel />
               </Tabs.Panel>                
             </Tabs>           
           </main>
