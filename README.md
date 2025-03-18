@@ -48,7 +48,7 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Digital double functionality for representation in meetings, social settings, and more.
 - Support for different UI workflows and record/playback capabilities for non-realtime modes.
 
-### 🧮 Claude MCP Integration
+### 🧮 MCP Server Integration
 - Native support for the Model Context Protocol (MCP) for advanced Claude AI interactions
 - Integrated development environment for building and testing MCP applications
 - Seamless directory integration for providing context to Claude models
@@ -191,7 +191,6 @@ PieVerse's Chrome Debugger panel also provides built-in convenience features:
 To use the VS Code integration features:
 
 1. Install the PieVerse VS Code extension:
-   1. Install the PieVerse VS Code extension:
    ```bash
    # Navigate to the extension directory
    cd pieverse-diff-extension
@@ -219,6 +218,19 @@ To use the VS Code integration features:
    - Access command history and diagnostics in a unified interface
 
 The VS Code integration uses a WebSocket connection to communicate between PieVerse and VS Code, allowing for seamless interaction between the two applications.
+
+### MCP Server
+Although named the "Claude MCP Server," this component is actually a generic MCP server that supports various tool interactions via the MCP protocol. Its features include:
+- **Flexible Configuration:** Customize allowed directories and server port.
+- **Generic MCP Protocol Support:** Works with different MCP-based tools, not limited to any specific AI model.
+- **Seamless Integration:** Provides file and command interactions for both Claude and other MCP clients.
+
+## MCP Client Features
+
+The MCP Client provides a user interface to manage and execute tools via the MCP server. Key features include:
+- Real-time server output monitoring.
+- Tool execution management.
+- **Screenshot Preview:** Optionally preview screenshots directly in the UI without saving them to disk.
 
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:
