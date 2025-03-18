@@ -461,6 +461,8 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             
             <Textarea
               label="Description"
+              autoCorrect="off"
+              autoComplete="off"
               value={editingPrompt?.description || ''}
               onChange={(e) => setEditingPrompt(prev => 
                 prev ? { ...prev, description: e.target.value } : null
