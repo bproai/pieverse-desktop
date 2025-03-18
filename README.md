@@ -54,6 +54,8 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Seamless directory integration for providing context to Claude models
 - Real-time conversation management with enhanced context handling
 - Efficient management of multiple Claude instances with different contexts
+- Support for multiple MCP server types through a unified configuration interface
+- Built-in templates for various MCP server configurations (filesystem, brave-search, memory, etc.)
 
 ### 🧪 Enhanced LLM Developer Assistance
 - Advanced problem-solving journey capture system that records complete developer-LLM interactions
@@ -228,9 +230,14 @@ Although named the "Claude MCP Server," this component is actually a generic MCP
 ## MCP Client Features
 
 The MCP Client provides a user interface to manage and execute tools via the MCP server. Key features include:
-- Real-time server output monitoring.
-- Tool execution management.
-- **Screenshot Preview:** Optionally preview screenshots directly in the UI without saving them to disk.
+- Support for multiple MCP server types (filesystem, brave-search, puppeteer, memory, google-maps)
+- JSON-based configuration system for easy server definition and customization
+- Server selection interface for switching between different MCP server types
+- Environment variable handling for API keys and specialized server configurations
+- Real-time server output monitoring with copy and clear functionality
+- Tool execution management with intelligent argument handling
+- **Screenshot Preview:** Optionally preview screenshots directly in the UI without saving them to disk
+- Directory access management for controlling which local directories are accessible to MCP servers
 
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:

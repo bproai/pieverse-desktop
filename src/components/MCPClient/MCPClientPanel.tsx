@@ -30,7 +30,8 @@ import {
   Send,
   Trash,
   Plus,
-  Copy
+  Copy,
+  Settings
 } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 
@@ -42,6 +43,11 @@ import { open } from '@tauri-apps/plugin-dialog';
 interface MCPConfig {
   command: string;
   args: string[];
+  env?: Record<string, string>;
+}
+
+interface MCPServersConfig {
+  mcpServers: Record<string, MCPConfig>;
 }
 
 interface DirectoryConfig {
@@ -64,13 +70,24 @@ const MCPClientPanel: React.FC = () => {
   const [allowedDirectories, setAllowedDirectories] = useState<DirectoryConfig[]>([]);
   const [dockerCommand, setDockerCommand] = useState('docker');
   const [dockerArgs, setDockerArgs] = useState('run -i --rm --init -e DOCKER_CONTAINER=true mcp/puppeteer');
+  
+  // MCP server configuration state
+  const [mcpServers, setMcpServers] = useState<Record<string, MCPConfig>>({
+    "puppeteer": {
+      command: "docker",
+      args: ["run", "-i", "--rm", "--init", "-e", "DOCKER_CONTAINER=true", "mcp/puppeteer"]
+    }
+  });
+  const [selectedServerType, setSelectedServerType] = useState<string>("puppeteer");
+  const [showConfigEditor, setShowConfigEditor] = useState(false);
+  const [configJson, setConfigJson] = useState('');
+  
   const [advancedVisible, setAdvancedVisible] = useState(false);
   const [availableTools, setAvailableTools] = useState<string[]>([]);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [toolArgs, setToolArgs] = useState('{}');
   
   const scrollRef = useRef<HTMLDivElement>(null);
-
   const [screenshotData, setScreenshotData] = useState<{ data: string, mimeType: string } | null>(null);
 
   // Auto-scroll to bottom when new output arrives
@@ -80,9 +97,10 @@ const MCPClientPanel: React.FC = () => {
     }
   }, [serverOutput]);
 
-  // Get initial MCP server status
+  // Get initial MCP server status and load configuration
   useEffect(() => {
     checkServerStatus();
+    loadMcpServersConfig();
     
     // Listen for MCP server output
     const unlistenOutput = listen('mcp-server-output', (event: Event<string>) => {
@@ -161,6 +179,130 @@ const MCPClientPanel: React.FC = () => {
     };
   }, [selectedTool]);
 
+  // Load MCP servers configuration from local state or create a default config
+  const loadMcpServersConfig = () => {
+    try {
+      // This is a mock function since we're not modifying the backend
+      // In a real implementation, this would call the backend API
+      const defaultConfig: MCPServersConfig = {
+        mcpServers: {
+          "filesystem": {
+            command: "docker",
+            args: [
+              "run",
+              "-i",
+              "--rm",
+              "--mount", "type=bind,src=/Users/brian.pan/Desktop,dst=/projects/Desktop",
+              "--mount", "type=bind,src=/Users/brian.pan/Downloads,dst=/projects/Downloads",
+              "mcp/filesystem",
+              "/projects"
+            ]
+          },
+          "brave-search": {
+            command: "docker",
+            args: [
+              "run",
+              "-i",
+              "--rm",
+              "-e",
+              "BRAVE_API_KEY",
+              "mcp/brave-search"
+            ],
+            env: {
+              "BRAVE_API_KEY": "BSAhxxZOTsSPVAi4c-5Jye3ZNTxiCpO"
+            }
+          },
+          "puppeteer": {
+            command: "docker",
+            args: ["run", "-i", "--rm", "--init", "-e", "DOCKER_CONTAINER=true", "mcp/puppeteer"]
+          },
+          "memory": {
+            command: "docker",
+            args: ["run", "-i", "-v", "claude-memory:/app/dist", "--rm", "mcp/memory"]
+          },
+          "google-maps": {
+            command: "docker",
+            args: [
+              "run",
+              "-i",
+              "--rm",
+              "-e",
+              "GOOGLE_MAPS_API_KEY",
+              "mcp/google-maps"
+            ],
+            env: {
+              "GOOGLE_MAPS_API_KEY": "AIzaSyBxyXz9rCZdUAU3e1Gqp69rfUAAhayNlc4"
+            }
+          }
+        }
+      };
+      
+      setMcpServers(defaultConfig.mcpServers);
+      setConfigJson(JSON.stringify(defaultConfig, null, 2));
+      
+      // Update the UI with the current server configuration
+      if (selectedServerType && defaultConfig.mcpServers[selectedServerType]) {
+        const currentConfig = defaultConfig.mcpServers[selectedServerType];
+        setDockerCommand(currentConfig.command);
+        setDockerArgs(currentConfig.args.join(' '));
+      }
+    } catch (err: any) {
+      console.error('Error loading MCP servers config:', err);
+      setError(`Failed to load MCP servers configuration: ${err.toString()}`);
+    }
+  };
+
+  // Save the MCP servers configuration
+  const saveMcpServersConfig = () => {
+    try {
+      let parsedConfig: MCPServersConfig;
+      try {
+        parsedConfig = JSON.parse(configJson);
+        setMcpServers(parsedConfig.mcpServers);
+        
+        // Update the UI with the current server configuration if it exists
+        if (selectedServerType && parsedConfig.mcpServers[selectedServerType]) {
+          const currentConfig = parsedConfig.mcpServers[selectedServerType];
+          setDockerCommand(currentConfig.command);
+          setDockerArgs(currentConfig.args.join(' '));
+        }
+        
+        notifications.show({
+          title: 'Success',
+          message: 'MCP servers configuration saved successfully',
+          color: 'green'
+        });
+        
+        setShowConfigEditor(false);
+      } catch (parseErr) {
+        notifications.show({
+          title: 'Invalid JSON',
+          message: 'Please enter valid JSON configuration',
+          color: 'red'
+        });
+      }
+    } catch (err: any) {
+      console.error('Error saving MCP servers config:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to save configuration: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
+  // Handle server type selection change
+  const handleServerTypeChange = (value: string | null) => {
+    if (value && mcpServers[value]) {
+      setSelectedServerType(value);
+      
+      // Update the UI with the selected server configuration
+      const config = mcpServers[value];
+      setDockerCommand(config.command);
+      setDockerArgs(config.args.join(' '));
+    }
+  };
+
   const checkServerStatus = async () => {
     try {
       const isRunning = await core.invoke<boolean>('get_puppeteer_mcp_status');
@@ -197,13 +339,14 @@ const MCPClientPanel: React.FC = () => {
       // Split docker args into array
       const argsArray = dockerArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
       
-      // Update config first
-      await core.invoke('update_puppeteer_mcp_config', { 
-        config: {
-          command: dockerCommand,
-          args: argsArray 
-        }
-      });
+      // Update config first based on the selected server type
+      const configToUse = {
+        command: dockerCommand,
+        args: argsArray
+      };
+      
+      // Save the current config
+      await core.invoke('update_puppeteer_mcp_config', { config: configToUse });
       
       // Start the server
       await core.invoke('start_puppeteer_mcp_server');
@@ -211,7 +354,7 @@ const MCPClientPanel: React.FC = () => {
       setIsServerRunning(true);
       notifications.show({
         title: 'Success',
-        message: 'MCP server started successfully',
+        message: `${selectedServerType} MCP server started successfully`,
         color: 'green'
       });
     } catch (err: any) {
@@ -394,12 +537,26 @@ const MCPClientPanel: React.FC = () => {
       // Split docker args into array
       const argsArray = dockerArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
       
+      // Update the current server type in the mcpServers object
+      const updatedServers = { ...mcpServers };
+      updatedServers[selectedServerType] = {
+        ...updatedServers[selectedServerType],
+        command: dockerCommand,
+        args: argsArray
+      };
+      
+      setMcpServers(updatedServers);
+      
+      // Update the puppeteer config for backward compatibility
       await core.invoke('update_puppeteer_mcp_config', { 
         config: {
           command: dockerCommand,
           args: argsArray 
         }
       });
+      
+      // Update the config JSON
+      setConfigJson(JSON.stringify({ mcpServers: updatedServers }, null, 2));
       
       notifications.show({
         title: 'Success',
@@ -434,14 +591,21 @@ const MCPClientPanel: React.FC = () => {
         <Group position="apart">
           <Group>
             <Bot size={20} />
-            <Text size="xl" fw={700}>Puppeteer (or other) MCP Server</Text>
+            <Text size="xl" fw={700}>MCP Server</Text>
           </Group>
-          <Badge 
-            color={isServerRunning ? 'green' : 'gray'}
-            variant="filled"
-          >
-            {isServerRunning ? 'Running' : 'Stopped'}
-          </Badge>
+          <Group>
+            <Badge 
+              color={isServerRunning ? 'green' : 'gray'}
+              variant="filled"
+            >
+              {isServerRunning ? 'Running' : 'Stopped'}
+            </Badge>
+            <Tooltip label="Edit Configuration">
+              <ActionIcon onClick={() => setShowConfigEditor(!showConfigEditor)}>
+                <Settings size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         </Group>
       </Card.Section>
       
@@ -452,62 +616,120 @@ const MCPClientPanel: React.FC = () => {
           </Alert>
         )}
         
-        <Group position="apart">
-          {!isServerRunning ? (
-            <Button 
-              onClick={startMCPServer}
-              loading={loading}
-              leftSection={<Terminal size={14} />}
-            >
-              Start MCP Server
-            </Button>
-          ) : (
-            <Button 
-              onClick={stopMCPServer}
-              loading={loading}
-              color="red"
-              leftSection={<Terminal size={14} />}
-            >
-              Stop MCP Server
-            </Button>
-          )}
-          
-          <Button 
-            variant="outline"
-            onClick={checkServerStatus}
-            leftSection={<RefreshCw size={14} />}
-          >
-            Refresh Status
-          </Button>
-        </Group>
-        
-        {isServerRunning && availableTools.length > 0 && (
-          <Card withBorder p="xs" style={{ background: '#f9f9f9' }}>
-            <Text size="sm" fw={600} mb="xs">Execute Tool</Text>
-            <Stack spacing="sm">
+        {showConfigEditor ? (
+          <Card withBorder p="xs">
+            <Text size="sm" fw={600} mb="xs">MCP Servers Configuration</Text>
+            <JsonInput
+              value={configJson}
+              onChange={(value) => {
+                // Replace any smart quotes with straight quotes
+                const sanitized = value
+                  .replace(/[""]/g, '"')
+                  .replace(/['']/g, "'");
+                setConfigJson(sanitized);
+              }}
+              autosize
+              minRows={10}
+              mb="sm"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
+            <Group position="apart">
+              <Button 
+                onClick={() => setShowConfigEditor(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={saveMcpServersConfig}
+                color="green"
+              >
+                Save Configuration
+              </Button>
+            </Group>
+          </Card>
+        ) : (
+          <>
+            <Group position="apart">
               <Select
-                label="Select Tool"
-                data={availableTools}
-                value={selectedTool}
-                onChange={setSelectedTool}
+                label="MCP Server Type"
+                description="Select the MCP server to run"
+                data={Object.keys(mcpServers).map(server => ({ 
+                  value: server, 
+                  label: server.charAt(0).toUpperCase() + server.slice(1) 
+                }))}
+                value={selectedServerType}
+                onChange={(value) => value && handleServerTypeChange(value)}
+                style={{ minWidth: '200px' }}
               />
-              <JsonInput
-                label="Arguments (JSON)"
-                placeholder='{
+              
+              {!isServerRunning ? (
+                <Button 
+                  onClick={startMCPServer}
+                  loading={loading}
+                  leftSection={<Terminal size={14} />}
+                >
+                  Start MCP Server
+                </Button>
+              ) : (
+                <Button 
+                  onClick={stopMCPServer}
+                  loading={loading}
+                  color="red"
+                  leftSection={<Terminal size={14} />}
+                >
+                  Stop MCP Server
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline"
+                onClick={checkServerStatus}
+                leftSection={<RefreshCw size={14} />}
+              >
+                Refresh Status
+              </Button>
+            </Group>
+            
+            {isServerRunning && availableTools.length > 0 && (
+              <Card withBorder p="xs" style={{ background: '#f9f9f9' }}>
+                <Text size="sm" fw={600} mb="xs">Execute Tool</Text>
+                <Stack spacing="sm">
+                  <Select
+                    label="Select Tool"
+                    data={availableTools}
+                    value={selectedTool}
+                    onChange={setSelectedTool}
+                  />
+                  <JsonInput
+                    label="Arguments (JSON)"
+                    placeholder='{
   "url": "https://example.com",
   "selector": ".main-content"
 }'
-                value={toolArgs}
-                onChange={setToolArgs}
-                formatOnBlur
-                autosize
-                minRows={3}
-              />
-              <Button onClick={executeTool} leftSection={<Send size={14} />}>
-                Execute Tool
-              </Button>
-            </Stack>
-          </Card>
+                    value={toolArgs}
+                    onChange={(value) => {
+                      // Replace any smart quotes with straight quotes
+                      const sanitized = value
+                        .replace(/[""]/g, '"')
+                        .replace(/['']/g, "'");
+                      setToolArgs(sanitized);
+                    }}
+                    autosize
+                    minRows={3}
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                  />
+                  <Button onClick={executeTool} leftSection={<Send size={14} />}>
+                    Execute Tool
+                  </Button>
+                </Stack>
+              </Card>
+            )}
+          </>
         )}
         
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
