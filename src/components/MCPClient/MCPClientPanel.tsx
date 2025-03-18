@@ -71,6 +71,8 @@ const MCPClientPanel: React.FC = () => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [screenshotData, setScreenshotData] = useState<{ data: string, mimeType: string } | null>(null);
+
   // Auto-scroll to bottom when new output arrives
   useEffect(() => {
     if (scrollRef.current) {
@@ -110,7 +112,7 @@ const MCPClientPanel: React.FC = () => {
       setSelectedTool(null);
       notifications.show({
         title: 'MCP Server Stopped',
-        message: 'The Puppeteer MCP server has stopped',
+        message: 'The MCP server has stopped',
         color: 'yellow'
       });
     });
@@ -118,7 +120,24 @@ const MCPClientPanel: React.FC = () => {
     // Listen for tool results
     const unlistenResults = listen('mcp-tool-result', (event: Event<ToolResult>) => {
       const result = event.payload;
-      
+    
+      // Check if the result is an array and extract the image data
+      if (Array.isArray(result.result)) {
+        const imageResult = result.result.find((item: any) => item.type === 'image' && item.data);
+        if (imageResult) {
+          setScreenshotData({
+            data: imageResult.data,
+            mimeType: imageResult.mimeType || 'image/png' // Default if not provided
+          });
+          console.log("Received image data:", imageResult.data);          
+        }
+      } else if (result.result && result.result.type === 'image' && result.result.data) {
+        setScreenshotData({
+          data: result.result.data,
+          mimeType: result.result.mimeType || 'image/png'
+        });
+      }
+    
       if (!result.success && result.error) {
         notifications.show({
           title: 'Tool Execution Failed',
@@ -192,7 +211,7 @@ const MCPClientPanel: React.FC = () => {
       setIsServerRunning(true);
       notifications.show({
         title: 'Success',
-        message: 'Puppeteer MCP server started successfully',
+        message: 'MCP server started successfully',
         color: 'green'
       });
     } catch (err: any) {
@@ -218,7 +237,7 @@ const MCPClientPanel: React.FC = () => {
       setSelectedTool(null);
       notifications.show({
         title: 'Success',
-        message: 'Puppeteer MCP server stopped successfully',
+        message: 'MCP server stopped successfully',
         color: 'blue'
       });
     } catch (err: any) {
@@ -519,6 +538,16 @@ const MCPClientPanel: React.FC = () => {
                 : 'No output yet. Start the server to see output here.'}
             </Code>
           </ScrollArea>
+          { screenshotData && (
+            <Card shadow="sm" p="md" radius="md" withBorder style={{ marginTop: '1rem' }}>
+              <Text size="sm" fw={600}>Screenshot Preview</Text>
+              <img 
+                src={`data:${screenshotData.mimeType};base64,${screenshotData.data}`} 
+                alt="Screenshot" 
+                style={{ maxWidth: '100%' }} 
+              />
+            </Card>
+          )}
         </div>
         
         <Group position="apart" style={{ cursor: 'pointer' }} onClick={() => setAdvancedVisible(!advancedVisible)}>

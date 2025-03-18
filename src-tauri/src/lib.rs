@@ -274,7 +274,7 @@ pub fn run() {
             get_claude_mcp_status,
             add_claude_mcp_directory,
             remove_claude_mcp_directory,
-            // Puppeteer MCP commands
+            // MCP server commands
             start_puppeteer_mcp_server,
             stop_puppeteer_mcp_server,
             get_puppeteer_mcp_status,

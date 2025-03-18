@@ -227,7 +227,7 @@ pub async fn start_puppeteer_mcp_server(
         *sender = Some(tx);
     }
 
-    let _ = app.emit("mcp-server-output", "Starting Puppeteer MCP server...");
+    let _ = app.emit("mcp-server-output", "Starting MCP server...");
 
     let mut env_vars = HashMap::new();
     env_vars.insert("DEBUG".to_string(), "true".to_string());
