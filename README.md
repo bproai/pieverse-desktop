@@ -238,6 +238,7 @@ The MCP Client provides a user interface to manage and execute tools via the MCP
 - Tool execution management with intelligent argument handling
 - **Screenshot Preview:** Optionally preview screenshots directly in the UI without saving them to disk
 - Directory access management for controlling which local directories are accessible to MCP servers
+- **Configuration Management:** Import and export server configurations to easily share or backup settings
 
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:

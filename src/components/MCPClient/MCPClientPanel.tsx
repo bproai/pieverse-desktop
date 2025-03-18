@@ -31,14 +31,17 @@ import {
   Trash,
   Plus,
   Copy,
-  Settings
+  Settings,
+  Upload,
+  Download 
 } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
 import { listen, Event } from '@tauri-apps/api/event';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 interface MCPConfig {
   command: string;
@@ -585,6 +588,114 @@ const MCPClientPanel: React.FC = () => {
     });
   };
 
+  const importConfiguration = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{
+          name: 'Configuration Files',
+          extensions: ['json']
+        }],
+        title: 'Import MCP Configuration'
+      });
+      
+      if (selected && typeof selected === 'string') {
+        const fileContent = await readTextFile(selected);
+        
+        try {
+          const parsedConfig = JSON.parse(fileContent);
+          
+          // Validate the config has the expected structure
+          if (!parsedConfig.mcpServers || typeof parsedConfig.mcpServers !== 'object') {
+            throw new Error('Invalid configuration format: missing mcpServers object');
+          }
+          
+          // Update the configuration
+          setConfigJson(JSON.stringify(parsedConfig, null, 2));
+          setMcpServers(parsedConfig.mcpServers);
+          
+          // If the currently selected server exists in the new config, update the UI
+          if (parsedConfig.mcpServers[selectedServerType]) {
+            const config = parsedConfig.mcpServers[selectedServerType];
+            setDockerCommand(config.command);
+            setDockerArgs(config.args.join(' '));
+          }
+          // Otherwise, select the first server in the config
+          else if (Object.keys(parsedConfig.mcpServers).length > 0) {
+            const firstServer = Object.keys(parsedConfig.mcpServers)[0];
+            setSelectedServerType(firstServer);
+            const config = parsedConfig.mcpServers[firstServer];
+            setDockerCommand(config.command);
+            setDockerArgs(config.args.join(' '));
+          }
+          
+          notifications.show({
+            title: 'Success',
+            message: 'Configuration imported successfully',
+            color: 'green'
+          });
+        } catch (parseErr: any) {
+          console.error('Error parsing config file:', parseErr);
+          notifications.show({
+            title: 'Invalid Configuration',
+            message: `Failed to parse configuration file: ${parseErr.toString()}`,
+            color: 'red'
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error('Error importing configuration:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to import configuration: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+  
+  const exportConfiguration = async () => {
+    try {
+      // Make sure we have a valid configuration to export
+      let configToExport: MCPServersConfig;
+      try {
+        configToExport = JSON.parse(configJson);
+      } catch (parseErr: any) {
+        notifications.show({
+          title: 'Invalid Configuration',
+          message: 'Current configuration has invalid JSON syntax. Please fix before exporting.',
+          color: 'red'
+        });
+        return;
+      }
+      
+      const savePath = await saveDialog({
+        filters: [{
+          name: 'Configuration Files',
+          extensions: ['json']
+        }],
+        defaultPath: 'pieverse_desktop_config.json',
+        title: 'Save MCP Configuration'
+      });
+      
+      if (savePath) {
+        await writeTextFile(savePath, configJson);
+        
+        notifications.show({
+          title: 'Success',
+          message: 'Configuration exported successfully',
+          color: 'green'
+        });
+      }
+    } catch (err: any) {
+      console.error('Error exporting configuration:', err);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to export configuration: ${err.toString()}`,
+        color: 'red'
+      });
+    }
+  };
+
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Card.Section p="md" className="border-b">
@@ -635,7 +746,7 @@ const MCPClientPanel: React.FC = () => {
               autoCorrect="off"
               autoCapitalize="off"
             />
-            <Group position="apart">
+            <Group>
               <Button 
                 onClick={() => setShowConfigEditor(false)}
                 variant="outline"
@@ -648,7 +759,23 @@ const MCPClientPanel: React.FC = () => {
               >
                 Save Configuration
               </Button>
-            </Group>
+              <Button
+                onClick={importConfiguration}
+                variant="outline"
+                color="blue"
+                leftSection={<Upload size={14} />}
+              >
+                Import From File
+              </Button>
+              <Button
+                onClick={exportConfiguration}
+                variant="outline"
+                color="blue"
+                leftSection={<Download size={14} />}
+              >
+    Export To File
+  </Button>
+</Group>
           </Card>
         ) : (
           <>
