@@ -130,6 +130,16 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
   - **One-click copy:** Easily copy log entries to clipboard
 - Helps troubleshoot extension behavior, track background processes, and debug service worker interactions
 
+### 💻 VS Code Integration
+- Seamless integration with Visual Studio Code through a dedicated extension
+- Features include:
+  - **Terminal integration:** Execute and capture terminal output directly from PieVerse
+  - **Command execution:** Run VS Code commands from within the PieVerse interface
+  - **File diagnostics:** View and navigate code issues and suggestions
+  - **Real-time collaboration:** Work together on code with AI assistance
+  - **Context-aware help:** Get targeted coding assistance based on your active files
+- Custom terminal implementation provides a full shell experience while maintaining output capture capability
+
 ## Chrome Extension Debugging Setup
 
 To use the Chrome Extension debugging feature:
@@ -175,6 +185,40 @@ PieVerse's Chrome Debugger panel also provides built-in convenience features:
   - Launch Chrome in remote debugging mode
   - Start the bridge connection
 - **One-click setup:** Simplifies the entire debugging process directly from within the application
+
+## VS Code Integration Setup
+
+To use the VS Code integration features:
+
+1. Install the PieVerse VS Code extension:
+   1. Install the PieVerse VS Code extension:
+   ```bash
+   # Navigate to the extension directory
+   cd pieverse-diff-extension
+   
+   # Package the extension
+   vsce package
+   
+   # Uninstall (in case needed)
+   code --uninstall-extension reason-one-ai.pieverse-diff-extension
+   
+   # Install the extension in VS Code
+   code --install-extension pieverse-diff-extension-0.0.1.vsix
+   ```
+
+2. Launch VS Code and PieVerse Desktop
+
+3. Connect PieVerse to VS Code:
+   - In PieVerse, navigate to the VS Code Integration panel
+   - Click "Connect to VS Code" to establish the WebSocket connection
+   - Once connected, you can execute terminal commands, view diagnostics, and interact with your code
+
+4. Use the integrated terminal:
+   - Execute commands directly from PieVerse
+   - View output in real-time without switching applications
+   - Access command history and diagnostics in a unified interface
+
+The VS Code integration uses a WebSocket connection to communicate between PieVerse and VS Code, allowing for seamless interaction between the two applications.
 
 ## 🎥 Demo and Showcase
 We are preparing live and recorded demos that highlight:
@@ -277,7 +321,8 @@ pieverse-desktop/
 │   │   ├── Prompts/ - AI prompt management interface
 │   │   ├── Python/ - Python execution environment
 │   │   ├── References/ - Reference material management
-│   │   └── Signals/ - Trend analysis and signal detection
+│   │   ├── Signals/ - Trend analysis and signal detection
+│   │   └── VSCodeIntegration/ - VS Code terminal and diagnostics integration
 │   ├── services/ - Frontend service layers
 │   └── sql/ - SQL schemas and queries
 ├── src-tauri/ - Rust backend code
@@ -287,6 +332,7 @@ pieverse-desktop/
 │   │   └── python_scripts/ - Python scripts for data analysis
 ├── scripts/
 │   └── chrome-bridge/ - WebSocket bridge for Chrome DevTools Protocol
+├── pieverse-diff-extension/ - VS Code extension for integration
 └── ...
 ```
 
@@ -301,6 +347,9 @@ Powered by Rust with Tauri 2.0, it uses SQLite for local storage, supports MySQL
 
 ### AI Technology:
 Multiple AI models (Rule-based, GPT-4o mini, GPT-4o Realtime, and GPT-4o Realtime Mini) adapt to your needs for natural, interactive experiences.
+
+### VS Code Integration:
+A custom VS Code extension built with TypeScript and the VS Code Extension API, using WebSockets for bidirectional communication with the main application.
 
 ## 🌐 API Reference
 The RESTful API supports endpoints for prompt management, Q&A data handling, and database operations. Refer to our API documentation for detailed information.
@@ -354,9 +403,11 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
 - **v0.3.1:**
   Added HTML Renderer for visualizing and editing HTML content in multiple formats.
 - **v0.3.2:**
-  Enhanced Document Renderer with Markdown support, syntax highlighting, and <span class="user-style-normal">special tag handling</span>.
+  Enhanced Document Renderer with Markdown support, syntax highlighting, and special tag handling.
 - **v0.4.0:**
   Added Enhanced LLM Developer Assistance with problem-solving journey capture and specialized fine-tuning capabilities.
+- **v0.5.0:**
+  Added VS Code integration for terminal access, diagnostics viewing, and seamless code interaction.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 
