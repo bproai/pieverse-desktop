@@ -249,7 +249,16 @@ async fn handle_chrome_connection(stream: TcpStream, tx: broadcast::Sender<Strin
     match tokio_tungstenite::accept_async(stream).await {
         Ok(ws_stream) => {
             println!("WebSocket connection established with Chrome extension: {}", addr);
-            process_chrome_messages(ws_stream, tx, addr, app).await;
+            
+            // Emit connected event to frontend
+            emit_connection_event(&app, true, &addr.to_string());
+            
+            // Process messages
+            process_chrome_messages(ws_stream, tx, addr, app.clone()).await;
+            
+            // Emit disconnected event when connection closes
+            // This will execute after process_chrome_messages returns (connection closed)
+            emit_connection_event(&app, false, &addr.to_string());
         },
         Err(e) => println!("Error during WebSocket handshake: {}", e),
     }
@@ -336,4 +345,13 @@ async fn process_chrome_messages(
     }
     
     println!("WebSocket connection closed with Chrome extension: {}", addr);
+}
+
+
+// Add this function somewhere in your module
+fn emit_connection_event(app: &AppHandle, connected: bool, client_info: &str) {
+    let _ = app.emit("chrome-extension-connection", serde_json::json!({
+        "connected": connected,
+        "clientInfo": client_info
+    }));
 }

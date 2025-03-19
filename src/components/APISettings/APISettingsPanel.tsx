@@ -4,6 +4,7 @@ import { Card, Text, Group, TextInput, Button, Badge, Stack } from '@mantine/cor
 import { Settings, Power, PowerOff, Radio } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 import WebSocketService from '../../services/WebSocketService';
+import { listen } from '@tauri-apps/api/event';
 
 export function APISettingsPanel() {
   const [httpStatus, setHttpStatus] = useState('stopped');
@@ -16,8 +17,32 @@ export function APISettingsPanel() {
   const [wsIsLoading, setWsIsLoading] = useState(false);
   const [wsError, setWsError] = useState('');
 
+  const [chromeConnected, setChromeConnected] = useState(false);
+  const [connectedClient, setConnectedClient] = useState('');
+
+  const [testPrompt, setTestPrompt] = useState("Tell me about WebSockets in 2-3 sentences.");
+  const [sendingTest, setSendingTest] = useState(false);
+
+
   // Get WebSocket service instance
   const wsService = WebSocketService.getInstance();
+
+  useEffect(() => {
+    // Listen for chrome extension connection events
+    const unlisten = listen('chrome-extension-connection', (event) => {
+      const payload = event.payload as { connected: boolean, clientInfo: string };
+      setChromeConnected(payload.connected);
+      if (payload.connected) {
+        setConnectedClient(payload.clientInfo);
+      } else {
+        setConnectedClient('');
+      }
+    });
+  
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
 
   useEffect(() => {
     checkHttpServerStatus();
@@ -35,6 +60,43 @@ export function APISettingsPanel() {
       clearInterval(intervalId);
     };
   }, []);
+
+  const sendTestPrompt = async () => {
+    if (!testPrompt) {
+      notifications.show({
+        title: 'Empty Prompt',
+        message: 'Please enter a test prompt first',
+        color: 'yellow'
+      });
+      return;
+    }
+    
+    setSendingTest(true);
+    try {
+      await core.invoke('send_message_to_chrome', { 
+        message: JSON.stringify({
+          type: 'insertPrompt',
+          prompt: testPrompt,
+          autoSubmit: true // Set to true to test automatic submission
+        })
+      });
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Test prompt sent to Chrome extension',
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error sending test prompt:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to send test prompt: ${error}`,
+        color: 'red'
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   // HTTP Server Functions
   const checkHttpServerStatus = async () => {
@@ -215,9 +277,16 @@ export function APISettingsPanel() {
               <Radio size={24} />
               <Text size="xl" weight={500}>WebSocket Server</Text>
             </Group>
-            <Badge color={wsStatus === 'running' ? 'green' : 'red'} variant="filled">
-              {wsStatus}
-            </Badge>
+            <Group spacing={8}>
+              {chromeConnected && (
+                <Badge color="green" variant="filled">
+                  Extension Connected
+                </Badge>
+              )}
+              <Badge color={wsStatus === 'running' ? 'green' : 'red'} variant="filled">
+                {wsStatus}
+              </Badge>
+            </Group>
           </Group>
 
           <Stack spacing="xs">
@@ -272,7 +341,29 @@ export function APISettingsPanel() {
               Apply Port
             </Button>
           </Group>
+          {chromeConnected && (
+            <Text size="xs" color="dimmed">
+              Chrome extension connected from: {connectedClient}
+            </Text>
+          )}          
         </Stack>
+        <Group mt="md">
+          <TextInput
+            label="Test Prompt"
+            placeholder="Enter a test prompt here"
+            value={testPrompt}
+            onChange={(e) => setTestPrompt(e.currentTarget.value)}
+            style={{ flexGrow: 1 }}
+          />
+          <Button
+            mt={25} // Align with the input
+            onClick={sendTestPrompt}
+            disabled={wsStatus !== 'running'}
+            loading={sendingTest}
+          >
+            Send to Extension
+          </Button>
+        </Group>
       </Card>
     </Stack>
   );
