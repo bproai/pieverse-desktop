@@ -235,14 +235,16 @@ pub async fn create_copies_for_files(
         .map(|entries| entries.count() == 0)
         .unwrap_or(true);
     
-    if !is_empty {
-        // Clear the directory (frontend will handle confirmation)
-        fs::read_dir(&drag_drop_dir)
-            .map_err(|e| format!("Failed to read drag_and_drop directory: {}", e))?
-            .filter_map(Result::ok)
-            .for_each(|entry| {
-                let _ = fs::remove_file(entry.path());
-            });
+    if !file_paths.is_empty() {
+        if !is_empty {
+            // Clear the directory (frontend will handle confirmation)
+            fs::read_dir(&drag_drop_dir)
+                .map_err(|e| format!("Failed to read drag_and_drop directory: {}", e))?
+                .filter_map(Result::ok)
+                .for_each(|entry| {
+                    let _ = fs::remove_file(entry.path());
+                });
+        }
     }
     
     let project_path = Path::new(&project_base_path);
@@ -256,7 +258,7 @@ pub async fn create_copies_for_files(
             project_path.join(&file_path)
         };
         
-        // Get the filename for the symlink
+        // Get the filename
         let file_name = full_path.file_name()
             .ok_or_else(|| format!("Invalid file path: {}", full_path.display()))?;
         
@@ -277,7 +279,7 @@ pub async fn create_copies_for_files(
         created_links += 1;
     }
     
-    Ok(format!("Created {} symlinks in {}", created_links, drag_drop_dir.display()))
+    Ok(format!("Created {} copies in {}", created_links, drag_drop_dir.display()))
 }
 
 #[command]

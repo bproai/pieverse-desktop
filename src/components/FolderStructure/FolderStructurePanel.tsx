@@ -335,7 +335,6 @@ const FolderStructurePanel: React.FC = () => {
         return await getCorrectFilePath(file);
       }));
       
-      // Call the Rust backend to create symlinks with proper Tauri 2.0 invoke pattern
       const result = await core.invoke('create_copies_for_files', {
         filePaths,
         projectBasePath: projectPath
