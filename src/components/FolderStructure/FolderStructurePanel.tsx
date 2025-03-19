@@ -297,6 +297,79 @@ const FolderStructurePanel: React.FC = () => {
     }
   };
 
+  const stageFilesForDragAndDrop = async () => {
+    if (selectedFiles.length === 0) {
+      notifications.show({
+        title: 'No Files Selected',
+        message: 'Please select at least one file first',
+        color: 'blue'
+      });
+      return;
+    }
+    
+    try {
+      // First, check if the directory exists and has files
+      const dragDropExists = await core.invoke('check_drag_drop_dir_exists') as boolean;
+      
+      if (dragDropExists) {
+        let dragDropPath = "";
+        try {
+          const result = await core.invoke('create_symlinks_for_files', {
+            filePaths: [],
+            projectBasePath: projectPath
+          }) as string;
+          // Extract path from the result text
+          const pathMatch = result.match(/in\s+(.+?)$/);
+          dragDropPath = pathMatch ? pathMatch[1] : "";
+        } catch {}
+                
+        // Ask for confirmation to clear the directory
+        const confirmed = window.confirm(`The drag_and_drop folder already contains files. Is it okay to remove them?\n\nPath: ${dragDropPath}`);
+        if (!confirmed) {
+          return;
+        }
+      }
+      
+      // Collect paths of selected files
+      const filePaths = await Promise.all(selectedFiles.map(async (file) => {
+        return await getCorrectFilePath(file);
+      }));
+      
+      // Call the Rust backend to create symlinks with proper Tauri 2.0 invoke pattern
+      const result = await core.invoke('create_symlinks_for_files', {
+        filePaths,
+        projectBasePath: projectPath
+      }) as string;
+      
+      notifications.show({
+        title: 'Success',
+        message: result,
+        color: 'green'
+      });
+      
+      // Open the folder in the system's file explorer
+      try {
+        await core.invoke('open_drag_drop_dir');
+      } catch (error) {
+        console.error('Failed to open drag and drop folder:', error);
+      }
+      
+      // Provide more detailed success information
+      notifications.show({
+        title: 'Files Ready',
+        message: 'Files are now staged for drag & drop in the tmp/drag_and_drop folder',
+        color: 'blue'
+      });
+    } catch (error) {
+      console.error('Error staging files for drag and drop:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to stage files: ${error}`,
+        color: 'red'
+      });
+    }
+  };
+
   // Handle drag start
   const handleDragStart = async (event: React.DragEvent<HTMLDivElement>) => {
     if (selectedFiles.length === 0) return;
@@ -657,6 +730,15 @@ const FolderStructurePanel: React.FC = () => {
                     leftSection={<Copy size={14} />}
                     >
                     Copy to Clipboard
+                    </Button>
+                    <Button 
+                      onClick={stageFilesForDragAndDrop}
+                      size="xs"
+                      variant="filled"
+                      color="cyan"
+                      leftSection={<Folder size={14} />}
+                    >
+                      Stage Files for Drag & Drop
                     </Button>
                 </Group>
                 </Group>

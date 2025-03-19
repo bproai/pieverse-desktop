@@ -4,6 +4,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::command;
 use regex::Regex;
+use std::fs::create_dir_all;
+use tauri::AppHandle;
+use tauri::Manager;
+
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
+#[cfg(windows)]
+use std::os::windows::fs as windows_fs;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileNode {
@@ -200,4 +209,148 @@ fn create_exclude_regex(filters: &FilterOptions) -> Result<Option<Regex>, String
 #[command]
 pub fn is_valid_path(path: String) -> bool {
     PathBuf::from(path).exists()
+}
+
+
+#[command]
+pub async fn create_symlinks_for_files(
+    app_handle: AppHandle,
+    file_paths: Vec<String>, 
+    project_base_path: String
+) -> Result<String, String> {
+    // Use Tauri 2.0 pattern to get app data directory
+    let app_dir = app_handle.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    // Create the tmp and drag_and_drop directories
+    let tmp_dir = app_dir.join("tmp");
+    let drag_drop_dir = tmp_dir.join("drag_and_drop");
+    
+    // Create directories if they don't exist
+    create_dir_all(&drag_drop_dir)
+        .map_err(|e| format!("Failed to create drag_and_drop directory: {}", e))?;
+    
+    // Check if drag_drop_dir is empty
+    let is_empty = fs::read_dir(&drag_drop_dir)
+        .map(|entries| entries.count() == 0)
+        .unwrap_or(true);
+    
+    if !is_empty {
+        // Clear the directory (frontend will handle confirmation)
+        fs::read_dir(&drag_drop_dir)
+            .map_err(|e| format!("Failed to read drag_and_drop directory: {}", e))?
+            .filter_map(Result::ok)
+            .for_each(|entry| {
+                let _ = fs::remove_file(entry.path());
+            });
+    }
+    
+    let project_path = Path::new(&project_base_path);
+    let mut created_links = 0;
+    
+    for file_path in file_paths {
+        // Construct the full source path
+        let full_path = if file_path.starts_with(&project_base_path) {
+            PathBuf::from(&file_path)
+        } else {
+            project_path.join(&file_path)
+        };
+        
+        // Get the filename for the symlink
+        let file_name = full_path.file_name()
+            .ok_or_else(|| format!("Invalid file path: {}", full_path.display()))?;
+        
+        let target_path = drag_drop_dir.join(file_name);
+        
+        // Create the symlink based on platform
+        #[cfg(unix)]
+        {
+            unix_fs::symlink(&full_path, &target_path)
+                .map_err(|e| format!("Failed to create symlink for {}: {}", full_path.display(), e))?;
+        }
+        
+        #[cfg(windows)]
+        {
+            let metadata = fs::metadata(&full_path)
+                .map_err(|e| format!("Failed to get metadata for {}: {}", full_path.display(), e))?;
+            
+            if metadata.is_dir() {
+                windows_fs::symlink_dir(&full_path, &target_path)
+                    .map_err(|e| format!("Failed to create directory symlink for {}: {}", full_path.display(), e))?;
+            } else {
+                windows_fs::symlink_file(&full_path, &target_path)
+                    .map_err(|e| format!("Failed to create file symlink for {}: {}", full_path.display(), e))?;
+            }
+        }
+        
+        created_links += 1;
+    }
+    
+    Ok(format!("Created {} symlinks in {}", created_links, drag_drop_dir.display()))
+}
+
+#[command]
+pub async fn check_drag_drop_dir_exists(app_handle: AppHandle) -> Result<bool, String> {
+    // Use Tauri 2.0 pattern to get app data directory
+    let app_dir = app_handle.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let tmp_dir = app_dir.join("tmp");
+    let drag_drop_dir = tmp_dir.join("drag_and_drop");
+    
+    // Check if directory exists and has files
+    if !drag_drop_dir.exists() {
+        return Ok(false);
+    }
+    
+    let has_files = fs::read_dir(&drag_drop_dir)
+        .map(|entries| entries.count() > 0)
+        .unwrap_or(false);
+    
+    Ok(has_files)
+}
+
+#[command]
+pub async fn open_drag_drop_dir(app_handle: AppHandle) -> Result<(), String> {
+    let app_dir = app_handle.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let tmp_dir = app_dir.join("tmp");
+    let drag_drop_dir = tmp_dir.join("drag_and_drop");
+    
+    // Make sure directory exists
+    if !drag_drop_dir.exists() {
+        create_dir_all(&drag_drop_dir)
+            .map_err(|e| format!("Failed to create drag_and_drop directory: {}", e))?;
+    }
+    
+    // Open the directory using the system's file explorer
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        Command::new("open")
+            .arg(drag_drop_dir)
+            .spawn()
+            .map_err(|e| format!("Failed to open Finder: {}", e))?;
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        Command::new("explorer")
+            .arg(drag_drop_dir)
+            .spawn()
+            .map_err(|e| format!("Failed to open Explorer: {}", e))?;
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        Command::new("xdg-open")
+            .arg(drag_drop_dir)
+            .spawn()
+            .map_err(|e| format!("Failed to open file manager: {}", e))?;
+    }
+    
+    Ok(())
 }

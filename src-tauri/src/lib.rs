@@ -102,7 +102,10 @@ use services::chrome_debugger::open_chrome_in_terminal;
 use services::project_structure::{
     get_project_structure,
     generate_structure_text,
-    is_valid_path
+    is_valid_path,
+    create_symlinks_for_files,
+    check_drag_drop_dir_exists,
+    open_drag_drop_dir
 };
 use services::references::{
     load_references,
@@ -256,6 +259,9 @@ pub fn run() {
             get_project_structure,
             generate_structure_text,
             is_valid_path,
+            create_symlinks_for_files,
+            check_drag_drop_dir_exists,
+            open_drag_drop_dir,
             load_references,
             save_references,
             start_vscode_ws_server,
