@@ -13,7 +13,7 @@ import {
   Select,
   ActionIcon
 } from '@mantine/core';
-import { Upload, FileText, Plus, Database, FolderTree, Copy, Check, Brain } from 'lucide-react';
+import { Upload, FileText, Plus, Database, FolderTree, Copy, Check, Brain, BookOpen } from 'lucide-react';
 
 const ContextBuilderPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string | null>('files');
@@ -88,6 +88,9 @@ const ContextBuilderPanel: React.FC = () => {
               <Tabs.Tab value="llm-rules" icon={<Brain size={16} />}>
                 LLM Rules
               </Tabs.Tab>
+              <Tabs.Tab value="references" icon={<BookOpen size={16} />}>
+                References
+              </Tabs.Tab>
               <Tabs.Tab value="editor" icon={<FileText size={16} />}>
                 Context Editor
               </Tabs.Tab>
@@ -144,6 +147,31 @@ const ContextBuilderPanel: React.FC = () => {
                   ]}
                   mt="md"
                 />
+              </Card>
+            </Tabs.Panel>            
+
+            <Tabs.Panel value="references" pt="md">
+              <Card withBorder p="md" radius="md">
+                <Text>References will be shown here</Text>
+                <Text size="sm" color="dimmed" mt="md">
+                  You can include documentation references, API specifications, and other reference materials to add to your context.
+                </Text>
+                <Group position="apart" mt="md">
+                  <Select
+                    label="Select Reference Category"
+                    placeholder="Choose a reference category"
+                    style={{ width: '300px' }}
+                    data={[
+                      { value: 'apis', label: 'API References' },
+                      { value: 'docs', label: 'Documentation' },
+                      { value: 'specs', label: 'Specifications' },
+                      { value: 'custom', label: 'Custom References' }
+                    ]}
+                  />
+                  <Button variant="outline" size="sm" mt="lg">
+                    Import Reference
+                  </Button>
+                </Group>
               </Card>
             </Tabs.Panel>            
 
