@@ -208,7 +208,7 @@ const MCPClientPanel: React.FC = () => {
               "-i",
               "--rm",
               "-e",
-              "BRAVE_API_KEY",
+              "BRAVE_API_KEY=BSAhxxZOTsSPVAi4c-5Jye3ZNTxiCpO",
               "mcp/brave-search"
             ],
             env: {
@@ -230,7 +230,7 @@ const MCPClientPanel: React.FC = () => {
               "-i",
               "--rm",
               "-e",
-              "GOOGLE_MAPS_API_KEY",
+              "GOOGLE_MAPS_API_KEY=AIzaSyBxyXz9rCZdUAU3e1Gqp69rfUAAhayNlc4s",
               "mcp/google-maps"
             ],
             env: {

@@ -460,7 +460,8 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             />
             
             <Textarea
-              label="Description"
+              label="Prompt"
+              required
               autoCorrect="off"
               autoComplete="off"
               value={editingPrompt?.description || ''}

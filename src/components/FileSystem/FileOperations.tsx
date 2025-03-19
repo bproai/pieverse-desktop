@@ -58,7 +58,7 @@ const FileOperations: React.FC = () => {
   // Show notifications based on operation result
   const showOperationResult = (success: boolean, operation: string, details?: string) => {
     if (success) {
-      const message = `${operation} successful${details ? `: ${details}` : ''}`;
+      const message = `${operation} successfully${details ? `: ${details}` : ''}`;
       setSuccess(message);
       notifications.show({
         title: 'Success',
