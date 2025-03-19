@@ -159,7 +159,9 @@ use services::chrome_extension_ws::{
     start_chrome_ws_server,
     stop_chrome_ws_server,
     get_chrome_ws_status,
-    send_message_to_chrome
+    send_message_to_chrome,
+    get_chrome_ws_clients,
+    send_targeted_message_to_chrome
 };
 
 use async_stream::stream;
@@ -304,7 +306,9 @@ pub fn run() {
             start_chrome_ws_server,
             stop_chrome_ws_server,
             get_chrome_ws_status,
-            send_message_to_chrome
+            send_message_to_chrome,
+            get_chrome_ws_clients,
+            send_targeted_message_to_chrome
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

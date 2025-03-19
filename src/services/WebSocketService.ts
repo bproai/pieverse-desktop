@@ -9,6 +9,14 @@ export interface ChromeMessage {
   [key: string]: any;
 }
 
+export interface ClientInfo {
+  id: string;
+  addr: string;
+  platform: string;
+  connected_at: number;
+  last_active: number;
+}
+
 class WebSocketService {
   private port: number = 3031;
   private isRunning: boolean = false;
@@ -34,7 +42,9 @@ class WebSocketService {
       'chrome-extension-request',
       'chrome-extension-action',
       'chrome-extension-notification',
-      'chrome-extension-message'
+      'chrome-extension-message',
+      'chrome-extension-connection',
+      'chrome-extension-clients-updated' // Add this new event
     ];
 
     for (const eventType of eventTypes) {
@@ -106,6 +116,42 @@ class WebSocketService {
       await core.invoke('send_message_to_chrome', { message: messageStr });
     } catch (error) {
       console.error('Failed to send WebSocket message:', error);
+      throw error;
+    }
+  }
+
+  // Add new method to get connected clients
+  public async getConnectedClients(): Promise<ClientInfo[]> {
+    try {
+      return await core.invoke('get_chrome_ws_clients') as ClientInfo[];
+    } catch (error) {
+      console.error('Failed to get connected clients:', error);
+      return [];
+    }
+  }
+
+  // Add new method to send targeted messages
+  public async sendTargetedMessage(
+    message: ChromeMessage | string,
+    targetType: 'broadcast' | 'platform' | 'client',
+    targetId?: string
+  ): Promise<void> {
+    if (!this.isRunning) {
+      throw new Error("WebSocket server is not running");
+    }
+
+    const messageStr = typeof message === 'string' 
+      ? message 
+      : JSON.stringify(message);
+    
+    try {
+      await core.invoke('send_targeted_message_to_chrome', { 
+        message: messageStr,
+        targetType: targetType,
+        targetId: targetId
+      });
+    } catch (error) {
+      console.error('Failed to send targeted WebSocket message:', error);
       throw error;
     }
   }

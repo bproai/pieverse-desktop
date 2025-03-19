@@ -1,11 +1,12 @@
 // src/components/APISettings/APISettingsPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, TextInput, Button, Badge, Stack } from '@mantine/core';
-import { Settings, Power, PowerOff, Radio } from 'lucide-react';
+import { Card, Text, Group, TextInput, Button, Badge, Stack, Select, ActionIcon } from '@mantine/core';
+import { Settings, Power, PowerOff, Radio, RefreshCw } from 'lucide-react';
 import { core } from '@tauri-apps/api';
-import WebSocketService from '../../services/WebSocketService';
+import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 import { notifications } from '@mantine/notifications';
+import { ChromeClientsList } from './ChromeClientsList';
 
 export function APISettingsPanel() {
   const [httpStatus, setHttpStatus] = useState('stopped');
@@ -20,13 +21,57 @@ export function APISettingsPanel() {
 
   const [chromeConnected, setChromeConnected] = useState(false);
   const [connectedClient, setConnectedClient] = useState('');
+  const [clients, setClients] = useState<ClientInfo[]>([]);
 
   const [testPrompt, setTestPrompt] = useState("Tell me about WebSockets in 2-3 sentences.");
   const [sendingTest, setSendingTest] = useState(false);
+  const [targetType, setTargetType] = useState<'broadcast' | 'platform' | 'client'>('broadcast');
+  const [targetId, setTargetId] = useState<string | null>(null);
 
 
   // Get WebSocket service instance
   const wsService = WebSocketService.getInstance();
+
+  useEffect(() => {
+    const clientRefreshInterval = setInterval(() => {
+      if (wsStatus === 'running') {
+        wsService.getConnectedClients().then(setClients);
+      }
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(clientRefreshInterval);
+  }, [wsStatus]);
+
+  useEffect(() => {
+    // Listen for client updates
+    const setupClientListener = async () => {
+      const unlisten = await listen('chrome-extension-clients-updated', (event) => {
+        setClients(event.payload as ClientInfo[]);
+        
+        // Check if the currently selected client is still available
+        if (targetType === 'client' && targetId) {
+          const clientStillExists = event.payload.some((client: ClientInfo) => client.id === targetId);
+          if (!clientStillExists) {
+            // Reset selection if the client is no longer available
+            setTargetId(null);
+            notifications.show({
+              title: 'Client Disconnected',
+              message: 'The selected client has disconnected. Please select another client.',
+              color: 'yellow'
+            });
+          }
+        }
+      });
+      
+      return unlisten;
+    };
+    
+    const unlistenPromise = setupClientListener();
+    
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, [targetId, targetType]);
 
   useEffect(() => {
     // Listen for chrome extension connection events
@@ -39,9 +84,15 @@ export function APISettingsPanel() {
         setConnectedClient('');
       }
     });
+    
+    // Listen for clients updated events
+    const clientsUnlisten = listen('chrome-extension-clients-updated', (event) => {
+      setClients(event.payload as ClientInfo[]);
+    });
   
     return () => {
       unlisten.then(fn => fn());
+      clientsUnlisten.then(fn => fn());
     };
   }, []);
 
@@ -85,6 +136,49 @@ export function APISettingsPanel() {
       notifications.show({
         title: 'Success',
         message: 'Test prompt sent to Chrome extension',
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error sending test prompt:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to send test prompt: ${error}`,
+        color: 'red'
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  const sendTargetedTestPrompt = async () => {
+    if (!testPrompt) {
+      notifications.show({
+        title: 'Empty Prompt',
+        message: 'Please enter a test prompt first',
+        color: 'yellow'
+      });
+      return;
+    }
+    
+    setSendingTest(true);
+    try {
+      const message = {
+        type: 'insertPrompt',
+        prompt: testPrompt,
+        autoSubmit: true
+      };
+      
+      await wsService.sendTargetedMessage(
+        message,
+        targetType, 
+        targetId || undefined
+      );
+      
+      notifications.show({
+        title: 'Success',
+        message: `Test prompt sent to ${targetType === 'broadcast' ? 'all clients' : 
+                  targetType === 'platform' ? `${targetId} platform` :
+                  'specific client'}`,
         color: 'green'
       });
     } catch (error) {
@@ -204,6 +298,50 @@ export function APISettingsPanel() {
       await handleStopWsService();
     }
     await handleStartWsService();
+  };
+
+  const refreshClients = async () => {
+    try {
+      const clientsList = await wsService.getConnectedClients();
+      setClients(clientsList);
+    } catch (error) {
+      console.error('Failed to refresh clients:', error);
+    }
+  };
+
+  // Helper functions for targeting options
+  const getPlatformOptions = () => {
+    // Get unique platforms from clients
+    const platforms = [...new Set(clients.map(c => c.platform).filter(p => p))];
+    
+    // If no platforms detected yet, return default options
+    if (platforms.length === 0) {
+      return [
+        { value: 'chatgpt', label: 'ChatGPT' }, 
+        { value: 'claude', label: 'Claude' }
+      ];
+    }
+    
+    return platforms.map(p => ({ 
+      value: p, 
+      // Make display names nicer
+      label: p === 'chatgpt' ? 'ChatGPT' : 
+            p === 'claude' ? 'Claude' : p
+    }));
+  };
+  
+  const getClientOptions = () => {
+    return clients.map(c => {
+      // Calculate how long since last active
+      const lastActiveSeconds = Math.floor((Date.now() - c.last_active * 1000) / 1000);
+      const isRecent = lastActiveSeconds < 30; // Consider active if message in last 30 seconds
+      
+      return {
+        value: c.id,
+        label: `${c.platform || 'Unknown'} (${c.addr})${isRecent ? ' 🟢' : ' ⚪'}`, 
+        // Green dot for recently active clients
+      };
+    });
   };
 
   return (
@@ -348,6 +486,7 @@ export function APISettingsPanel() {
             </Text>
           )}          
         </Stack>
+        
         <Group mt="md">
           <TextInput
             label="Test Prompt"
@@ -366,6 +505,78 @@ export function APISettingsPanel() {
           </Button>
         </Group>
       </Card>
+
+      {/* Add client list component when server is running */}
+      {wsStatus === 'running' && <ChromeClientsList />}
+      
+      {/* Add targeted messaging UI when server is running */}
+      {wsStatus === 'running' && (
+        <Card className="w-full" shadow="sm" padding="lg">
+          <Stack>
+            <Text size="lg" weight={500}>Targeted Message</Text>
+            
+            <TextInput
+              label="Test Prompt"
+              placeholder="Enter a test prompt here"
+              value={testPrompt}
+              onChange={(e) => setTestPrompt(e.currentTarget.value)}
+            />
+            
+            <Group grow>
+              <Select
+                label="Target Type"
+                value={targetType}
+                onChange={(value) => setTargetType(value as 'broadcast' | 'platform' | 'client')}
+                data={[
+                  { value: 'broadcast', label: 'Broadcast to All' },
+                  { value: 'platform', label: 'Target Platform' },
+                  { value: 'client', label: 'Target Specific Client' }
+                ]}
+              />
+              
+              {targetType === 'platform' && (
+                <Select
+                  label="Select Platform"
+                  value={targetId}
+                  onChange={setTargetId}
+                  data={getPlatformOptions()}
+                  placeholder="Select platform"
+                  disabled={getPlatformOptions().length === 0}
+                />
+              )}
+              
+              {targetType === 'client' && (
+                <Group position="apart" mt="md">
+                  <Select
+                    label="Select Client"
+                    value={targetId}
+                    onChange={setTargetId}
+                    data={getClientOptions()}
+                    placeholder="Select client"
+                    disabled={clients.length === 0}
+                    style={{ flexGrow: 1 }}
+                  />
+                  <ActionIcon onClick={refreshClients} mt={30}>
+                    <RefreshCw size={16} />
+                  </ActionIcon>
+                </Group>
+              )}
+            </Group>
+            
+            <Button
+              onClick={sendTargetedTestPrompt}
+              disabled={
+                wsStatus !== 'running' || 
+                (targetType === 'platform' && !targetId) ||
+                (targetType === 'client' && !targetId)
+              }
+              loading={sendingTest}
+            >
+              Send Targeted Message
+            </Button>
+          </Stack>
+        </Card>
+      )}
     </Stack>
   );
 }
