@@ -324,7 +324,7 @@ const FolderStructurePanel: React.FC = () => {
         } catch {}
                 
         // Ask for confirmation to clear the directory
-        const confirmed = window.confirm(`The drag_and_drop folder already contains files. Is it okay to remove them?\n\nPath: ${dragDropPath}`);
+        const confirmed = await window.confirm(`The drag_and_drop folder already contains files. Is it okay to remove them?\n\nPath: ${dragDropPath}`);
         if (!confirmed) {
           return;
         }
