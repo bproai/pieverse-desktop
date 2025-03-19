@@ -183,7 +183,7 @@ async createFile(filePath: string): Promise<boolean> {
       return entries.map(entry => ({
         name: entry.name || path.basename(entry.path),
         path: entry.path,
-        isDir: entry.children !== undefined,
+        isDir: entry.isDirectory || false,
         children: entry.children?.map(child => ({
           name: child.name || path.basename(child.path),
           path: child.path,
