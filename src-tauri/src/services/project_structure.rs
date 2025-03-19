@@ -213,7 +213,7 @@ pub fn is_valid_path(path: String) -> bool {
 
 
 #[command]
-pub async fn create_symlinks_for_files(
+pub async fn create_copies_for_files(
     app_handle: AppHandle,
     file_paths: Vec<String>, 
     project_base_path: String
@@ -262,26 +262,17 @@ pub async fn create_symlinks_for_files(
         
         let target_path = drag_drop_dir.join(file_name);
         
-        // Create the symlink based on platform
-        #[cfg(unix)]
-        {
-            unix_fs::symlink(&full_path, &target_path)
-                .map_err(|e| format!("Failed to create symlink for {}: {}", full_path.display(), e))?;
+        let metadata = fs::metadata(&full_path)
+            .map_err(|e| format!("Failed to get metadata for {}: {}", full_path.display(), e))?;
+
+        if metadata.is_dir() {
+            // Skip directories for now
+            continue;
+        } else {
+            fs::copy(&full_path, &target_path)
+                .map_err(|e| format!("Failed to copy file {}: {}", full_path.display(), e))?;
         }
-        
-        #[cfg(windows)]
-        {
-            let metadata = fs::metadata(&full_path)
-                .map_err(|e| format!("Failed to get metadata for {}: {}", full_path.display(), e))?;
             
-            if metadata.is_dir() {
-                windows_fs::symlink_dir(&full_path, &target_path)
-                    .map_err(|e| format!("Failed to create directory symlink for {}: {}", full_path.display(), e))?;
-            } else {
-                windows_fs::symlink_file(&full_path, &target_path)
-                    .map_err(|e| format!("Failed to create file symlink for {}: {}", full_path.display(), e))?;
-            }
-        }
         
         created_links += 1;
     }

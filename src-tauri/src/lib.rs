@@ -103,7 +103,7 @@ use services::project_structure::{
     get_project_structure,
     generate_structure_text,
     is_valid_path,
-    create_symlinks_for_files,
+    create_copies_for_files,
     check_drag_drop_dir_exists,
     open_drag_drop_dir
 };
@@ -259,7 +259,7 @@ pub fn run() {
             get_project_structure,
             generate_structure_text,
             is_valid_path,
-            create_symlinks_for_files,
+            create_copies_for_files,
             check_drag_drop_dir_exists,
             open_drag_drop_dir,
             load_references,

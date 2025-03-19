@@ -314,7 +314,7 @@ const FolderStructurePanel: React.FC = () => {
       if (dragDropExists) {
         let dragDropPath = "";
         try {
-          const result = await core.invoke('create_symlinks_for_files', {
+          const result = await core.invoke('create_copies_for_files', {
             filePaths: [],
             projectBasePath: projectPath
           }) as string;
@@ -336,7 +336,7 @@ const FolderStructurePanel: React.FC = () => {
       }));
       
       // Call the Rust backend to create symlinks with proper Tauri 2.0 invoke pattern
-      const result = await core.invoke('create_symlinks_for_files', {
+      const result = await core.invoke('create_copies_for_files', {
         filePaths,
         projectBasePath: projectPath
       }) as string;
