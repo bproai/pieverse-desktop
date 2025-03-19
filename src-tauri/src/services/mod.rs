@@ -39,3 +39,6 @@ pub mod file_service;
 pub mod claude_mcp_service;
 
 pub mod mcp_client_service;
+
+// Chrome extension WebSocket service
+pub mod chrome_extension_ws;

@@ -154,6 +154,14 @@ use services::mcp_client_service::{
     get_puppeteer_mcp_tools
 };
 
+use services::chrome_extension_ws::{
+    ChromeExtWebSocketState,
+    start_chrome_ws_server,
+    stop_chrome_ws_server,
+    get_chrome_ws_status,
+    send_message_to_chrome
+};
+
 use async_stream::stream;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -195,6 +203,7 @@ pub fn run() {
         .manage(VSCodeWebSocketState::new())
         .manage(ClaudeMcpState::new())
         .manage(PuppeteerMcpState::new())
+        .manage(ChromeExtWebSocketState::new())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -291,7 +300,11 @@ pub fn run() {
             remove_puppeteer_mcp_directory,
             get_puppeteer_mcp_config,
             update_puppeteer_mcp_config,
-            send_to_puppeteer_mcp
+            send_to_puppeteer_mcp,
+            start_chrome_ws_server,
+            stop_chrome_ws_server,
+            get_chrome_ws_status,
+            send_message_to_chrome
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
