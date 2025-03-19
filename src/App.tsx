@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -22,6 +22,7 @@ import { VSCodeIntegrationPanel } from './components/VSCodeIntegration';
 import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 import { MCPServerPanel } from './components/MCPServer';
 import { MCPClientPanel } from './components/MCPClient';
+import { ContextBuilderPanel } from './components/ContextBuilder';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -116,6 +117,9 @@ function App() {
                 <Tabs.Tab value="filesystem" leftSection={<HardDrive size={16} />}>
                   File System
                 </Tabs.Tab>
+                <Tabs.Tab value="context-builder" leftSection={<Layers size={16} />}>
+                  Context Builder
+                </Tabs.Tab>
                 <Tabs.Tab value="claude-mcp" leftSection={<Server size={16} />}>
                   MCP Server
                 </Tabs.Tab>
@@ -179,6 +183,9 @@ function App() {
               </Tabs.Panel>
               <Tabs.Panel value="filesystem" className="p-4">
                 <FileSystemPanel />
+              </Tabs.Panel>
+              <Tabs.Panel value="context-builder" className="p-4">
+                <ContextBuilderPanel />
               </Tabs.Panel>
               <Tabs.Panel value="claude-mcp" className="p-4">
                 <MCPServerPanel />
