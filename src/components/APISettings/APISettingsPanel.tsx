@@ -5,6 +5,7 @@ import { Settings, Power, PowerOff, Radio } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 import WebSocketService from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
+import { notifications } from '@mantine/notifications';
 
 export function APISettingsPanel() {
   const [httpStatus, setHttpStatus] = useState('stopped');
