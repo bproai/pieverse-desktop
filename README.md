@@ -73,6 +73,16 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
 - Bulk import/export, version control, and advanced filtering.
 - Seamless integration with both cloud and local storage options.
 
+### 🧩 PieVerse Prompt Pro Chrome Extension
+- Custom Chrome extension for integrating AI assistants with ChatGPT and Claude
+- Features include:
+  - **Dual platform support:** Works specifically with ChatGPT and Claude interfaces
+  - **Real-time message capture:** Records Q&A pairs for analysis and knowledge management
+  - **WebSocket communication:** Enables bidirectional messaging between PieVerse and chat platforms
+  - **Prompt injection:** Insert custom prompts and execute them automatically
+  - **Platform detection:** Automatically identifies whether you're using ChatGPT or Claude
+- Seamlessly works with the Chrome Extension Debugging feature for monitoring and troubleshooting
+
 ### 📊 Trend Analysis & Signal Detection
 - Real-time financial data visualization with Google Trends integration.
 - Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
