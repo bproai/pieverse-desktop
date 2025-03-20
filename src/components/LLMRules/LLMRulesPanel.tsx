@@ -258,6 +258,8 @@ Always refer to the latest Tauri 2.0 documentation at https://v2.tauri.app/ when
 
 When encountering code using Tauri 1.0 patterns, explicitly point out the needed changes for Tauri 2.0 compatibility, focusing especially on properly importing and using \`core.invoke()\` instead of \`invoke()\`.
 
+When suggesting code modifications, make only necessary changes while preserving existing code structure and comments. Prefer small, incremental changes that will appear as minimal diffs rather than large code block replacements.
+
 Use variables like this:
 - Project focus: {{projectFocus}}
 - Additional considerations: {{additionalNotes}}`,
