@@ -23,7 +23,7 @@ pub async fn fetch_chrome_targets(port: u16) -> Result<Value, String> {
 }
 
 // Only include this function in debug builds
-#[tauri::command]
+#[command]
 pub fn open_chrome_in_terminal() -> Result<(), String> {
     // Use AppleScript to open Terminal and run Chrome with remote debugging enabled
     let chrome_script = r#"

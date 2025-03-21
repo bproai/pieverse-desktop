@@ -43,6 +43,9 @@ import { Copy } from 'lucide-react';
 
 // Import Tauri API for Tauri 2
 import { core } from '@tauri-apps/api';
+// Add imports for the dialog and fs plugins
+import { open, save as saveDialog } from '@tauri-apps/plugin-dialog'; 
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 
 // Interfaces
@@ -404,6 +407,7 @@ const ChromeDebuggerPanel: React.FC = () => {
   const [websocketOptions, setWebsocketOptions] = useState<WebSocketOption[]>([]);
   const [connected, setConnected] = useState<{ [key: string]: boolean | string }>({});
   const [messages, setMessages] = useState<ConsoleMessage[]>([]);
+  const [serverOutput, setServerOutput] = useState<string[]>([]);
   const [port, setPort] = useState('9222');
   const [filter, setFilter] = useState('');
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
@@ -710,35 +714,79 @@ const ChromeDebuggerPanel: React.FC = () => {
     setMessages([]);
   };
 
+  
   // Export console messages as JSON
-  const exportMessages = () => {
-    const dataStr = JSON.stringify(messages, null, 2);
-    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-    
-    const exportFileDefaultName = `chrome-logs-${new Date().toISOString()}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
-  // Filter messages based on text filter
-  const filteredMessages = messages.filter(message => {
-    const matchesFilter = !filter || 
-      message.text.toLowerCase().includes(filter.toLowerCase()) ||
-      message.level.toLowerCase().includes(filter.toLowerCase()) ||
-      message.targetTitle.toLowerCase().includes(filter.toLowerCase());
-    
-    return matchesFilter;
-  });
-
-  // Auto-scroll to bottom of console
-  useEffect(() => {
-    if (consoleEndRef.current) {
-      consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  const exportMessages = async () => {
+    try {
+      console.log("Starting export process...");
+      
+      // Generate the JSON data
+      const dataStr = JSON.stringify(messages, null, 2);
+      const timestamp = new Date().toISOString().replace(/:/g, '-');
+      const exportFileDefaultName = `chrome-logs-${timestamp}.json`;
+      
+      console.log("Opening save dialog...");
+      
+      // Show save dialog to get the save location from user
+      const savePath = await saveDialog({
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }],
+        defaultPath: exportFileDefaultName,
+        title: 'Save Chrome Console Logs'
+      });
+      
+      console.log("Save dialog result:", savePath);
+      
+      // Only proceed if user selected a path (didn't cancel)
+      if (savePath) {
+        console.log("Writing file to:", savePath);
+        
+        try {
+          // Write the file to the selected path
+          await writeTextFile(savePath, dataStr);
+          console.log("File written successfully");
+          
+          // Add a success message to the console logs
+          setMessages(prev => [...prev, {
+            id: `export-${Date.now()}`,
+            timestamp: Date.now(),
+            level: 'info',
+            text: `Logs exported successfully to ${savePath}`,
+            source: 'system',
+            targetId: '',
+            targetTitle: 'System'
+          }]);
+          
+          // Also update serverOutput if needed
+          setServerOutput(prev => [...prev, `[INFO] Logs exported successfully to ${savePath}`]);
+        } catch (writeErr) {
+          console.error("File write error:", writeErr);
+          throw writeErr; // Re-throw to be caught by the outer catch
+        }
+      } else {
+        console.log("User cancelled the save dialog");
+      }
+    } catch (err) {
+      console.error('Failed to export logs:', err);
+      setError(`Failed to export logs: ${err instanceof Error ? err.message : String(err)}`);
+      
+      // Add error to console logs
+      setMessages(prev => [...prev, {
+        id: `export-error-${Date.now()}`,
+        timestamp: Date.now(),
+        level: 'error',
+        text: `Failed to export logs: ${err instanceof Error ? err.message : String(err)}`,
+        source: 'system',
+        targetId: '',
+        targetTitle: 'System'
+      }]);
+      
+      // Also update serverOutput
+      setServerOutput(prev => [...prev, `[ERROR] Failed to export logs: ${err instanceof Error ? err.message : String(err)}`]);
     }
-  }, [filteredMessages]);
+  };
 
   // Connect to the bridge when component mounts
   useEffect(() => {
@@ -782,6 +830,23 @@ const ChromeDebuggerPanel: React.FC = () => {
   };
 
   const targetSummary = getTargetSummary();
+
+  // Filter messages based on text filter
+  const filteredMessages = messages.filter(message => {
+    const matchesFilter = !filter || 
+      message.text.toLowerCase().includes(filter.toLowerCase()) ||
+      message.level.toLowerCase().includes(filter.toLowerCase()) ||
+      message.targetTitle.toLowerCase().includes(filter.toLowerCase());
+    
+    return matchesFilter;
+  });
+  
+  // Auto-scroll to bottom of console
+  useEffect(() => {
+    if (consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [filteredMessages]);
 
   return (
     <div className="chrome-debugger-panel">
