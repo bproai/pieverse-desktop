@@ -611,12 +611,12 @@ export function APISettingsPanel() {
         <Card className="w-full" shadow="sm" padding="lg">
           <Stack>
             <Group position="apart">
-              <Text size="lg" weight={500}>New ChatGPT Chat</Text>
-              <Badge color="blue" variant="filled">ChatGPT Only</Badge>
+              <Text size="lg" weight={500}>New AI Chat</Text>
+              <Badge color="violet" variant="filled">ChatGPT & Claude</Badge>
             </Group>
             
             <Text size="xs" color="dimmed">
-              This will trigger the "New Chat" button on ChatGPT, creating a fresh conversation.
+              Creates a new conversation by triggering the New Chat functionality in ChatGPT or Claude.
             </Text>
             
             <Group grow>
@@ -629,10 +629,26 @@ export function APISettingsPanel() {
                   setNewChatStatus({ loading: false, result: null });
                 }}
                 data={[
-                  { value: 'broadcast', label: 'All ChatGPT Tabs' },
-                  { value: 'client', label: 'Specific ChatGPT Tab' }
+                  { value: 'broadcast', label: 'All AI Assistants' },
+                  { value: 'platform', label: 'Specific Platform' },
+                  { value: 'client', label: 'Specific Client' }
                 ]}
               />
+              
+              {targetType === 'platform' && (
+                <Select
+                  label="Select Platform"
+                  value={targetId}
+                  onChange={(val) => {
+                    setTargetId(val);
+                    // Reset result when changing selection
+                    setNewChatStatus({ loading: false, result: null });
+                  }}
+                  data={getPlatformOptions()}
+                  placeholder="Select platform"
+                  disabled={getPlatformOptions().length === 0}
+                />
+              )}
               
               {targetType === 'client' && (
                 <Group position="apart" mt="md">
@@ -644,12 +660,9 @@ export function APISettingsPanel() {
                       // Reset result when changing client
                       setNewChatStatus({ loading: false, result: null });
                     }}
-                    data={getClientOptions().filter(option => 
-                      // Only show ChatGPT clients
-                      option.label.toLowerCase().includes('chatgpt')
-                    )}
-                    placeholder="Select ChatGPT client"
-                    disabled={clients.filter(c => c.platform === 'chatgpt').length === 0}
+                    data={getClientOptions()}
+                    placeholder="Select client"
+                    disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
                   />
                   <ActionIcon onClick={refreshClients} mt={30}>
@@ -659,16 +672,75 @@ export function APISettingsPanel() {
               )}
             </Group>
             
+            {/* Enhanced result display section */}
             {newChatStatus.result && (
-              <Group mt={4}>
-                <Badge 
-                  color={newChatStatus.result.success ? 'green' : 'red'}
-                  variant="filled"
-                >
-                  {newChatStatus.result.success ? 'Success' : 'Failed'}
-                </Badge>
-                <Text size="xs">{newChatStatus.result.message}</Text>
-              </Group>
+              <Card withBorder p="xs" radius="md" bg={newChatStatus.result.success ? 'rgba(0, 200, 0, 0.05)' : 'rgba(255, 0, 0, 0.05)'}>
+                <Stack spacing="xs">
+                  <Group position="apart">
+                    <Group>
+                      <Badge 
+                        color={newChatStatus.result.success ? 'green' : 'red'}
+                        variant="filled"
+                        size="lg"
+                      >
+                        {newChatStatus.result.success ? 'Success' : 'Failed'}
+                      </Badge>
+                      {newChatStatus.result.platform && (
+                        <Badge color="gray" variant="light">
+                          {newChatStatus.result.platform === 'chatgpt' ? 'ChatGPT' : 
+                          newChatStatus.result.platform === 'claude' ? 'Claude' : 
+                          newChatStatus.result.platform}
+                        </Badge>
+                      )}
+                    </Group>
+                    {newChatStatus.result.tabId && (
+                      <Text size="xs" color="dimmed">Tab ID: {newChatStatus.result.tabId}</Text>
+                    )}
+                  </Group>
+                  
+                  <Text size="sm" weight={500}>
+                    {newChatStatus.result.message}
+                  </Text>
+                  
+                  {/* Platform-specific details */}
+                  {newChatStatus.result.platform === 'chatgpt' && (
+                    <>
+                      {/* ChatGPT specific details */}
+                      {newChatStatus.result.initialArticleCount !== undefined && (
+                        <Text size="xs" color="dimmed">
+                          Article count: {newChatStatus.result.initialArticleCount} → {newChatStatus.result.finalArticleCount || 0}
+                        </Text>
+                      )}
+                      {newChatStatus.result.attempts && (
+                        <Text size="xs" color="dimmed">
+                          Attempts: {newChatStatus.result.attempts}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                  
+                  {newChatStatus.result.platform === 'claude' && (
+                    <>
+                      {/* Claude specific details */}
+                      {newChatStatus.result.initialMessageCount !== undefined && (
+                        <Text size="xs" color="dimmed">
+                          Message count: {newChatStatus.result.initialMessageCount} → {newChatStatus.result.finalMessageCount || 0}
+                        </Text>
+                      )}
+                      {newChatStatus.result.method && (
+                        <Text size="xs" color="dimmed">
+                          Method: {newChatStatus.result.method.replace(/-/g, ' ')}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Timestamp */}
+                  <Text size="xs" color="dimmed" align="right">
+                    {new Date().toLocaleTimeString()}
+                  </Text>
+                </Stack>
+              </Card>
             )}
             
             <Button
@@ -704,8 +776,9 @@ export function APISettingsPanel() {
               }}
               disabled={
                 wsStatus !== 'running' || 
+                (targetType === 'platform' && !targetId) ||
                 (targetType === 'client' && !targetId) ||
-                clients.filter(c => c.platform === 'chatgpt').length === 0 ||
+                clients.length === 0 ||
                 newChatStatus.loading
               }
             >
@@ -714,6 +787,7 @@ export function APISettingsPanel() {
           </Stack>
         </Card>
       )}
+
     </Stack>
   );
 }
