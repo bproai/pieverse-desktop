@@ -75,56 +75,59 @@ pub async fn sqlite_create_prompt(
     prompt: Prompt,
     state: State<'_, SqliteService>
 ) -> Result<(), String> {
-    let query = format!(
-        "INSERT INTO prompts (title, description, category, display_order, is_active) 
-         VALUES ('{}', {}, '{}', {}, {})",
-        prompt.title,
-        prompt.description.map_or("NULL".to_string(), |d| format!("'{}'", d)),
-        prompt.category,
-        prompt.display_order,
-        if prompt.is_active { 1 } else { 0 }
-    );
-
-    state.execute_query(&query)
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+    let query = "INSERT INTO prompts (title, description, category, display_order, is_active) 
+                 VALUES (?, ?, ?, ?, ?)";
+    
+    state.execute_parameterized(
+        query,
+        [
+            prompt.title,
+            prompt.description.unwrap_or_default(),
+            prompt.category,
+            prompt.display_order.to_string(),
+            (if prompt.is_active { 1 } else { 0 }).to_string()
+        ],
+    )
+    .map_err(|e| e.to_string())
 }
 
+// Replace sqlite_update_prompt with:
 #[tauri::command]
 pub async fn sqlite_update_prompt(
     id: i64,
     prompt: Prompt,
     state: State<'_, SqliteService>
 ) -> Result<(), String> {
-    let query = format!(
-        "UPDATE prompts SET 
-         title = '{}',
-         description = {},
-         category = '{}',
-         display_order = {},
-         is_active = {},
-         updated_at = CURRENT_TIMESTAMP
-         WHERE id = {}",
-        prompt.title,
-        prompt.description.map_or("NULL".to_string(), |d| format!("'{}'", d)),
-        prompt.category,
-        prompt.display_order,
-        if prompt.is_active { 1 } else { 0 },
-        id
-    );
-
-    state.execute_query(&query)
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+    let query = "UPDATE prompts SET 
+                title = ?,
+                description = ?,
+                category = ?,
+                display_order = ?,
+                is_active = ?,
+                updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?";
+    
+    state.execute_parameterized(
+        query,
+        [
+            prompt.title,
+            prompt.description.unwrap_or_default(),
+            prompt.category,
+            prompt.display_order.to_string(),
+            (if prompt.is_active { 1 } else { 0 }).to_string(),
+            id.to_string()
+        ],
+    )
+    .map_err(|e| e.to_string())
 }
 
+// Replace sqlite_delete_prompt with:
 #[tauri::command]
 pub async fn sqlite_delete_prompt(
     id: i64,
     state: State<'_, SqliteService>
 ) -> Result<(), String> {
-    let query = format!("DELETE FROM prompts WHERE id = {}", id);
-    state.execute_query(&query)
-        .map(|_| ())
+    let query = "DELETE FROM prompts WHERE id = ?";
+    state.execute_parameterized(query, [id.to_string()])
         .map_err(|e| e.to_string())
 }
