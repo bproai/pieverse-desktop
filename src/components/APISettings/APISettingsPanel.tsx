@@ -29,8 +29,37 @@ export function APISettingsPanel() {
   const [targetId, setTargetId] = useState<string | null>(null);
 
 
+  const [newChatStatus, setNewChatStatus] = useState({ loading: false, result: null });
+
   // Get WebSocket service instance
   const wsService = WebSocketService.getInstance();
+
+
+  useEffect(() => {
+    const setupNewChatListener = async () => {
+      const unlisten = await listen('chrome-extension-message', (event) => {
+        const payload = event.payload;
+        if (payload.type === 'newChatResult') {
+          setNewChatStatus(prev => ({ ...prev, loading: false, result: payload }));
+          
+          // Show notification based on result
+          notifications.show({
+            title: payload.success ? 'Success' : 'Action Failed',
+            message: payload.message,
+            color: payload.success ? 'green' : 'red'
+          });
+        }
+      });
+      
+      return unlisten;
+    };
+    
+    const unlistenPromise = setupNewChatListener();
+    
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, []);
 
   useEffect(() => {
     const clientRefreshInterval = setInterval(() => {
@@ -573,6 +602,114 @@ export function APISettingsPanel() {
               loading={sendingTest}
             >
               Send Targeted Message
+            </Button>
+          </Stack>
+        </Card>
+      )}
+
+      {wsStatus === 'running' && (
+        <Card className="w-full" shadow="sm" padding="lg">
+          <Stack>
+            <Group position="apart">
+              <Text size="lg" weight={500}>New ChatGPT Chat</Text>
+              <Badge color="blue" variant="filled">ChatGPT Only</Badge>
+            </Group>
+            
+            <Text size="xs" color="dimmed">
+              This will trigger the "New Chat" button on ChatGPT, creating a fresh conversation.
+            </Text>
+            
+            <Group grow>
+              <Select
+                label="Target Type"
+                value={targetType}
+                onChange={(value) => {
+                  setTargetType(value as 'broadcast' | 'platform' | 'client');
+                  // Reset result when changing targeting
+                  setNewChatStatus({ loading: false, result: null });
+                }}
+                data={[
+                  { value: 'broadcast', label: 'All ChatGPT Tabs' },
+                  { value: 'client', label: 'Specific ChatGPT Tab' }
+                ]}
+              />
+              
+              {targetType === 'client' && (
+                <Group position="apart" mt="md">
+                  <Select
+                    label="Select Client"
+                    value={targetId}
+                    onChange={(val) => {
+                      setTargetId(val);
+                      // Reset result when changing client
+                      setNewChatStatus({ loading: false, result: null });
+                    }}
+                    data={getClientOptions().filter(option => 
+                      // Only show ChatGPT clients
+                      option.label.toLowerCase().includes('chatgpt')
+                    )}
+                    placeholder="Select ChatGPT client"
+                    disabled={clients.filter(c => c.platform === 'chatgpt').length === 0}
+                    style={{ flexGrow: 1 }}
+                  />
+                  <ActionIcon onClick={refreshClients} mt={30}>
+                    <RefreshCw size={16} />
+                  </ActionIcon>
+                </Group>
+              )}
+            </Group>
+            
+            {newChatStatus.result && (
+              <Group mt={4}>
+                <Badge 
+                  color={newChatStatus.result.success ? 'green' : 'red'}
+                  variant="filled"
+                >
+                  {newChatStatus.result.success ? 'Success' : 'Failed'}
+                </Badge>
+                <Text size="xs">{newChatStatus.result.message}</Text>
+              </Group>
+            )}
+            
+            <Button
+              color="teal"
+              loading={newChatStatus.loading}
+              onClick={() => {
+                // Reset previous results
+                setNewChatStatus({ loading: true, result: null });
+                
+                // Send the newChat message
+                wsService.sendTargetedMessage(
+                  { type: 'newChat' },
+                  targetType, 
+                  targetId || undefined
+                ).then(() => {
+                  // Message sent successfully - result will come back via websocket
+                }).catch(error => {
+                  // Error sending message
+                  setNewChatStatus({ 
+                    loading: false, 
+                    result: { 
+                      success: false, 
+                      message: `Failed to send command: ${error}` 
+                    } 
+                  });
+                  
+                  notifications.show({
+                    title: 'Error',
+                    message: `Failed to send new chat command: ${error}`,
+                    color: 'red'
+                  });
+                });
+              }}
+              disabled={
+                wsStatus !== 'running' || 
+                (targetType === 'client' && !targetId) ||
+                clients.filter(c => c.platform === 'chatgpt').length === 0 ||
+                newChatStatus.loading
+              }
+            >
+              Start New Chat
             </Button>
           </Stack>
         </Card>
