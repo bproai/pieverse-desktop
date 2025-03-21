@@ -10,11 +10,8 @@ import {
   Alert, 
   Badge, 
   ScrollArea,
-  Table,
-  Tabs,
   ActionIcon,
   Tooltip,
-  Switch,
   MultiSelect,
   Code,
   Collapse,
@@ -22,30 +19,28 @@ import {
 } from '@mantine/core';
 
 // Import specific icons individually
-import { AlertCircle } from 'lucide-react';
-import { RefreshCw } from 'lucide-react';
-import { Link } from 'lucide-react';
-import { TerminalSquare } from 'lucide-react';
-import { Play } from 'lucide-react';
-import { X } from 'lucide-react';
-import { Download } from 'lucide-react';
-import { Trash } from 'lucide-react';
-import { ExternalLink } from 'lucide-react';
-import { Info } from 'lucide-react';
-import { Terminal } from 'lucide-react';
-import { Check } from 'lucide-react';
-import { Globe } from 'lucide-react';
-import { FileCode } from 'lucide-react';
-import { ServerCog } from 'lucide-react';
-import { Code2 } from 'lucide-react';
-import { LayoutTemplate } from 'lucide-react';
-import { Copy } from 'lucide-react';
+import { 
+  AlertCircle, 
+  RefreshCw, 
+  TerminalSquare, 
+  Download, 
+  Trash, 
+  Info, 
+  Terminal, 
+  Check, 
+  Globe, 
+  FileCode, 
+  ServerCog, 
+  Code2, 
+  LayoutTemplate, 
+  Copy 
+} from 'lucide-react';
 
 // Import Tauri API for Tauri 2
 import { core } from '@tauri-apps/api';
 // Add imports for the dialog and fs plugins
-import { open, save as saveDialog } from '@tauri-apps/plugin-dialog'; 
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { save as saveDialog } from '@tauri-apps/plugin-dialog'; 
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 
 // Interfaces
@@ -840,7 +835,7 @@ const ChromeDebuggerPanel: React.FC = () => {
     
     return matchesFilter;
   });
-  
+
   // Auto-scroll to bottom of console
   useEffect(() => {
     if (consoleEndRef.current) {
