@@ -69,3 +69,4 @@ yarn-error.log*
 src-tauri/src/python_scripts/db.sqlite
 src-tauri/.cargo/config.toml
 screenshot.png
+Layoff Radar.html
