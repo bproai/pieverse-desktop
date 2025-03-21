@@ -15,6 +15,9 @@ export interface ClientInfo {
   platform: string;
   connected_at: number;
   last_active: number;
+  tab_title?: string;   // Add tab title
+  tab_url?: string;     // Add tab URL
+  favicon?: string;     // Add favicon URL (optional)
 }
 
 class WebSocketService {

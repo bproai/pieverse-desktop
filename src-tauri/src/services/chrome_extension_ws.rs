@@ -31,6 +31,9 @@ pub struct ClientInfo {
     pub platform: String,
     pub connected_at: i64,
     pub last_active: i64,
+    pub tab_title: Option<String>,  // Add tab title
+    pub tab_url: Option<String>,    // Add tab URL
+    pub favicon: Option<String>     // Add favicon URL (optional)
 }
 
 pub struct ChromeExtWebSocketState {
@@ -336,6 +339,9 @@ async fn handle_chrome_connection(
                 platform: "unknown".to_string(),
                 connected_at: chrono::Utc::now().timestamp(),
                 last_active: chrono::Utc::now().timestamp(),
+                tab_title: None,
+                tab_url: None,
+                favicon: None,
             };
             
             // Add to connected clients
@@ -431,7 +437,10 @@ async fn process_chrome_messages(
                                                 platform: platform.to_string(),
                                                 connected_at: chrono::Utc::now().timestamp(),
                                                 last_active: chrono::Utc::now().timestamp(),
-                                            };
+                                                tab_title: None,
+                                                tab_url: None,
+                                                favicon: None,
+                                            };                                            
                                             
                                             if let Ok(mut client_map) = clients.lock() {
                                                 client_map.insert(tab_client_id, tab_client_info);
@@ -453,6 +462,39 @@ async fn process_chrome_messages(
                                         // Emit the notification to the frontend
                                         let _ = app.emit("chrome-extension-notification", json);
                                     },
+                                    "tabInfo" => {
+                                        if let Some(tab_id) = json.get("tabId").and_then(|t| t.as_str()) {
+                                            let tab_title = json.get("title").and_then(|t| t.as_str()).map(String::from);
+                                            let tab_url = json.get("url").and_then(|u| u.as_str()).map(String::from);
+                                            let favicon = json.get("favicon").and_then(|f| f.as_str()).map(String::from);
+                                            
+                                            println!("Received tab info for tab {}: title={:?}, url={:?}", tab_id, tab_title, tab_url);
+                                            
+                                            // Important: Look for client with "tab_" prefix
+                                            let client_id = format!("tab_{}", tab_id);
+                                            
+                                            if let Ok(mut client_map) = clients.lock() {
+                                                if let Some(client) = client_map.get_mut(&client_id) {
+                                                    client.tab_title = tab_title;
+                                                    client.tab_url = tab_url;
+                                                    client.favicon = favicon;
+                                                    client.last_active = chrono::Utc::now().timestamp();
+                                                    println!("Updated client info for tab {}", tab_id);
+                                                    
+                                                    // After updating, release the lock
+                                                    drop(client_map);
+                                                    
+                                                    // Emit clients updated event
+                                                    emit_clients_updated_event(&app, &clients);
+                                                } else {
+                                                    println!("No client found with ID 'tab_{}', available clients: {:?}", 
+                                                            tab_id, client_map.keys().collect::<Vec<_>>());
+                                                }
+                                            }
+                                        } else {
+                                            println!("Missing tabId in tabInfo message");
+                                        }
+                                    }
                                     _ => {
                                         // Emit generic message for unknown types
                                         let _ = app.emit("chrome-extension-message", json);

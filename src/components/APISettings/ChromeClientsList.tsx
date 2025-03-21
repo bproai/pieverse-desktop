@@ -1,7 +1,7 @@
 // src/components/APISettings/ChromeClientsList.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Stack, Badge, ActionIcon, Select } from '@mantine/core';
-import { RefreshCw } from 'lucide-react';
+import { Card, Text, Group, Stack, Badge, ActionIcon, Tooltip } from '@mantine/core';
+import { RefreshCw, Globe, ExternalLink } from 'lucide-react';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 
@@ -56,6 +56,16 @@ export function ChromeClientsList() {
   const formatTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString();
   };
+
+  // Format URL for display (hostname only)
+  const formatUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch (e) {
+      return url;
+    }
+  };
   
   return (
     <Card className="w-full" shadow="sm" padding="lg">
@@ -79,11 +89,48 @@ export function ChromeClientsList() {
             clients.map(client => (
               <Card key={client.id} withBorder p="sm">
                 <Group position="apart">
-                  <Stack spacing={0}>
-                    <Text weight={500}>{client.platform || 'Unknown Platform'}</Text>
-                    <Text size="xs" color="dimmed">{client.addr}</Text>
+                  <Stack spacing={4} style={{ maxWidth: '70%' }}>
+                    {/* Display tab title if available, fallback to ID and platform */}
+                    <Text weight={500} style={{ 
+                      wordBreak: 'break-word',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {client.tab_title || `${client.platform || 'Unknown'}`}
+                    </Text>
+                    
+                    {/* Display URL if available */}
+                    {client.tab_url && (
+                      <Group spacing={4} noWrap>
+                        <Globe size={12} />
+                        <Tooltip label={client.tab_url} position="top">
+                          <Text size="xs" color="dimmed" style={{ 
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {formatUrl(client.tab_url)}
+                          </Text>
+                        </Tooltip>
+                        <ActionIcon 
+                          size="xs" 
+                          onClick={() => window.open(client.tab_url, '_blank')}
+                        >
+                          <ExternalLink size={12} />
+                        </ActionIcon>
+                      </Group>
+                    )}
+                    
+                    {/* Always show platform and connection info */}
+                    <Group spacing={4}>
+                      <Badge size="xs" variant="outline">
+                        {client.platform || 'Unknown'}
+                      </Badge>
+                      <Text size="xs" color="dimmed">{client.addr}</Text>
+                    </Group>
                   </Stack>
-                  <Stack spacing={0} align="flex-end">
+                  
+                  <Stack spacing={4} align="flex-end">
                     <Text size="xs">Connected: {formatTime(client.connected_at)}</Text>
                     <Text size="xs">Last active: {formatTime(client.last_active)}</Text>
                   </Stack>

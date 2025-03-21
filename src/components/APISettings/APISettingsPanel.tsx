@@ -7,6 +7,9 @@ import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 import { notifications } from '@mantine/notifications';
 import { ChromeClientsList } from './ChromeClientsList';
+import { ClientSelectItem } from './ClientSelectItem';
+import { forwardRef } from 'react';
+
 
 export function APISettingsPanel() {
   const [httpStatus, setHttpStatus] = useState('stopped');
@@ -141,6 +144,23 @@ export function APISettingsPanel() {
       clearInterval(intervalId);
     };
   }, []);
+
+  const SelectItem = forwardRef(
+    ({ label, description, active, platform, ...others }, ref) => (
+      <div ref={ref} {...others}>
+        <div>
+          <span>{label}</span>
+          {active && <span style={{ marginLeft: 5, color: 'green' }}>●</span>}
+        </div>
+        {(platform || description) && (
+          <div style={{ fontSize: 12, opacity: 0.7 }}>
+            {platform && <span style={{ marginRight: 5 }}>{platform}</span>}
+            {description && <span>{description}</span>}
+          </div>
+        )}
+      </div>
+    )
+  );
 
   const sendTestPrompt = async () => {
     if (!testPrompt) {
@@ -361,14 +381,14 @@ export function APISettingsPanel() {
   
   const getClientOptions = () => {
     return clients.map(c => {
-      // Calculate how long since last active
-      const lastActiveSeconds = Math.floor((Date.now() - c.last_active * 1000) / 1000);
-      const isRecent = lastActiveSeconds < 30; // Consider active if message in last 30 seconds
+      // Format all info into the label string
+      const title = c.tab_title || `${c.platform || 'Unknown'}`;
+      const url = c.tab_url ? ` (${new URL(c.tab_url).hostname})` : '';
+      const active = Date.now() - c.last_active * 1000 < 30000 ? ' 🟢' : '';
       
       return {
         value: c.id,
-        label: `${c.platform || 'Unknown'} (${c.addr})${isRecent ? ' 🟢' : ' ⚪'}`, 
-        // Green dot for recently active clients
+        label: `${title}${url}${active}`,
       };
     });
   };
@@ -655,11 +675,7 @@ export function APISettingsPanel() {
                   <Select
                     label="Select Client"
                     value={targetId}
-                    onChange={(val) => {
-                      setTargetId(val);
-                      // Reset result when changing client
-                      setNewChatStatus({ loading: false, result: null });
-                    }}
+                    onChange={setTargetId}
                     data={getClientOptions()}
                     placeholder="Select client"
                     disabled={clients.length === 0}
