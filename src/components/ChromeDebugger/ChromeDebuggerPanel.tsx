@@ -52,7 +52,7 @@ interface ChromeTarget {
   type: string;
   url: string;
   webSocketDebuggerUrl: string;
-  faviconUrl?: string;
+  favicon?: string;
   parentId?: string;
 }
 
@@ -73,7 +73,7 @@ interface WebSocketOption {
   type: string;             // Type of target
   webSocketDebuggerUrl: string;  // Full WebSocket URL
   id: string;               // Target ID
-  faviconUrl?: string;      // Favicon URL when available
+  favicon?: string;      // Favicon URL when available
 }
 
 // Custom component for rendering the dropdown items
@@ -82,7 +82,7 @@ const ChromeTargetItem = ({
   url, 
   type, 
   webSocketDebuggerUrl,
-  faviconUrl
+  favicon
 }) => {
   // State for copy feedback
   const [copyStatus, setCopyStatus] = useState(false);
@@ -202,9 +202,9 @@ const ChromeTargetItem = ({
         <div style={{ paddingRight: '25px' /* Make room for the copy button */ }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
             {/* Left icon */}
-            {faviconUrl ? (
+            {favicon ? (
               <img 
-                src={faviconUrl} 
+                src={favicon} 
                 alt="" 
                 style={{ width: 16, height: 16, marginRight: 8, flexShrink: 0 }} 
               />
@@ -473,7 +473,7 @@ const ChromeDebuggerPanel: React.FC = () => {
           type: target.type || 'unknown',      // Type (page, iframe, worker, etc.)
           webSocketDebuggerUrl: target.webSocketDebuggerUrl, // Full WebSocket URL
           id: target.id || '',                 // Target ID
-          faviconUrl: target.faviconUrl        // Favicon if available
+          favicon: target.favicon        // Favicon if available
         };
       });
   };
@@ -952,7 +952,7 @@ const ChromeDebuggerPanel: React.FC = () => {
                   url: option.url,
                   type: option.type,
                   webSocketDebuggerUrl: option.webSocketDebuggerUrl,  // Make sure to pass this property
-                  faviconUrl: option.faviconUrl  // And this one
+                  favicon: option.favicon  // And this one
                 }))}
                 value={selectedWebsockets}
                 onChange={(values) => setSelectedWebsockets(values)}
@@ -963,14 +963,14 @@ const ChromeDebuggerPanel: React.FC = () => {
                 withScrollArea={true}
                 renderOption={({ option }) => {
                   // Make sure all necessary properties are passed to ChromeTargetItem
-                  const { label, url, type, webSocketDebuggerUrl, faviconUrl } = option;
+                  const { label, url, type, webSocketDebuggerUrl, favicon } = option;
                   return (
                     <ChromeTargetItem
                       label={label}
                       url={url}
                       type={type}
                       webSocketDebuggerUrl={webSocketDebuggerUrl}
-                      faviconUrl={faviconUrl}
+                      favicon={favicon}
                     />
                   );
                 }}

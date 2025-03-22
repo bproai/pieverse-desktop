@@ -13617,9 +13617,9 @@ interface HTMLTableCellElement extends HTMLElement {
      * Sets or retrieves whether the browser automatically performs wordwrap.
      * @deprecated
      *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableCellElement/noWrap)
+     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableCellElement/nowrap)
      */
-    noWrap: boolean;
+    nowrap: boolean;
     /**
      * Sets or retrieves how many rows in a table the cell should span.
      *

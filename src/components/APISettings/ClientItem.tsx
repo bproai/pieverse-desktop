@@ -1,5 +1,4 @@
 // src/components/APISettings/ClientItem.tsx
-import React from 'react';
 import { Card, Text, Group, Stack, Badge, ActionIcon, Tooltip } from '@mantine/core';
 import { Globe, ExternalLink } from 'lucide-react';
 import { ClientInfo } from '../../services/WebSocketService';
@@ -42,7 +41,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
     >
       <Group position="apart">
         <Stack spacing={4} style={{ maxWidth: '70%' }}>
-          <Group spacing={4} noWrap>
+          <Group spacing={4} nowrap='true'>
             {isRecent && (
               <div 
                 style={{ 
@@ -64,8 +63,22 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
           
           {/* Display URL if available */}
           {client.tab_url && (
-            <Group spacing={4} noWrap>
-              <Globe size={12} />
+            <Group spacing={4} nnowrap='true'>
+              {client.favicon ? (
+      <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+        <img 
+          src={client.favicon}
+          alt="Site favicon"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
+    ) : (
+      <Globe size={12} />
+    )}  
               <Tooltip label={client.tab_url} position="top">
                 <Text size="xs" color="dimmed" style={{ 
                   overflow: 'hidden',

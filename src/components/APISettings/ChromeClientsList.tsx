@@ -1,9 +1,11 @@
 // src/components/APISettings/ChromeClientsList.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Text, Group, Stack, Badge, ActionIcon, Tooltip } from '@mantine/core';
 import { RefreshCw, Globe, ExternalLink } from 'lucide-react';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
+import { Image } from '@mantine/core'; // Make sure to import the correct Image component
+
 
 export function ChromeClientsList() {
   const [clients, setClients] = useState<ClientInfo[]>([]);
@@ -101,8 +103,20 @@ export function ChromeClientsList() {
                     
                     {/* Display URL if available */}
                     {client.tab_url && (
-                      <Group spacing={4} noWrap>
-                        <Globe size={12} />
+                      <Group spacing={4} nowrap='true'>
+                        <Image
+                        src={client.favicon}
+                        alt="Site favicon"
+                        withplaceholder="true"
+                        placeholder={<Globe size={12} />}
+                        style={{ 
+                            width: '16px', 
+                            height: '16px', 
+                            objectFit: 'contain',
+                            flexShrink: 0
+                        }}
+                        />
+                        
                         <Tooltip label={client.tab_url} position="top">
                           <Text size="xs" color="dimmed" style={{ 
                             overflow: 'hidden',

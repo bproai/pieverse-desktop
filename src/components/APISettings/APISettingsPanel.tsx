@@ -1,13 +1,12 @@
 // src/components/APISettings/APISettingsPanel.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Text, Group, TextInput, Button, Badge, Stack, Select, ActionIcon } from '@mantine/core';
-import { Settings, Power, PowerOff, Radio, RefreshCw } from 'lucide-react';
+import { Settings, Power, PowerOff, Radio, RefreshCw, Globe } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 import { notifications } from '@mantine/notifications';
 import { ChromeClientsList } from './ChromeClientsList';
-import { ClientSelectItem } from './ClientSelectItem';
 import { forwardRef } from 'react';
 
 
@@ -161,6 +160,32 @@ export function APISettingsPanel() {
       </div>
     )
   );
+  const PlatformSelectItem = forwardRef(
+    ({ label, favicon, ...others }, ref) => (
+      <div ref={ref} {...others}>
+        <Group spacing={4} nowrap='true'>
+          {favicon ? (
+            <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+              <img 
+                src={favicon}
+                alt="Platform favicon"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
+          ) : (
+            <Globe size={12} />
+          )}
+          <span>{label}</span>
+        </Group>
+      </div>
+    )
+  );
+  
+  PlatformSelectItem.displayName = 'PlatformSelectItem';
 
   const sendTestPrompt = async () => {
     if (!testPrompt) {
@@ -360,35 +385,51 @@ export function APISettingsPanel() {
 
   // Helper functions for targeting options
   const getPlatformOptions = () => {
-    // Get unique platforms from clients
-    const platforms = [...new Set(clients.map(c => c.platform).filter(p => p))];
+    // Get unique platforms from clients with their favicons
+    const platformData = {};
+    
+    clients.forEach(c => {
+      if (c.platform) {
+        // If we haven't seen this platform yet, or if this client has a favicon and the current one doesn't
+        if (!platformData[c.platform] || (!platformData[c.platform].favicon && c.favicon)) {
+          platformData[c.platform] = {
+            platform: c.platform,
+            favicon: c.favicon
+          };
+        }
+      }
+    });
     
     // If no platforms detected yet, return default options
-    if (platforms.length === 0) {
+    if (Object.keys(platformData).length === 0) {
       return [
-        { value: 'chatgpt', label: 'ChatGPT' }, 
-        { value: 'claude', label: 'Claude' }
+        { value: 'chatgpt', label: 'ChatGPT', favicon: null }, 
+        { value: 'claude', label: 'Claude', favicon: null }
       ];
     }
     
-    return platforms.map(p => ({ 
-      value: p, 
+    return Object.values(platformData).map(p => ({ 
+      value: p.platform, 
       // Make display names nicer
-      label: p === 'chatgpt' ? 'ChatGPT' : 
-            p === 'claude' ? 'Claude' : p
+      label: p.platform === 'chatgpt' ? 'ChatGPT' : 
+             p.platform === 'claude' ? 'Claude' : p.platform,
+      favicon: p.favicon
     }));
   };
   
   const getClientOptions = () => {
     return clients.map(c => {
-      // Format all info into the label string
+      // Format text for the label
       const title = c.tab_title || `${c.platform || 'Unknown'}`;
       const url = c.tab_url ? ` (${new URL(c.tab_url).hostname})` : '';
-      const active = Date.now() - c.last_active * 1000 < 30000 ? ' 🟢' : '';
+      const active = Date.now() - c.last_active * 1000 < 30000;
       
       return {
         value: c.id,
-        label: `${title}${url}${active}`,
+        label: `${title}${url}`,  // Plain text label
+        description: c.platform,
+        active: active,
+        favicon: c.favicon
       };
     });
   };
@@ -591,6 +632,26 @@ export function APISettingsPanel() {
                   data={getPlatformOptions()}
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
+                  renderOption={({ option }) => (
+                    <Group spacing={4} nowrap='true'>
+                      {option.favicon ? (
+                        <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+                          <img 
+                            src={option.favicon}
+                            alt="Platform favicon"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain'
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <Globe size={12} />
+                      )}
+                      <span>{option.label}</span>
+                    </Group>
+                  )}
                 />
               )}
               
@@ -604,6 +665,38 @@ export function APISettingsPanel() {
                     placeholder="Select client"
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
+                    renderOption={({ option }) => (
+                      <Group nowrap='true' spacing="xs">
+                        {option.favicon ? (
+                          <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+                            <img 
+                              src={option.favicon}
+                              alt="Site favicon"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <Globe size={12} />
+                        )}
+                        
+                        {option.active && (
+                          <div 
+                            style={{ 
+                              width: 8, 
+                              height: 8, 
+                              borderRadius: '50%', 
+                              backgroundColor: '#2ECC40'
+                            }} 
+                          />
+                        )}
+                        
+                        <Text>{option.label}</Text>
+                      </Group>
+                    )}
                   />
                   <ActionIcon onClick={refreshClients} mt={30}>
                     <RefreshCw size={16} />
@@ -659,14 +752,30 @@ export function APISettingsPanel() {
                 <Select
                   label="Select Platform"
                   value={targetId}
-                  onChange={(val) => {
-                    setTargetId(val);
-                    // Reset result when changing selection
-                    setNewChatStatus({ loading: false, result: null });
-                  }}
+                  onChange={setTargetId}
                   data={getPlatformOptions()}
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
+                  renderOption={({ option }) => (
+                    <Group spacing={4} nowrap='true'>
+                      {option.favicon ? (
+                        <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+                          <img 
+                            src={option.favicon}
+                            alt="Platform favicon"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain'
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <Globe size={12} />
+                      )}
+                      <span>{option.label}</span>
+                    </Group>
+                  )}
                 />
               )}
               
@@ -680,6 +789,38 @@ export function APISettingsPanel() {
                     placeholder="Select client"
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
+                    renderOption={({ option }) => (
+                      <Group nowrap='true' spacing="xs">
+                        {option.favicon ? (
+                          <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
+                            <img 
+                              src={option.favicon}
+                              alt="Site favicon"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <Globe size={12} />
+                        )}
+                        
+                        {option.active && (
+                          <div 
+                            style={{ 
+                              width: 8, 
+                              height: 8, 
+                              borderRadius: '50%', 
+                              backgroundColor: '#2ECC40'
+                            }} 
+                          />
+                        )}
+                        
+                        <Text>{option.label}</Text>
+                      </Group>
+                    )}
                   />
                   <ActionIcon onClick={refreshClients} mt={30}>
                     <RefreshCw size={16} />
