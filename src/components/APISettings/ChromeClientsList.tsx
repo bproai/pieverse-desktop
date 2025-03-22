@@ -5,7 +5,8 @@ import { RefreshCw, Globe, ExternalLink } from 'lucide-react';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 import { Image } from '@mantine/core'; // Make sure to import the correct Image component
-
+import { openUrl } from '@tauri-apps/plugin-opener';
+                                
 
 export function ChromeClientsList() {
   const [clients, setClients] = useState<ClientInfo[]>([]);
@@ -127,10 +128,18 @@ export function ChromeClientsList() {
                           </Text>
                         </Tooltip>
                         <ActionIcon 
-                          size="xs" 
-                          onClick={() => window.open(client.tab_url, '_blank')}
-                        >
-                          <ExternalLink size={12} />
+                            size="xs" 
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                await openUrl(client.tab_url);
+                                console.log("URL opened successfully");
+                                } catch (err) {
+                                console.error("Failed to open URL:", err);
+                                }
+                            }}
+                            >
+                            <ExternalLink size={12} />
                         </ActionIcon>
                       </Group>
                     )}
