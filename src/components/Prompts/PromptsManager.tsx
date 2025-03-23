@@ -17,6 +17,9 @@ import {
   Select,
   SegmentedControl
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { 
   ChevronRight, 
   Plus,
@@ -27,7 +30,8 @@ import {
   Trash,
   AlertCircle,
   Upload,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Download
 } from 'lucide-react';
 import { MySQLService } from '../MySQL/MySQLService';
 import promptService from '../../services/MySQLPromptService';
@@ -148,6 +152,60 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       setError('Failed to transfer prompts. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleExportPrompts = async () => {
+    try {
+      // Make sure we have prompts to export
+      if (prompts.length === 0) {
+        setError('No prompts to export.');
+        return;
+      }
+      
+      // Convert prompts to the format needed for export
+      const exportData = prompts.map(prompt => ({
+        title: prompt.title,
+        description: prompt.description,
+        category: prompt.category,
+        display_order: Number(prompt.display_order),
+        is_active: typeof prompt.is_active === 'number' ? tinyintToBoolean(prompt.is_active) : prompt.is_active
+      }));
+      
+      // Create a JSON string with proper formatting
+      const jsonString = JSON.stringify(exportData, null, 2);
+      
+      // Use Tauri's saveDialog to get the save path
+      const savePath = await saveDialog({
+        filters: [{
+          name: 'JSON Files',
+          extensions: ['json']
+        }],
+        defaultPath: `prompts_export_${new Date().toISOString().split('T')[0]}.json`,
+        title: 'Save Prompts'
+      });
+      
+      // If user selected a path, write the file
+      if (savePath) {
+        await writeTextFile(savePath, jsonString);
+        
+        // Show success notification
+        notifications.show({
+          title: 'Success',
+          message: 'Prompts exported successfully',
+          color: 'green'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to export prompts:', error);
+      setError('Failed to export prompts. Please try again.');
+      
+      // Show error notification
+      notifications.show({
+        title: 'Error',
+        message: `Failed to export prompts: ${error.toString()}`,
+        color: 'red'
+      });
     }
   };
 
@@ -358,6 +416,14 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             onClick={() => setIsBulkImportOpen(true)}
           >
             Bulk Import
+          </Button>
+          <Button
+            variant="outline"
+            leftSection={<Download size={16} />}
+            onClick={handleExportPrompts}
+            disabled={prompts.length === 0}
+          >
+            Export JSON
           </Button>
           <Button
             leftSection={<Plus size={16} />}
