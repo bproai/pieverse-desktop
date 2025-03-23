@@ -466,9 +466,11 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                 onMouseEnter={() => setLastHoveredPromptId(prompt.id)}
               >
                 <Group position="apart" align="flex-start" style={{ width: "100%" }}>
-                  <Group align="flex-start" style={{ flexGrow: 1, minWidth: 0 }}>
-                    {getCategoryIcon(category)}
-                    <div className="overflow-hidden flex-grow">
+                <Group align="flex-start" style={{ flexGrow: 1, minWidth: 0, flexWrap: 'nowrap' }}>
+                    <div style={{ flexShrink: 0 }}>
+                      {getCategoryIcon(category)}
+                    </div>
+                    <div className="overflow-hidden flex-grow" style={{ minWidth: '50%' }}>
                       <Text size="lg" weight={500}>{prompt.title}</Text>
                       <Text 
                         size="sm" 
