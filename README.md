@@ -401,8 +401,8 @@ The database is stored in the system's local data directory (using Tauri 2.0 pat
 ## 🗺️ Roadmap
 Our roadmap outlines our future plans:
 
-- **Q2 2025:** Complete Digital Twin Beta Launch, enhanced avatar animations, and advanced prompt management.
-- **Q3 2025:** Integration of additional AI models, expanded social capabilities for the Digital Twin, and improved trend analysis.
+- **Q2 2025:** Complete Digital Twin Beta Launch, enhanced avatar animations, advanced prompt management, and **LLM Response Longitudinal Analysis System**.
+- **Q3 2025:** Integration of additional AI models, expanded social capabilities for the Digital Twin, improved trend analysis, and **AI-Powered Presentation Generator**.
 - **Q4 2025:** Robotics integration testing, enhanced legacy preservation, and multi-language support.
 
 See our full [Roadmap](./docs/ROADMAP.md) for detailed milestones.
