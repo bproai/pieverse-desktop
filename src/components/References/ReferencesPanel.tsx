@@ -61,43 +61,30 @@ const ReferencesPanel: React.FC = () => {
   
   const loadReferences = async () => {
     try {
-      // In a real implementation, this would call a Tauri command to load from local storage
-      // For now, we'll use mock data
-      const mockReferences: ReferenceItem[] = [
-        {
-          id: '1',
-          title: 'Tauri Dialog API',
-          type: 'documentation',
-          url: 'https://v2.tauri.app/plugin/dialog/',
-          content: 'The Tauri Dialog API allows creating native dialogs for file selection, alerts, and confirmations.',
-          tags: ['tauri', 'dialog', 'api'],
-          dateAdded: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          title: 'React Hooks Reference',
-          type: 'documentation',
-          url: 'https://react.dev/reference/react',
-          content: 'Complete reference for React Hooks including useState, useEffect, and more.',
-          tags: ['react', 'hooks', 'frontend'],
-          dateAdded: new Date().toISOString(),
-        },
-        {
-          id: '3',
-          title: 'Mantine UI Components',
-          type: 'url',
-          url: 'https://mantine.dev/core/button/',
-          content: 'Documentation for Mantine UI library components.',
-          tags: ['mantine', 'ui', 'components'],
-          dateAdded: new Date().toISOString(),
-        }
-      ];
+      // Call the Tauri backend to load references from storage
+      const result = await core.invoke('load_references');
       
-      setReferences(mockReferences);
-      
-      // In the real implementation:
-      // const storedReferences = await invoke('load_references');
-      // setReferences(JSON.parse(storedReferences));
+      // If result is valid, use it
+      if (result && Array.isArray(result)) {
+        // Transform snake_case to camelCase if needed
+        const formattedReferences = result.map(ref => ({
+          id: ref.id,
+          title: ref.title,
+          type: ref.type,
+          url: ref.url || '',
+          content: ref.content || '',
+          tags: ref.tags,
+          dateAdded: ref.date_added, // Convert from snake_case to camelCase
+          imageData: ref.image_data  // Convert from snake_case to camelCase
+        }));
+        
+        console.log('Loaded references:', formattedReferences);
+        setReferences(formattedReferences);
+      } else {
+        // If no valid result, use empty array
+        console.warn('No valid references found, using empty array');
+        setReferences([]);
+      }
     } catch (error) {
       console.error('Failed to load references:', error);
       notifications.show({
@@ -105,14 +92,32 @@ const ReferencesPanel: React.FC = () => {
         message: 'Failed to load references',
         color: 'red',
       });
+      
+      // In case of error, use empty array
+      setReferences([]);
     }
   };
   
   const saveReferences = async (updatedReferences: ReferenceItem[]) => {
     try {
-      // In a real implementation, save to storage via Tauri
-      // await invoke('save_references', { references: JSON.stringify(updatedReferences) });
-      console.log('References saved:', updatedReferences);
+      // Transform the references to match the backend expected format
+      const formattedReferences = updatedReferences.map(ref => ({
+        id: ref.id,
+        title: ref.title,
+        type: ref.type,
+        url: ref.url,
+        content: ref.content,
+        tags: ref.tags,
+        date_added: ref.dateAdded,
+        image_data: ref.imageData
+      }));
+      
+      // Debug log
+      console.log('Saving references:', formattedReferences);
+      
+      // Call the Tauri command to save references
+      await core.invoke('save_references', { references: formattedReferences });
+      console.log('References saved successfully');
     } catch (error) {
       console.error('Failed to save references:', error);
       notifications.show({
@@ -358,6 +363,9 @@ const ReferencesPanel: React.FC = () => {
                       addTag();
                     }
                   }}
+                  autoComplete="off"  // Add this line
+                  autoCorrect="off"   // Add this line
+                  spellCheck={false}  // Add this line
                 />
                 <Button onClick={addTag}>Add</Button>
               </Group>
