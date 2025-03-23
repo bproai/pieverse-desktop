@@ -6,6 +6,9 @@ let apiUrl = 'http://localhost:3030'; // Default API URL
 let autoSubmitEnabled = false; // Default to off for auto-submit
 let searchEnabled = false; // Default to off for search button
 
+let wsUrl = 'ws://localhost:3031'; // Default WebSocket URL
+
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM loaded - initializing popup');
   
@@ -20,6 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Load custom prompts from local storage
   loadLocalPrompts();
+
+  // Add WebSocket preview functionality - ADD THIS NEW CODE
+  const wsHostInput = document.getElementById('wsHost');
+  const wsPortInput = document.getElementById('wsPort');
+  const previewWsHost = document.getElementById('previewWsHost');
+  const previewWsPort = document.getElementById('previewWsPort');
+
+  if (wsHostInput && previewWsHost) {
+    wsHostInput.addEventListener('input', function() {
+      previewWsHost.textContent = this.value || 'localhost';
+    });
+  }
+  
+  if (wsPortInput && previewWsPort) {
+    wsPortInput.addEventListener('input', function() {
+      previewWsPort.textContent = this.value || '3031';
+    });
+  }
   
   // Set up pull prompts button
   const pullPromptsBtn = document.getElementById('pullPrompts');
@@ -189,9 +210,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Pre-fill current settings
         try {
           // API settings
-          const url = new URL(apiUrl);
-          document.getElementById('apiHost').value = url.hostname;
-          document.getElementById('apiPort').value = url.port || '3030';
+          const apiUrl = new URL(apiUrl);
+          document.getElementById('apiHost').value = apiUrl.hostname;
+          document.getElementById('apiPort').value = apiUrl.port || '3030';
+          
+          // WebSocket settings
+          const wsUrlObj = new URL(wsUrl.replace('ws://', 'http://'));
+          document.getElementById('wsHost').value = wsUrlObj.hostname;
+          document.getElementById('wsPort').value = wsUrlObj.port || '3031';
+          
+          // Update previews
+          const previewHost = document.getElementById('previewHost');
+          const previewPort = document.getElementById('previewPort');
+          const previewWsHost = document.getElementById('previewWsHost');
+          const previewWsPort = document.getElementById('previewWsPort');
+          
+          if (previewHost) previewHost.textContent = apiUrl.hostname;
+          if (previewPort) previewPort.textContent = apiUrl.port || '3030';
+          if (previewWsHost) previewWsHost.textContent = wsUrlObj.hostname;
+          if (previewWsPort) previewWsPort.textContent = wsUrlObj.port || '3031';
           
           // Auto-submit toggle
           const autoSubmitToggle = document.getElementById('autoSubmitToggle');
@@ -204,21 +241,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (searchToggle) {
             searchToggle.checked = searchEnabled;
           }
-
+    
           const trackQAToggle = document.getElementById('trackQA');
           if (trackQAToggle) {
             chrome.storage.sync.get(['trackQA'], function(result) {
               trackQAToggle.checked = result.trackQA === undefined ? false : result.trackQA;
             });
           }
-          
-          // Also update preview
-          const previewHost = document.getElementById('previewHost');
-          const previewPort = document.getElementById('previewPort');
-          if (previewHost) previewHost.textContent = url.hostname;
-          if (previewPort) previewPort.textContent = url.port || '3030';
         } catch (error) {
-          console.error('Error parsing API URL:', error);
+          console.error('Error parsing URLs:', error);
         }
       } else {
         console.error('Settings modal not found in the DOM');
@@ -235,7 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-    
+
+  const clearCacheBtn = document.getElementById("clearCacheButton");
+  if (clearCacheBtn) {
+    clearCacheBtn.addEventListener("click", function() {
+      chrome.runtime.sendMessage({ action: "clearCache" }, function(response) {
+        if (response && response.success) {
+          alert("Cache cleared successfully");
+        } else {
+          alert("Failed to clear cache");
+        }
+      });
+    });
+  }    
   
   // Preview API URL as user types
   const apiHostInput = document.getElementById('apiHost');
@@ -455,7 +498,7 @@ function loadTrackingSettings() {
 
 // Load settings from storage
 function loadSettings() {
-  // Load settings from chrome.storage
+  // Load API settings
   chrome.storage.sync.get(['apiUrl'], function(result) {
     if (result.apiUrl) {
       apiUrl = result.apiUrl;
@@ -472,6 +515,36 @@ function loadSettings() {
           apiPortInput.value = url.port || '3030';
         } catch (error) {
           console.error('Error parsing stored API URL:', error);
+        }
+      }
+    }
+  });
+  
+  // Load WebSocket settings
+  chrome.storage.sync.get(['wsUrl'], function(result) {
+    if (result.wsUrl) {
+      wsUrl = result.wsUrl;
+      console.log('Loaded WebSocket URL from settings:', wsUrl);
+      
+      // Update WebSocket UI elements
+      const wsHostInput = document.getElementById('wsHost');
+      const wsPortInput = document.getElementById('wsPort');
+      
+      if (wsHostInput && wsPortInput) {
+        try {
+          // Parse WebSocket URL (add http:// to make URL constructor work)
+          const url = new URL(wsUrl.replace('ws://', 'http://'));
+          wsHostInput.value = url.hostname;
+          wsPortInput.value = url.port || '3031';
+          
+          // Update preview elements
+          const previewWsHost = document.getElementById('previewWsHost');
+          const previewWsPort = document.getElementById('previewWsPort');
+          
+          if (previewWsHost) previewWsHost.textContent = url.hostname;
+          if (previewWsPort) previewWsPort.textContent = url.port || '3031';
+        } catch (error) {
+          console.error('Error parsing stored WebSocket URL:', error);
         }
       }
     }
@@ -564,15 +637,93 @@ function addLocalPromptToUI(promptData) {
 }
 
 // Save settings to storage
-function saveSettings(host, port) {
-  // Construct the full URL
-  const newApiUrl = `http://${host}:${port}`;
+function saveSettings() {
+  // Get API settings
+  const apiHost = document.getElementById('apiHost').value.trim();
+  const apiPort = document.getElementById('apiPort').value.trim();
   
-  // Save to chrome.storage
+  // Get WebSocket settings
+  const wsHost = document.getElementById('wsHost').value.trim();
+  const wsPort = document.getElementById('wsPort').value.trim();
+  
+  // Get auto-submit setting
+  const autoSubmitToggle = document.getElementById('autoSubmitToggle');
+  const newAutoSubmitEnabled = autoSubmitToggle ? autoSubmitToggle.checked : false;
+  
+  // Get search button setting
+  const searchToggle = document.getElementById('searchToggle');
+  const newSearchEnabled = searchToggle ? searchToggle.checked : false;
+  
+  // Get Q&A tracking setting
+  const trackQAToggle = document.getElementById('trackQA');
+  const trackQA = trackQAToggle ? trackQAToggle.checked : false;
+  
+  // Basic validation
+  if (!apiHost || !wsHost) {
+    showNotification('Please enter valid hosts', 'error');
+    return;
+  }
+  
+  if (!apiPort || isNaN(parseInt(apiPort)) || !wsPort || isNaN(parseInt(wsPort))) {
+    showNotification('Please enter valid port numbers', 'error');
+    return;
+  }
+  
+  // Save all settings
+  
+  // Save API URL
+  const newApiUrl = `http://${apiHost}:${apiPort}`;
   chrome.storage.sync.set({ apiUrl: newApiUrl }, function() {
     console.log('API URL saved:', newApiUrl);
     apiUrl = newApiUrl;
   });
+  
+  // Save WebSocket URL
+  const newWsUrl = `ws://${wsHost}:${wsPort}`;
+  chrome.storage.sync.set({ wsUrl: newWsUrl }, function() {
+    console.log('WebSocket URL saved:', newWsUrl);
+    wsUrl = newWsUrl;
+    
+    // Notify background script to reconnect WebSocket
+    chrome.runtime.sendMessage({ action: 'reconnectWebSocket', wsUrl: newWsUrl });
+  });
+  
+  // Save auto-submit setting
+  chrome.storage.sync.set({ autoSubmitEnabled: newAutoSubmitEnabled }, function() {
+    console.log('Auto-submit setting saved:', newAutoSubmitEnabled);
+    autoSubmitEnabled = newAutoSubmitEnabled;
+  });
+  
+  // Save search setting
+  chrome.storage.sync.set({ searchEnabled: newSearchEnabled }, function() {
+    console.log('Search setting saved:', newSearchEnabled);
+    searchEnabled = newSearchEnabled;
+    
+    // Send message to update search button state in active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      if (tabs && tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "toggleSearch",
+          enabled: newSearchEnabled
+        }).catch(error => {
+          console.log("Could not toggle search button:", error);
+        });
+      }
+    });
+  });
+
+  // Save tracking setting
+  chrome.storage.sync.set({ trackQA: trackQA }, function() {
+    console.log('Q&A tracking setting saved:', trackQA);
+  });
+
+  // Close modal and show confirmation
+  if (settingsModal) {
+    settingsModal.style.display = 'none';
+    settingsModal.classList.remove('active');
+  }
+  
+  showNotification('Settings saved successfully');
 }
 
 // Simplified version that doesn't use attributes
