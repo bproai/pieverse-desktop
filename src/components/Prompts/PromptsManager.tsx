@@ -268,7 +268,8 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       }
 
       setLoading(true);
-      await activeService.bulkImport(data);
+      const dataWithDummyFields = data.map(prompt => ({...prompt, id: 0, created_at: '', updated_at: ''}));
+      await activeService.bulkImport(dataWithDummyFields);
       await loadData();
       setIsBulkImportOpen(false);
       setBulkJson('');
