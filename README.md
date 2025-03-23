@@ -20,6 +20,7 @@
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
+- [Additional Documentation](#additional-documentation)
 - [License](#license)
 
 ## ✨ Overview
@@ -506,6 +507,18 @@ MCP Inspector will start a web server (commonly on port 3000 by default, or your
 
 > **Note:** Ensure your MCP server is running (for example, on port 3500 or as configured) so that MCP Inspector can connect to it and display the relevant information.
 
+## 📚 Additional Documentation
+PieVerse Desktop includes several Markdown files with detailed information on specific topics:
+
+- [CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Guidelines for contributing to the project
+- [ROADMAP.md](./docs/ROADMAP.md) - Future development plans and milestones
+- [CHANGELOG.md](./docs/CHANGELOG.md) - Detailed history of changes and updates
+- [Research Reports](./Research%20Reports/) - Collection of research findings and analyses:
+  - [Bay Area Layoff Radar](./Research%20Reports/Research%20-%20Bay%20Area%20Layoff%20Radar%20-%20Deep%20Research.md)
+  - [Mermaid Diagrams](./Research%20Reports/Research%20-%20Mermaid.md)
+  - [Pricing Strategy](./Research%20Reports/Research%20-%20Pricing%20Strategy%20-%20Deep%20Research.md)
+
+You can also find additional documentation in the project subfolders, such as extension READMEs and configuration guides.
 
 ## 📄 License
 [MIT License](LICENSE)
