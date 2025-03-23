@@ -19,6 +19,7 @@ import { Search, Plus, Trash, ExternalLink, Edit, Save, X, FileText, Image as Im
 import { notifications } from '@mantine/notifications';
 import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 // Define types for reference items
 type ReferenceType = 'documentation' | 'image' | 'url' | 'code' | 'other';
@@ -205,10 +206,10 @@ const ReferencesPanel: React.FC = () => {
       tags: newReference.tags.filter(t => t !== tag),
     });
   };
-  
-  const openUrl = async (url: string) => {
+
+  const handleOpenUrl = async (url: string) => {
     try {
-      await open(url);
+      await openUrl(url);
     } catch (error) {
       console.error('Failed to open URL:', error);
       notifications.show({
@@ -421,7 +422,7 @@ const ReferencesPanel: React.FC = () => {
                     </Group>
                     <Group spacing={8}>
                       {reference.url && (
-                        <ActionIcon title="Open URL" onClick={() => openUrl(reference.url || '')}>
+                        <ActionIcon title="Open URL" onClick={() => handleOpenUrl(reference.url || '')}>
                           <ExternalLink size={18} />
                         </ActionIcon>
                       )}
