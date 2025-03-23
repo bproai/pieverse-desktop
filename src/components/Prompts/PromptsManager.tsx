@@ -50,6 +50,9 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [bulkJson, setBulkJson] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [expandedPromptId, setExpandedPromptId] = useState<number | null>(null);
+  const [lastHoveredPromptId, setLastHoveredPromptId] = useState<number | null>(null);
+  
   const [deleteConfirmation, setDeleteConfirmation] = useState<{prompt: Prompt, opened: boolean}>({
     prompt: null as any,
     opened: false
@@ -389,28 +392,38 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             {promptsByCategory[category]?.map(prompt => (
               <Card
                 key={prompt.id}
-                className="bg-white hover:bg-gray-50 transition-colors duration-200 group"
+                className="bg-white hover:bg-gray-50 transition-colors duration-200 prompt-card"
                 shadow="sm"
                 padding="md"
-                onClick={(e) => e.preventDefault()}
+                onClick={() => setExpandedPromptId(expandedPromptId === prompt.id ? null : prompt.id)}
+                onMouseEnter={() => setLastHoveredPromptId(prompt.id)}
               >
-                <Group position="apart">
-                  <Group>
+                <Group position="apart" align="flex-start" style={{ width: "100%" }}>
+                  <Group align="flex-start" style={{ flexGrow: 1, minWidth: 0 }}>
                     {getCategoryIcon(category)}
-                    <div>
+                    <div className="overflow-hidden flex-grow">
                       <Text size="lg" weight={500}>{prompt.title}</Text>
-                      <Text size="sm" color="dimmed">
+                      <Text 
+                        size="sm" 
+                        color="dimmed"
+                        className="truncate"
+                        style={{ 
+                          width: "100%",
+                          whiteSpace: (expandedPromptId === prompt.id || lastHoveredPromptId === prompt.id) ? 'normal' : 'nowrap',
+                          overflow: (expandedPromptId === prompt.id || lastHoveredPromptId === prompt.id) ? 'visible' : 'hidden',
+                          textOverflow: (expandedPromptId === prompt.id || lastHoveredPromptId === prompt.id) ? 'clip' : 'ellipsis'
+                        }}
+                      >
                         {prompt.description}
                         {prompt.is_active && <span className="ml-2 text-green-500">(Active)</span>}
                       </Text>
                     </div>
                   </Group>
-                  <Group spacing="xs" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <Group spacing="xs" style={{ flexShrink: 0 }}>
                     <Button
                       variant="subtle"
                       size="sm"
                       onClick={(e) => {
-                        e.preventDefault();
                         e.stopPropagation();
                         handleEdit(prompt);
                       }}
@@ -422,7 +435,6 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                       color="red"
                       size="sm"
                       onClick={(e) => {
-                        e.preventDefault();
                         e.stopPropagation();
                         setDeleteConfirmation({ prompt, opened: true });
                       }}
