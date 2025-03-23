@@ -518,6 +518,17 @@ PieVerse Desktop includes several Markdown files with detailed information on sp
   - [Mermaid Diagrams](./Research%20Reports/Research%20-%20Mermaid.md)
   - [Pricing Strategy](./Research%20Reports/Research%20-%20Pricing%20Strategy%20-%20Deep%20Research.md)
 
+### Git Subtree Management
+This project uses Git subtrees to manage external dependencies and related subprojects:
+
+- **chatgpt-playbook-extension**: Chrome extension for integrating with ChatGPT and Claude
+  - Repository: https://github.com/bproai/chatgpt-playbook-extension.git
+  - Update command: `git subtree pull --prefix=chatgpt-playbook-extension https://github.com/bproai/chatgpt-playbook-extension.git main --squash`
+  - README: [chatgpt-playbook-extension/README.md](./chatgpt-playbook-extension/README.md)
+
+- **pieverse-diff-extension**: VS Code extension for integration
+  - Update instructions are available in the extension directory
+  
 You can also find additional documentation in the project subfolders, such as extension READMEs and configuration guides.
 
 ## 📄 License
