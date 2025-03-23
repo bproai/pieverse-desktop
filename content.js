@@ -41,8 +41,14 @@ function toggleSearchButton(enabled) {
   
   const platform = getCurrentPlatform();
   if (!platform) return;
+
+  // Skip search button toggling for Claude as it doesn't have the same search functionality
+  if (platform === 'claude') {
+    console.log("Search button toggling not applicable for Claude platform");
+    return;
+  }
   
-  // Find search button
+  // Find search button - only for ChatGPT
   let searchButton = document.querySelector('button[aria-label="Search"]');
   
   if (!searchButton) {
@@ -90,10 +96,10 @@ function startAnswerMonitoring(questionText) {
   if (!platform) return;
   
   // Only proceed if we're on ChatGPT for now (keeping Claude code for future)
-  if (platform !== 'chatgpt') {
-    console.log("Q&A tracking currently implemented only for ChatGPT");
-    return;
-  }
+  // if (platform !== 'chatgpt') {
+  //   console.log("Q&A tracking currently implemented only for ChatGPT");
+  //   return;
+  // }
   
   // Check if tracking is enabled in settings
   chrome.storage.sync.get(['trackQA'], function(result) {
@@ -143,6 +149,29 @@ function scanForExistingAnswers() {
 
 // Extract rich HTML and text content from an answer element
 function extractRichAnswer(answerElement) {
+  const platform = getCurrentPlatform();
+
+  if (platform !== 'chatgpt') {
+    // For Claude, the structure is different
+    // First, find the container with the message content
+    const claudeMessageContainer = answerElement.closest('.font-claude-message') || answerElement;
+    
+    // Try to locate the content grid where the actual message is
+    const contentGrid = claudeMessageContainer.querySelector('div > div.grid.gap-2\\.5');
+    
+    if (contentGrid) {
+      // Use the content grid if found
+      const htmlContent = contentGrid.outerHTML;
+      const plainText = contentGrid.innerText || contentGrid.textContent;
+      return { plain_text: plainText.trim(), html: htmlContent.trim() };
+    } else {
+      // Fallback to the message container if grid not found
+      const htmlContent = claudeMessageContainer.outerHTML;
+      const plainText = claudeMessageContainer.innerText || claudeMessageContainer.textContent;
+      return { plain_text: plainText.trim(), html: htmlContent.trim() };
+    }
+  }
+
   // Try to locate the rich content container
   let container = answerElement.querySelector('.markdown.prose') ||
                   answerElement.querySelector('.markdown') ||
@@ -164,6 +193,62 @@ function extractRichAnswer(answerElement) {
 
 // Check if an answer is complete by looking for UI elements that appear when generation is done
 function isAnswerComplete(answerElement) {
+  const platform = getCurrentPlatform();
+
+  if (platform !== 'chatgpt') {
+    // For Claude, we need to check several things:
+    
+    // 1. Check if the div has data-is-streaming="false" attribute
+    // This is the most reliable indicator for Claude
+    const isStreamingContainer = answerElement.closest('div[data-is-streaming]');
+    if (isStreamingContainer) {
+      const isStreaming = isStreamingContainer.getAttribute('data-is-streaming') === 'true';
+      if (isStreaming) {
+        console.log("Claude answer is still streaming");
+        return false;
+      }
+    }
+    
+    // 2. Find the font-claude-message container
+    const messageContainer = answerElement.closest('.font-claude-message');
+    if (!messageContainer) {
+      console.log("DETECTION ISSUE: Could not find font-claude-message container");
+      return false;
+    }
+    
+    // 3. Check for content
+    const paragraphs = messageContainer.querySelectorAll('p, pre, ol, ul, table');
+    const hasContent = paragraphs.length > 0;
+    
+    // 4. Look for UI elements - this will be used in our OR condition
+    const parentContainer = answerElement.closest('.group') || 
+                          isStreamingContainer?.parentElement ||
+                          answerElement.parentElement;
+    
+    // Look for any of these UI elements
+    const copySvg = parentContainer?.querySelector('svg[data-testid="action-bar-copy"]');
+    const thumbsUpButton = parentContainer?.querySelector('[aria-label="Give positive feedback"]');
+    const thumbsDownButton = parentContainer?.querySelector('[aria-label="Give negative feedback"]');
+    const retryButton = parentContainer?.querySelector('button[aria-haspopup="menu"]');
+    
+    const hasUIElements = copySvg || thumbsUpButton || thumbsDownButton || retryButton;
+    
+    console.log("Claude answer completion check:", {
+      hasContent: hasContent,
+      hasCopySvg: !!copySvg,
+      hasUIElements: !!hasUIElements,
+      isStreamingDone: isStreamingContainer ? isStreamingContainer.getAttribute('data-is-streaming') === 'false' : 'unknown'
+    });
+    
+    // Consider the answer complete if EITHER:
+    // 1. Streaming is done AND there's content
+    // OR
+    // 2. We found UI elements (even if they're hidden until hover)
+    return (isStreamingContainer && 
+            isStreamingContainer.getAttribute('data-is-streaming') === 'false' && 
+            hasContent) || hasUIElements;
+  }  
+
   // We need to look for buttons outside the answer element itself
   // First, find the article that contains everything
   const article = answerElement.closest('article');
@@ -202,6 +287,81 @@ function isAnswerComplete(answerElement) {
 
 // Validate if an answer is complete and worth storing
 function isValidAnswer(richAnswer, modelInfo, answerElement) {
+  const platform = getCurrentPlatform();
+
+  if (platform !== 'chatgpt') {
+    // Check if the answer is empty or too short
+    if (!richAnswer.plain_text || richAnswer.plain_text.trim().length < 2) {
+      console.log("VALIDATION FAILED: Claude answer too short or empty");
+      return false;
+    }
+    
+    // Check if the message container has stopped streaming
+    const isStreamingContainer = answerElement.closest('div[data-is-streaming]');
+    if (isStreamingContainer && isStreamingContainer.getAttribute('data-is-streaming') === 'true') {
+      console.log("VALIDATION FAILED: Claude answer is still streaming");
+      return false;
+    }
+    
+    // Look for the Claude message container - this must exist
+    const messageContainer = answerElement.closest('.font-claude-message');
+    if (!messageContainer) {
+      console.log("VALIDATION FAILED: Missing font-claude-message container");
+      return false;
+    }
+    
+    // Check for actual content - this is our primary validation criterion
+    const paragraphs = messageContainer.querySelectorAll('p, pre, ol, ul, table');
+    const hasRealContent = paragraphs.length > 0;
+    if (!hasRealContent) {
+      console.log("VALIDATION FAILED: No content paragraphs found in Claude answer");
+      return false;
+    }
+    
+    // Look for UI elements as a secondary validation method
+    const parentContainer = answerElement.closest('.group') || 
+                            answerElement.closest('[data-is-streaming]') ||
+                            answerElement.parentElement;
+    
+    if (parentContainer) {
+      // Look for any UI elements
+      const copySvg = parentContainer.querySelector('svg[data-testid="action-bar-copy"]');
+      const copyButton = parentContainer.querySelector('button[data-testid="action-bar-copy"]');
+      const thumbsUpButton = parentContainer.querySelector('[aria-label="Give positive feedback"]');
+      const thumbsDownButton = parentContainer.querySelector('[aria-label="Give negative feedback"]');
+      const retryButton = parentContainer.querySelector('button[aria-haspopup="menu"]');
+      
+      // Log what was found but don't require any specific element
+      console.log("Claude UI elements found:", {
+        hasCopySvg: !!copySvg,
+        hasCopyButton: !!copyButton,
+        hasThumbsUpButton: !!thumbsUpButton,
+        hasThumbsDownButton: !!thumbsDownButton,
+        hasRetryButton: !!retryButton
+      });
+    }
+    
+    // // Claude answers sometimes have placeholder text at the beginning
+    // const hasPlaceholderText = richAnswer.plain_text.includes("I'd be happy to help") && 
+    //                          richAnswer.plain_text.length < 500 &&
+    //                          (richAnswer.plain_text.includes("provide") || richAnswer.plain_text.includes("share"));
+                             
+    // if (hasPlaceholderText) {
+    //   console.log("VALIDATION FAILED: Detected Claude placeholder text");
+    //   return false;
+    // }
+    
+    // Set a reasonable model info for Claude even if not explicitly detected
+    if (!modelInfo || modelInfo.model === 'unknown') {
+      // This won't affect the validity check but will help with logging
+      console.log("Using default model info for Claude");
+      modelInfo = { model: 'Claude', modelSlug: 'claude' };
+    }
+    
+    console.log("VALIDATION PASSED: Claude answer is complete and valid");
+    return true;
+  }
+  
   // Log some details for debugging
   console.log("Validating answer:", {
     modelInfo,
@@ -307,6 +467,15 @@ function processAnswer(latestAnswer) {
         if (isValidAnswer(updatedRichAnswer, updatedModelInfo, latestAnswer)) {
           console.log("Answer is now valid, processing");
           storeValidAnswer(latestAnswer, updatedRichAnswer, updatedModelInfo);
+          
+          // Call the background script to handle the copy button click
+          console.log("Sending clickCopyButton message to background script");
+          chrome.runtime.sendMessage({
+            action: "clickCopyButton",
+            platform: getCurrentPlatform()
+          }, response => {
+            console.log("Background script response to clickCopyButton:", response);
+          });
         } else {
           console.log("Answer still invalid after retry");
         }
@@ -318,6 +487,30 @@ function processAnswer(latestAnswer) {
   
   // Answer is valid, store it
   storeValidAnswer(latestAnswer, richAnswer, modelInfo);
+  
+  // Call the background script to handle the copy button click
+  console.log("Sending clickCopyButton message to background script");
+  chrome.runtime.sendMessage({
+    action: "clickCopyButton",
+    platform: getCurrentPlatform()
+  }, response => {
+    console.log("Background script response to clickCopyButton:", response);
+    
+    if (response && response.success) {
+      if (response.contentExtracted) {
+        console.log("Content successfully extracted and sent via WebSocket, length:", response.contentLength);
+      } else {
+        console.log("Copy button clicked but content not directly extracted");
+      }
+    } else {
+      const platform = getCurrentPlatform();
+      if (platform!=='chatgpt') {
+        console.log("Copy button click action skipped for Claude.");
+      }
+      else 
+        console.error("Failed to click copy button:", response ? response.error : "Unknown error");
+    }
+  });
 }
 
 // Store a validated answer
@@ -390,7 +583,22 @@ function setupAnswerObserver(platform) {
   }
   
   const answerSelector = platform === 'claude' ? CLAUDE_ANSWER_SELECTOR : CHATGPT_ANSWER_SELECTOR;
-  const conversationContainer = document.querySelector('main') || document;
+  
+  // Find the best container to observe
+  let conversationContainer;
+  if (platform === 'claude') {
+    // For Claude, try to find the most specific container possible
+    conversationContainer = document.querySelector('#claude-chat-container') || 
+                           document.querySelector('.chat-container') ||
+                           document.querySelector('[data-is-streaming]')?.closest('.h-full') ||
+                           document.querySelector('main') || 
+                           document;
+  } else {
+    // For ChatGPT, use the main container
+    conversationContainer = document.querySelector('main') || document;
+  }
+  
+  console.log(`Setting up ${platform} answer observer on container:`, conversationContainer);
   
   // Track the latest answer we've seen
   let latestAnswerSeen = null;
@@ -401,7 +609,7 @@ function setupAnswerObserver(platform) {
     // Only start if we're not already monitoring this element
     if (latestAnswerSeen === answerElement) return;
     
-    console.log("Starting to monitor new answer element", answerElement);
+    console.log(`Starting to monitor new ${platform} answer element:`, answerElement);
     latestAnswerSeen = answerElement;
     
     // Clear any existing interval
@@ -421,7 +629,7 @@ function setupAnswerObserver(platform) {
       
       // Check if answer is complete
       if (isAnswerComplete(answerElement)) {
-        console.log("Answer appears complete! Processing now.");
+        console.log(`${platform} answer appears complete! Processing now.`);
         clearInterval(completionCheckInterval);
         
         // Wait a short moment to ensure everything is rendered
@@ -434,7 +642,7 @@ function setupAnswerObserver(platform) {
         // Only log every 5th time (or whatever number you prefer)
         logCounter++;
         if (logCounter % 5 === 0) {
-          console.log("Answer still being generated, waiting...");
+          console.log(`${platform} answer still being generated, waiting...`);
         }
       }
     }, 2000); // Check every 2 seconds
@@ -444,13 +652,33 @@ function setupAnswerObserver(platform) {
   answerObserver = new MutationObserver((mutations) => {
     if (!isWaitingForAnswer) return;
     
-    // Look for answers in the mutations
-    const answerElements = document.querySelectorAll(answerSelector);
-    if (answerElements.length > 0) {
-      const latestAnswer = answerElements[answerElements.length - 1];
-      
-      // Start monitoring this answer for completion
-      startMonitoringAnswer(latestAnswer);
+    if (platform === 'claude') {
+      // For Claude, we need to look for divs with certain classes
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          // Check for completed message containers
+          const completedMessages = document.querySelectorAll('div[data-is-streaming="false"] .font-claude-message');
+          if (completedMessages.length > 0) {
+            const latestMessage = completedMessages[completedMessages.length - 1];
+            startMonitoringAnswer(latestMessage);
+          }
+          
+          // Also look for answers based on the selector
+          const answerElements = document.querySelectorAll(answerSelector);
+          if (answerElements.length > 0) {
+            const latestAnswer = answerElements[answerElements.length - 1];
+            startMonitoringAnswer(latestAnswer);
+          }
+        }
+      }
+    } else {
+      // Original ChatGPT implementation
+      // Look for answers in the mutations
+      const answerElements = document.querySelectorAll(answerSelector);
+      if (answerElements.length > 0) {
+        const latestAnswer = answerElements[answerElements.length - 1];
+        startMonitoringAnswer(latestAnswer);
+      }
     }
   });
   
@@ -458,12 +686,22 @@ function setupAnswerObserver(platform) {
   answerObserver.observe(conversationContainer, {
     childList: true,
     subtree: true,
-    attributes: true
+    attributes: true,
+    attributeFilter: ['data-is-streaming'] // Important for Claude
   });
   
-  console.log("Answer observer set up for platform:", platform);
+  console.log(`Answer observer set up for platform: ${platform}`);
   
   // Immediately check for existing answers
+  if (platform === 'claude') {
+    // For Claude, check multiple possible answer elements
+    const completedMessages = document.querySelectorAll('div[data-is-streaming="false"] .font-claude-message');
+    if (completedMessages.length > 0) {
+      const latestMessage = completedMessages[completedMessages.length - 1];
+      startMonitoringAnswer(latestMessage);
+    }
+  }
+  
   const existingAnswers = document.querySelectorAll(answerSelector);
   if (existingAnswers.length > 0) {
     const latestAnswer = existingAnswers[existingAnswers.length - 1];
@@ -471,16 +709,31 @@ function setupAnswerObserver(platform) {
   }
   
   // Start fallback polling in case observer misses the answer element
-  pollForAnswer(answerSelector);
+  pollForAnswer(answerSelector, platform);
   
   // Also set up a long-running fallback check
-  setupLongRunningFallback(answerSelector);
+  setupLongRunningFallback(answerSelector, platform);
 }
 
 // Fallback polling to capture the answer element if not caught by the observer
-function pollForAnswer(answerSelector, maxPollTime = 30000, pollInterval = 1000) {
+function pollForAnswer(answerSelector, platform, maxPollTime = 30000, pollInterval = 1000) {
   let elapsed = 0;
   const intervalId = setInterval(() => {
+    if (platform === 'claude') {
+      // For Claude, check completed messages first
+      const completedMessages = document.querySelectorAll('div[data-is-streaming="false"] .font-claude-message');
+      if (completedMessages.length > 0) {
+        const latestMessage = completedMessages[completedMessages.length - 1];
+        if (isAnswerComplete(latestMessage)) {
+          console.log("Polling found a complete Claude answer element; processing now");
+          processAnswer(latestMessage);
+          clearInterval(intervalId);
+          return;
+        }
+      }
+    }
+    
+    // Then check using the standard selector as fallback
     const answerElements = document.querySelectorAll(answerSelector);
     if (answerElements.length > 0) {
       const latestAnswer = answerElements[answerElements.length - 1];
@@ -492,6 +745,7 @@ function pollForAnswer(answerSelector, maxPollTime = 30000, pollInterval = 1000)
         return;
       }
     }
+    
     elapsed += pollInterval;
     if (elapsed >= maxPollTime) {
       console.log("Polling timeout reached without finding a complete answer element");
@@ -501,7 +755,7 @@ function pollForAnswer(answerSelector, maxPollTime = 30000, pollInterval = 1000)
 }
 
 // Extra fallback for very long running generations
-function setupLongRunningFallback(answerSelector) {
+function setupLongRunningFallback(answerSelector, platform) {
   // Set up a repeated check that runs less frequently but for a longer time
   const maxChecks = 20; // Up to 2 minutes of waiting
   let checkCount = 0;
@@ -515,7 +769,26 @@ function setupLongRunningFallback(answerSelector) {
       return;
     }
     
-    console.log(`Long-running fallback check ${checkCount}/${maxChecks}`);
+    console.log(`Long-running fallback check ${checkCount}/${maxChecks} for ${platform}`);
+    
+    if (platform === 'claude') {
+      // For Claude, check completed messages first
+      const completedMessages = document.querySelectorAll('div[data-is-streaming="false"] .font-claude-message');
+      if (completedMessages.length > 0) {
+        const latestMessage = completedMessages[completedMessages.length - 1];
+        if (isAnswerComplete(latestMessage)) {
+          console.log("Long-running fallback found complete Claude answer");
+          setTimeout(() => {
+            if (isWaitingForAnswer) {
+              processAnswer(latestMessage);
+            }
+          }, 500);
+          
+          clearInterval(longRunningInterval);
+          return;
+        }
+      }
+    }
     
     // Find all answers and check the latest one
     const answerElements = document.querySelectorAll(answerSelector);
@@ -575,12 +848,54 @@ function extractModelInfo(answerElement, platform) {
     } catch (error) {
       console.error("Error extracting model info:", error);
     }
-  } else if (platform === 'claude') {
-    // Claude code preserved for future implementation
+  } 
+  else if (platform === 'claude') {
     try {
-      const modelElement = document.querySelector('[aria-label^="Claude"]');
-      if (modelElement) {
-        model = modelElement.getAttribute('aria-label') || 'Claude';
+      // Try to find the model selector dropdown for Claude
+      const claudeModelSelector = document.querySelector('button[data-testid="model-selector-dropdown"]');
+      if (claudeModelSelector) {
+        // Find the model name div within the selector
+        const modelNameDiv = claudeModelSelector.querySelector('div.whitespace-nowrap');
+        if (modelNameDiv && modelNameDiv.textContent) {
+          // Extract the text content and trim any whitespace
+          const modelText = modelNameDiv.textContent.trim();
+          model = 'Claude ' + modelText;
+          
+          // Convert to a slug format (e.g., "Claude 3.7 Sonnet" -> "claude-3-7-sonnet")
+          modelSlug = 'claude-' + modelText.toLowerCase().replace(/\s+/g, '-').replace(/\./g, '-');
+          console.log("Extracted Claude model info:", { model, modelSlug, modelText });
+        }
+      }
+      
+      // Fallback to previous methods if the selector wasn't found
+      if (model === 'unknown') {
+        modelSlug = 'claude';
+        model = 'Claude'; // Default if we can't determine version
+        
+        // Check page content for Claude version indicators
+        const pageContent = document.body.innerText;
+        if (pageContent.includes('Claude 3 Opus')) {
+          model = 'Claude 3 Opus';
+          modelSlug = 'claude-3-opus';
+        } else if (pageContent.includes('Claude 3 Sonnet')) {
+          model = 'Claude 3 Sonnet';
+          modelSlug = 'claude-3-sonnet';
+        } else if (pageContent.includes('Claude 3 Haiku')) {
+          model = 'Claude 3 Haiku';
+          modelSlug = 'claude-3-haiku';
+        } else if (pageContent.includes('Claude 3')) {
+          model = 'Claude 3';
+          modelSlug = 'claude-3';
+        } else if (pageContent.includes('Claude 2')) {
+          model = 'Claude 2';
+          modelSlug = 'claude-2';
+        }
+        
+        // Try to find model in the header
+        const modelHeader = document.querySelector('header h1, header h2');
+        if (modelHeader && modelHeader.textContent.includes('Claude')) {
+          model = modelHeader.textContent.trim();
+        }
       }
     } catch (error) {
       console.error("Error extracting Claude model info:", error);
@@ -780,7 +1095,7 @@ window.addEventListener('load', () => {
   if (!platform) return;
   
   // Check if tracking is enabled and only apply for ChatGPT for now
-  if (platform !== 'chatgpt') return;
+  // if (platform !== 'chatgpt') return;
   
   chrome.storage.sync.get(['trackQA'], function(result) {
     const trackQA = result.trackQA === undefined ? false : result.trackQA;
@@ -836,4 +1151,133 @@ window.addEventListener('unload', () => {
   if (answerObserver) {
     answerObserver.disconnect();
   }
+});
+
+// Add this to the content.js, near the beginning after detecting the platform
+// Register this tab with the background script
+function registerWithBackground() {
+  const platform = getCurrentPlatform();
+  if (!platform) return;
+  
+  const tabInfo = {
+    title: document.title,
+    url: window.location.href,
+    favicon: getFaviconUrl()
+  };
+  
+  chrome.runtime.sendMessage({
+    action: "registerTab",
+    platform: platform,
+    tabInfo: tabInfo  // Include tab info during registration
+  }, response => {
+    if (response && response.success) {
+      console.log(`Tab registered with background script, tabId: ${response.tabId}`);
+    } else {
+      console.error("Failed to register tab with background script");
+    }
+  });
+}
+
+// Call this function when the content script initializes
+registerWithBackground();
+
+// Add tab unregistration on page unload
+window.addEventListener('unload', () => {
+  chrome.runtime.sendMessage({
+    action: "unregisterTab"
+  });
+  
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+  }
+  
+  if (answerObserver) {
+    answerObserver.disconnect();
+  }
+});
+
+
+// Add these functions to content.js
+
+// Function to send tab information to the background script
+function sendTabInfo() {
+  console.log("[DEBUG] sendTabInfo called with title:", document.title);
+  console.log("[DEBUG] Current URL:", window.location.href);
+
+  const tabInfo = {
+    title: document.title,
+    url: window.location.href,
+    favicon: getFaviconUrl()
+  };
+  
+  console.log("Sending tab info:", tabInfo);
+  
+  chrome.runtime.sendMessage({
+    action: "updateTabInfo",
+    data: tabInfo
+  }, response => {
+    if (response && response.success) {
+      console.log("Tab info successfully sent");
+    } else {
+      console.log("Error sending tab info:", response?.error);
+    }
+  });
+}
+
+// Function to get favicon URL
+function getFaviconUrl() {
+  // Try standard favicon link
+  const faviconLink = document.querySelector('link[rel="icon"]') || 
+                       document.querySelector('link[rel="shortcut icon"]');
+  if (faviconLink && faviconLink.href) {
+    return faviconLink.href;
+  }
+  
+  // Fallback to default favicon location
+  return window.location.origin + "/favicon.ico";
+}
+
+// Set up tab info reporting
+function setupTabInfoReporting() {
+  // Send initial tab info
+  sendTabInfo();
+  
+  // Setup periodic updates
+  setInterval(sendTabInfo, 30000); // Every 30 seconds
+  
+  // Listen for title changes
+  const titleObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList' || mutation.type === 'characterData') {
+        sendTabInfo();
+        break;
+      }
+    }
+  });
+  
+  // Start observing title element if it exists
+  const titleElement = document.querySelector('title');
+  if (titleElement) {
+    titleObserver.observe(titleElement, { 
+      childList: true, 
+      characterData: true, 
+      subtree: true 
+    });
+  }
+  
+  // Also send updates when the URL changes
+  let lastUrl = window.location.href;
+  setInterval(() => {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      sendTabInfo();
+    }
+  }, 1000); // Check URL changes every second
+}
+
+// Call this function when the page is loaded
+window.addEventListener('load', () => {
+  // Wait a moment for everything to load properly
+  setTimeout(setupTabInfoReporting, 1000);
 });

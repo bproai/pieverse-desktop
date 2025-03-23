@@ -7,6 +7,16 @@ let uploadInProgress = false;
 const UPLOAD_INTERVAL = 30000; // Upload every 30 seconds
 const MAX_CACHE_SIZE = 100;
 
+let wsConnection = null;
+let wsReconnectTimer = null;
+const WS_RECONNECT_INTERVAL = 5000; // Reconnect every 5 seconds if connection fails
+const WS_DEFAULT_PORT = 3031; // Default WebSocket port
+let pendingTabRegistrations = [];
+
+let registeredTabs = {};
+
+const tabInfoMap = new Map();
+
 // Load cached data from storage on startup
 function initializeState() {
   chrome.storage.local.get(['questionCache', 'answerCache'], function(result) {
@@ -47,6 +57,15 @@ function storeQuestionData(data) {
   
   // Schedule upload
   scheduleUpload();
+
+  // Also send the question via WebSocket for real-time notification
+  sendWebSocketMessage({
+    type: 'userQuestion',
+    content: data.question,
+    messageId: data.id,
+    timestamp: data.timestamp,
+    platform: data.platform
+  });
 }
 
 // Store answer data in cache
@@ -143,10 +162,19 @@ async function uploadCachedData() {
       metadata: a.metadata
     }));
     
-    // Filter out answers with null question_ids
-    const validAnswers = answers.filter(a => a.question_id !== null);
+    // CHANGE 3: Filter out potentially problematic data
+    // Filter out questions with empty or null required fields
+    const validQuestions = questions.filter(q => 
+      q.id && q.platform && q.question && q.timestamp
+    );
+    
+    // Filter out answers with empty or null required fields
+    const validAnswers = answers.filter(a => 
+      a.id && a.question_id && a.platform && a.answer && a.timestamp
+    );
 
-    console.log(`Uploading ${questions.length} questions and ${answers.length} answers to ${apiUrl}/api/qa`);
+    console.log(`Uploading ${validQuestions.length} questions and ${validAnswers.length} answers to ${apiUrl}/api/qa`);
+    console.log(`Filtered out ${questions.length - validQuestions.length} invalid questions and ${answers.length - validAnswers.length} invalid answers`);
     
     // Send to API
     const response = await fetch(`${apiUrl}/api/qa`, {
@@ -154,10 +182,13 @@ async function uploadCachedData() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ questions, answers })
+      body: JSON.stringify({ questions: validQuestions, answers: validAnswers })
     });
     
+    // CHANGE 2: Add more detailed error handling
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error response: ${errorText}`);
       throw new Error(`API returned status: ${response.status}`);
     }
     
@@ -191,6 +222,11 @@ setInterval(uploadCachedData, UPLOAD_INTERVAL);
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Update last active timestamp for the tab
+  if (sender && sender.tab && sender.tab.id && registeredTabs[sender.tab.id]) {
+    registeredTabs[sender.tab.id].lastActive = Date.now();
+  }
+    
   if (request.action === "clickSubmitButton") {
     // Get the tab ID from the sender
     const tabId = sender.tab.id;
@@ -239,6 +275,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Handle storing answer data
   if (request.action === "storeAnswerData") {
     storeAnswerData(request.data);
+
+    // NEW CODE: Also send the answer via WebSocket
+    try {
+      const answerContent = JSON.parse(request.data.answer);
+      sendWebSocketMessage({
+        type: 'aiAnswer',
+        content: answerContent,
+        messageId: request.data.id,
+        questionId: request.data.question_id,
+        timestamp: request.data.timestamp,
+        platform: request.data.platform,
+        model: request.data.model
+      });
+    } catch (error) {
+      console.error("Error sending answer via WebSocket:", error);
+    }
     
     // Add debug logging here
     console.log("After storing answer, current caches:", {
@@ -252,6 +304,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     });
     
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // Handle reconnecting WebSocket with new URL
+  if (request.action === "reconnectWebSocket") {
+    console.log("Reconnecting WebSocket with new URL:", request.wsUrl);
+    connectToWebSocket(request.wsUrl);
     sendResponse({ success: true });
     return true;
   }
@@ -278,7 +338,231 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     return true; // Keep the message channel open for async response
   }
+
+  // Handle sending WebSocket messages
+  if (request.action === "sendWebSocketMessage") {
+    console.log("[DEBUG] Background script received WebSocket message request:", {
+      type: request.data.type,
+      messageId: request.data.messageId,
+      contentLength: request.data.content ? request.data.content.length : 0,
+      timestamp: request.data.timestamp
+    });
+    
+    // Check WebSocket status before attempting to send
+    if (!wsConnection) {
+      console.error("[DEBUG] WebSocket connection is null");
+      sendResponse({ success: false, error: "WebSocket connection is null" });
+      return true;
+    }
+    
+    console.log("[DEBUG] WebSocket readyState:", wsConnection.readyState);
+    console.log("[DEBUG] WebSocket connection URL:", wsConnection.url);
+    
+    if (wsConnection.readyState === WebSocket.OPEN) {
+      try {
+        const messageString = JSON.stringify(request.data);
+        console.log("[DEBUG] Sending to WebSocket, message length:", messageString.length);
+        wsConnection.send(messageString);
+        console.log("[DEBUG] Message sent successfully to WebSocket");
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error("[DEBUG] Error sending message to WebSocket:", error);
+        sendResponse({ success: false, error: error.message });
+      }
+    } else {
+      console.error("[DEBUG] WebSocket not connected, readyState:", wsConnection.readyState);
+      sendResponse({ success: false, error: "WebSocket not connected" });
+    }
+    return true;
+  }
+
+  if (request.action === "clickCopyButton") {
+    // Get the tab ID from the sender
+    const tabId = sender.tab.id;
+    
+    console.log("Received clickCopyButton request");
+    
+    // Execute a script in the tab to click the copy button
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      function: clickCopyButton
+    })
+    .then(results => {
+      console.log("Copy button click script executed:", results);
+      
+      if (results && results[0] && results[0].result && results[0].result.success) {
+        // If copy was successful and we got the content directly
+        const extractedContent = results[0].result.content;
+        const messageId = results[0].result.messageId;
+        
+        // Send the content via WebSocket
+        if (extractedContent) {
+          sendWebSocketMessage({
+            type: 'aiContent',
+            content: extractedContent,
+            messageId: messageId,
+            timestamp: new Date().toISOString(),
+            platform: request.platform || 'unknown'
+          });
+          
+          sendResponse({ 
+            success: true, 
+            contentExtracted: true,
+            contentLength: extractedContent.length
+          });
+        } else {
+          sendResponse({ success: true, contentExtracted: false });
+        }
+      } else {
+        sendResponse({ 
+          success: false, 
+          error: results && results[0] && results[0].result ? results[0].result.error : "Unknown error" 
+        });
+      }
+    })
+    .catch(error => {
+      console.error("Error executing copy button click script:", error);
+      sendResponse({ success: false, error: error.message });
+    });
+    
+    // Keep the message channel open for async response
+    return true;
+  }
+
+  if (request.action === "registerTab") {
+    const tabId = sender.tab.id;
+    const tabInfo = {
+      url: sender.tab.url || "unknown",
+      platform: request.platform,
+      lastActive: Date.now(),
+      title: sender.tab.title || null,  // Include tab title
+      favicon: request.tabInfo ? request.tabInfo.favicon : null
+    };
+    
+    console.log(`Tab ${tabId} registered with platform: ${request.platform} and title: ${tabInfo.title}`);
+    registeredTabs[tabId] = tabInfo;
+    
+    // If WebSocket is connected, send tab registration
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+      console.log(`Sending tab registration for ${tabId} to WebSocket`);
+      sendWebSocketMessage({
+        type: 'register_tab',
+        tabId: tabId.toString(),
+        platform: request.platform,
+        url: sender.tab.url || "unknown",
+        title: sender.tab.title || null  // Send title information
+      });
+    } else {
+      console.log(`WebSocket not connected or not ready, can't register tab ${tabId}`);
+      console.log(`WebSocket status: ${wsConnection ? wsConnection.readyState : "null"}`);
+      // Store for later registration when WebSocket connects
+      if (!pendingTabRegistrations) {
+        pendingTabRegistrations = [];
+      }
+      pendingTabRegistrations.push({
+        tabId: tabId.toString(),
+        platform: request.platform,
+        url: sender.tab.url || "unknown",
+        title: sender.tab.title || null  // Include title in pending registrations
+      });
+    }
+    
+    // Send confirmation back to the content script
+    sendResponse({ success: true, tabId: tabId });
+    return true;
+  }
+
+  // Handle tab unregistration (optional but good practice)
+  if (request.action === "unregisterTab") {
+    const tabId = sender.tab.id;
+    if (registeredTabs[tabId]) {
+      delete registeredTabs[tabId];
+      console.log(`Tab ${tabId} unregistered`);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  if (request.action === "clearCache") {
+    console.log("Clearing Q&A cache manually...");
+    questionCache = [];
+    answerCache = [];
+    chrome.storage.local.set({
+      'questionCache': questionCache,
+      'answerCache': answerCache
+    }, function() {
+      console.log("Cache cleared successfully");
+      sendResponse({ success: true });
+    });
+    return true; // Keep the message channel open for async response
+  }
+
+  if (request.action === "updateTabInfo") {
+    // Get tab ID and tab info
+    const tabId = sender.tab.id.toString();
+    const tabInfo = request.data;
+    
+    console.log(`[DEBUG] Background received tab info for tab ${tabId}:`, tabInfo);
+    
+    // Store the tab info
+    tabInfoMap.set(tabId, tabInfo);
+    
+    // Format the message for WebSocket
+    const tabInfoMessage = {
+      type: "tabInfo",
+      tabId: tabId,
+      title: tabInfo.title,
+      url: tabInfo.url,
+      favicon: tabInfo.favicon
+    };
+    
+
+    // Send to WebSocket connection
+    // sendToWebSocket(JSON.stringify(tabInfoMessage));
+
+    // If WebSocket is connected, send tab info
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+      console.log("[DEBUG] Sending tabInfo message to WebSocket:", tabInfoMessage);
+      sendWebSocketMessage(tabInfoMessage);
+    } else {
+      console.log(`WebSocket not connected or not ready, can't send tab info for ${tabId}`);
+      console.log(`WebSocket status: ${wsConnection ? wsConnection.readyState : "null"}`);
+      // Store for later registration when WebSocket connects
+    }
+    
+    sendResponse({ success: true });
+    return true;
+  }  
+  
+
 });
+
+// function sendToWebSocket(message) {
+//   // Check if we have a WebSocket connection
+//   if (typeof webSocketConnection !== 'undefined' && webSocketConnection) {
+//     webSocketConnection.send(message);
+//     return;
+//   }
+  
+//   // Otherwise use the fetch API to forward to your backend
+//   chrome.storage.sync.get(['apiUrl'], async function(result) {
+//     try {
+//       const apiUrl = result.apiUrl || 'http://localhost:3030';
+      
+//       await fetch(`${apiUrl}/api/message`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json'
+//         },
+//         body: message
+//       });
+      
+//       console.log("Message sent to backend via fetch");
+//     } catch (error) {
+//       console.error("Error sending message:", error);
+//     }
+//   });
+// }
 
 // Function that will be injected into the page to click the submit button
 function clickSubmitButton(platform) {
@@ -310,6 +594,118 @@ function clickSubmitButton(platform) {
   }
   
   return false;
+}
+
+// Function that will be injected into the page to click the copy button
+function clickCopyButton() {
+  console.log(`Attempting to click copy button`);
+  
+  // Platform detection based on hostname, same as in the clickSubmitButton function
+  const hostname = window.location.hostname;
+  const isClaude = hostname.includes('claude.ai');
+  const isChatGPT = hostname.includes('chat.openai.com') || hostname.includes('chatgpt.com');
+  
+  if (isClaude) {
+    // Claude-specific implementation
+    console.log("Working with Claude, looking for Claude copy button");
+    
+    // Find all copy buttons in Claude's interface - they have a data-testid="action-bar-copy"
+    const claudeCopyButtons = document.querySelectorAll('button[data-testid="action-bar-copy"]');
+    
+    if (claudeCopyButtons.length === 0) {
+      console.log("No Claude copy buttons found");
+      return {success: false, error: "No Claude copy buttons found"};
+    }
+    
+    // Get the last/most recent copy button
+    const lastCopyButton = claudeCopyButtons[claudeCopyButtons.length - 1];
+    
+    if (lastCopyButton && !lastCopyButton.disabled) {
+      console.log("Found Claude copy button");
+      
+      // First, find the message container that contains this button
+      const messageContainer = lastCopyButton.closest('div[data-is-streaming="false"]');
+      let messageContent = "";
+      
+      if (messageContainer) {
+        // Find the message content within this container
+        const claudeMessage = messageContainer.querySelector('.font-claude-message');
+        if (claudeMessage) {
+          const contentDiv = claudeMessage.querySelector('div > div.grid.gap-2\\.5');
+          if (contentDiv) {
+            // Get all paragraphs, lists, and other formatted content
+            messageContent = contentDiv.innerHTML;
+          } else {
+            messageContent = claudeMessage.innerText || claudeMessage.textContent;
+          }
+        }
+        console.log("Extracted Claude content length:", messageContent.length);
+      }
+      
+      // Try to click the button, but catch any errors
+      try {
+        lastCopyButton.click();
+      } catch (error) {
+        console.warn("Claude copy button click failed, but continuing:", error);
+      }
+      
+      return {
+        success: true,
+        content: messageContent,
+        messageId: `claude_assistant_${new Date().getTime()}`
+      };
+    } else {
+      console.log("Claude copy button not found or is disabled");
+      return {success: false, error: "Claude copy button not found or disabled"};
+    }
+  } 
+  else if (isChatGPT) {
+    // Original ChatGPT implementation - unchanged
+    const copyButtons = document.querySelectorAll('button[aria-label="Copy"]');
+    
+    if (copyButtons.length === 0) {
+      console.log("No copy buttons found");
+      return {success: false, error: "No copy buttons found"};
+    }
+    
+    // Get the last/most recent copy button (likely for the latest response)
+    const lastCopyButton = copyButtons[copyButtons.length - 1];
+    
+    if (lastCopyButton && !lastCopyButton.disabled) {
+      console.log("Found and clicking copy button");
+      
+      // First, get the text content from the message element
+      const messageElement = lastCopyButton.closest('article');
+      let messageContent = "";
+      
+      if (messageElement) {
+        // Try to find the actual content within the article
+        const contentElement = messageElement.querySelector('.markdown');
+        if (contentElement) {
+          messageContent = contentElement.outerHTML || contentElement.innerText;
+        } else {
+          messageContent = messageElement.innerText || messageElement.textContent;
+        }
+        console.log("Extracted content length:", messageContent.length);
+      }
+      
+      // Click the button
+      lastCopyButton.click();
+      
+      return {
+        success: true, 
+        content: messageContent,
+        messageId: messageElement ? messageElement.getAttribute('data-message-id') : null
+      };
+    } else {
+      console.log("Copy button not found or is disabled");
+      return {success: false, error: "Copy button not found or disabled"};
+    }
+  } 
+  else {
+    console.log("Unknown platform");
+    return {success: false, error: "Unknown or unsupported platform"};
+  }
 }
 
 // Test API connection
@@ -398,3 +794,505 @@ chrome.runtime.onConnect.addListener(port => {
     console.log("Port disconnected");
   });
 });
+
+
+// Add this function to initialize WebSocket connection
+function initWebSocketConnection() {
+  // Get WebSocket URL from storage, default to localhost:3031
+  chrome.storage.sync.get(['wsUrl'], function(result) {
+    const wsUrl = result.wsUrl || 'ws://localhost:3031';
+    connectToWebSocket(wsUrl);
+  });
+}
+
+// Add function to connect to WebSocket
+function connectToWebSocket(wsUrl) {
+  // Clear any existing connection
+  if (wsConnection) {
+    wsConnection.close();
+    wsConnection = null;
+  }
+  
+  // Clear any reconnect timer
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+  
+  try {
+    console.log(`Connecting to WebSocket at ${wsUrl}`);
+    wsConnection = new WebSocket(wsUrl);
+    
+    // Add to your background.js after establishing the WebSocket connection
+    wsConnection.onopen = function() {
+      console.log('WebSocket connection established');
+      
+      // Send a hello message for the background script
+      sendWebSocketMessage({
+        type: 'hello',
+        clientType: 'chrome-extension',
+        version: '1.0.2',
+        platform: 'chrome-extension'
+      });
+      
+      // Register any pending tabs
+      if (pendingTabRegistrations && pendingTabRegistrations.length > 0) {
+        console.log(`Registering ${pendingTabRegistrations.length} pending tabs`);
+        pendingTabRegistrations.forEach(tab => {
+          sendWebSocketMessage({
+            type: 'register_tab',
+            tabId: tab.tabId,
+            platform: tab.platform,
+            url: tab.url
+          });
+        });
+        pendingTabRegistrations = [];
+      }
+      
+      // Then send individual platform registrations for each tab
+      console.log(`Registering ${Object.keys(registeredTabs).length} existing tabs`);
+      Object.entries(registeredTabs).forEach(([tabId, tabInfo]) => {
+        sendWebSocketMessage({
+          type: 'register_tab',
+          tabId: tabId.toString(),
+          platform: tabInfo.platform || "unknown",
+          url: tabInfo.url || "unknown"
+        });
+      });
+    };
+    
+    wsConnection.onmessage = function(event) {
+      console.log('WebSocket message received:', event.data);
+      
+      try {
+        const message = JSON.parse(event.data);
+        
+        // Extract routing information
+        const targetType = message.targetType || 'broadcast'; // 'broadcast', 'platform', 'client'
+        const targetId = message.targetId; // tabId or platform name
+        
+        // Handle insertPrompt message
+        if (message.type === 'insertPrompt') {
+          routeMessageToContent(message, targetType, targetId);
+        } 
+        // Add new handler for creating a new chat
+        else if (message.type === 'newChat') {
+          // Handle new chat request
+          handleNewChatRequest(message, targetType, targetId);
+        }        
+        // Add other message types as needed
+        else {
+          console.log(`Unknown message type: ${message.type}`);
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    };
+    
+    wsConnection.onclose = function(event) {
+      console.log('WebSocket connection closed:', event.code, event.reason);
+      scheduleReconnect(wsUrl);
+    };
+    
+    wsConnection.onerror = function(error) {
+      console.error('WebSocket error:', error);
+      // The onclose handler will be called after this
+    };
+  } catch (error) {
+    console.error('Error setting up WebSocket:', error);
+    scheduleReconnect(wsUrl);
+  }
+}
+
+// Function to schedule WebSocket reconnection
+function scheduleReconnect(wsUrl) {
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+  }
+  
+  wsReconnectTimer = setTimeout(() => {
+    console.log('Attempting to reconnect WebSocket...');
+    connectToWebSocket(wsUrl);
+  }, WS_RECONNECT_INTERVAL);
+}
+
+// Function to send message to WebSocket
+function sendWebSocketMessage(message) {
+  if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+    const messageString = typeof message === 'string' ? message : JSON.stringify(message);
+    wsConnection.send(messageString);
+    return true;
+  }
+  
+  console.log('WebSocket not connected, cannot send message');
+  return false;
+}
+
+// Initialize the extension - add WebSocket initialization
+function initializeState() {
+  chrome.storage.local.get(['questionCache', 'answerCache'], function(result) {
+    if (result.questionCache) {
+      questionCache = result.questionCache;
+      console.log(`Loaded ${questionCache.length} cached questions`);
+    }
+    
+    if (result.answerCache) {
+      answerCache = result.answerCache;
+      console.log(`Loaded ${answerCache.length} cached answers`);
+    }
+  });
+  
+  // Initialize WebSocket connection
+  initWebSocketConnection();
+}
+
+// Add this new function for routing messages
+function routeMessageToContent(message, targetType, targetId) {
+  // Determine which tabs should receive the message
+  let targetTabs = [];
+  
+  // Add debug logging for incoming values
+  console.log(`Routing message with targetType: ${targetType}, targetId: ${targetId}`);
+  
+  if (targetType === 'broadcast') {
+    // Send to all tabs
+    targetTabs = Object.keys(registeredTabs);
+    console.log(`Broadcasting to ${targetTabs.length} tabs`);
+  } 
+  else if (targetType === 'platform') {
+    // Send to all tabs of a specific platform (chatgpt, claude, etc)
+    targetTabs = Object.entries(registeredTabs)
+      .filter(([_, info]) => info.platform === targetId)
+      .map(([tabId, _]) => tabId);
+    console.log(`Targeting platform ${targetId}, found ${targetTabs.length} matching tabs`);
+  } 
+  else if (targetType === 'client') {
+    // Check if targetId has "tab_" prefix (from server) or if it's just the numeric ID
+    if (targetId && targetId.toString().startsWith('tab_')) {
+      // This is a tab ID from the server, extract just the number part
+      const numericId = targetId.toString().replace('tab_', '');
+      console.log(`Tab targeting: ID from server format, converted ${targetId} to ${numericId}`);
+      
+      if (registeredTabs[numericId]) {
+        targetTabs = [numericId];
+        console.log(`Found tab ${numericId}, will target specifically`);
+      }
+    } 
+    // Otherwise check if it's a raw tab ID
+    else if (registeredTabs[targetId]) {
+      targetTabs = [targetId];
+      console.log(`Found tab ${targetId}, will target specifically`);
+    }
+    else {
+      console.log(`Tab ${targetId} not found in registered tabs. Known tabs:`, Object.keys(registeredTabs));
+    }
+  }
+  
+  console.log(`Routing message to ${targetTabs.length} tabs`);
+  
+  // Important: Fixed logic condition - Only fall back if not specifically targeting a tab
+  if (targetTabs.length === 0 && targetType !== 'client') {
+    console.log('No registered tabs match criteria, falling back to all tabs');
+    chrome.tabs.query({}, function(tabs) {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'insertPrompt',
+          prompt: message.prompt,
+          autoSubmit: message.autoSubmit !== false,
+          messageId: message.messageId || null
+        }).catch(error => {
+          // This is expected to fail for tabs that don't have our content script
+          // console.log("Failed to send message to tab", tab.id, error);
+        });
+      });
+    });
+    return;
+  }
+  
+  // If we're targeting a specific tab but didn't find it, log this
+  if (targetTabs.length === 0 && targetType === 'client') {
+    console.log(`Error: Could not find targeted tab ${targetId}. Not sending message.`);
+    return;
+  }
+  
+  // Send the message to each target tab
+  targetTabs.forEach(tabId => {
+    chrome.tabs.sendMessage(parseInt(tabId), {
+      action: 'insertPrompt',
+      prompt: message.prompt,
+      autoSubmit: message.autoSubmit !== false,
+      messageId: message.messageId || null
+    }).catch(error => {
+      console.log(`Failed to send message to tab ${tabId}:`, error);
+      // Tab might be closed or not responding, clean up
+      delete registeredTabs[tabId];
+    });
+  });
+}
+
+// Add this new function to handle the new chat request
+function handleNewChatRequest(message, targetType, targetId) {
+  console.log('Handling new chat request:', message);
+  
+  // Determine which tabs should receive the new chat command
+  let targetTabs = [];
+  
+  if (targetType === 'broadcast') {
+    // Only target ChatGPT tabs for broadcast
+    targetTabs = Object.entries(registeredTabs)
+      .filter(([_, info]) => info.platform === 'chatgpt')
+      .map(([tabId, _]) => tabId);
+    console.log(`Broadcasting new chat to ${targetTabs.length} ChatGPT tabs`);
+  } 
+  else if (targetType === 'platform') {
+    // Target all tabs of the specified platform (either ChatGPT or Claude)
+    const platform = targetId;
+    targetTabs = Object.entries(registeredTabs)
+      .filter(([_, info]) => info.platform === platform)
+      .map(([tabId, _]) => tabId);
+    console.log(`Targeting all ${platform} tabs, found ${targetTabs.length} matching tabs`);
+  } 
+  else if (targetType === 'client') {
+    // Check if targetId has "tab_" prefix or if it's just the numeric ID
+    const numericId = targetId.toString().replace('tab_', '');
+    
+    // Accept any tab regardless of platform
+    if (registeredTabs[numericId]) {
+      targetTabs = [numericId];
+      console.log(`Found ChatGPT tab ${numericId}, will target specifically`);
+    } else {
+      console.log(`Tab ${numericId} is not a ChatGPT tab or not found`);
+    }
+  }
+  
+  // Execute script in each target tab based on its platform
+  targetTabs.forEach(tabId => {
+    const platform = registeredTabs[tabId]?.platform;
+    
+    // Choose the appropriate function based on the platform
+    const scriptFunction = platform === 'claude' ? clickClaudeNewChat : clickNewChatButton;
+    
+    chrome.scripting.executeScript({
+      target: { tabId: parseInt(tabId) },
+      function: scriptFunction
+    })
+    .then(results => {
+      console.log(`New chat button click executed in ${platform} tab`, tabId, ":", results);
+      
+      // Send result back via WebSocket
+      if (results && results[0] && results[0].result) {
+        const result = results[0].result;
+        
+        // Create the response message
+        sendWebSocketMessage({
+          type: 'newChatResult',
+          tabId: tabId,
+          platform: platform,
+          success: result.success,
+          message: result.message || result.error || 'Unknown result',
+          ...result // Include all other details from the result
+        });
+      } else {
+        // Handle case when no proper result returned
+        sendWebSocketMessage({
+          type: 'newChatResult',
+          tabId: tabId,
+          platform: platform,
+          success: false,
+          message: 'No result returned from script execution'
+        });
+      }
+    })
+    .catch(error => {
+      console.error(`Error executing new chat script in ${platform} tab`, tabId, ":", error);
+      
+      // Send error via WebSocket
+      sendWebSocketMessage({
+        type: 'newChatResult',
+        tabId: tabId,
+        platform: platform,
+        success: false, 
+        message: `Error: ${error.message}`
+      });
+    });
+  });
+  
+  // If no tabs were targeted, report failure
+  if (targetTabs.length === 0) {
+    sendWebSocketMessage({
+      type: 'newChatResult',
+      success: false,
+      message: 'No matching AI assistant tabs found'
+    });
+  }
+}
+
+// Function that will be injected into the page to click the new chat button
+function clickNewChatButton() {
+  console.log("Attempting to click the New chat button on ChatGPT");
+  
+  // Find the button by its data-testid attribute
+  const newChatButton = document.querySelector('button[data-testid="create-new-chat-button"]');
+  
+  if (newChatButton) {
+    console.log("Found and clicking ChatGPT New chat button");
+    
+    // Store initial article count before clicking
+    const initialArticleCount = document.querySelectorAll('article').length;
+    console.log(`Initial article count: ${initialArticleCount}`);
+    
+    // Click the button
+    newChatButton.click();
+    
+    // Set up a verification check with retry
+    return new Promise((resolve) => {
+      // First check after a short delay
+      setTimeout(() => {
+        const currentArticleCount = document.querySelectorAll('article').length;
+        console.log(`First check article count: ${currentArticleCount}`);
+        
+        // If no articles found, the new chat was successful
+        if (currentArticleCount === 0) {
+          resolve({ 
+            success: true, 
+            message: "New chat created successfully"
+          });
+        } else {
+          // If still have articles, try clicking again and check once more
+          if (newChatButton) {
+            console.log("Articles still present. Trying to click new chat button again...");
+            newChatButton.click();
+            
+            // Second check after another delay
+            setTimeout(() => {
+              const finalArticleCount = document.querySelectorAll('article').length;
+              console.log(`Final check article count: ${finalArticleCount}`);
+              
+              // Determine final success status
+              if (finalArticleCount === 0) {
+                resolve({ 
+                  success: true, 
+                  message: "New chat created successfully on second attempt"
+                });
+              } else {
+                resolve({ 
+                  success: false, 
+                  message: `Failed to create new chat. Articles still present: ${finalArticleCount}`
+                });
+              }
+            }, 1500); // Longer second check delay
+          } else {
+            resolve({ 
+              success: false, 
+              message: "Button disappeared after first click but articles still present"
+            });
+          }
+        }
+      }, 800); // Initial check delay
+    });
+  } else {
+    console.log("ChatGPT New chat button not found");
+    return { 
+      success: false, 
+      error: "Button not found"
+    };
+  }
+}
+
+// Function to trigger Claude's "New Chat" functionality with message count verification
+function clickClaudeNewChat() {
+  console.log("Attempting to trigger New Chat in Claude");
+  
+  // Count initial Claude messages
+  const initialMessageCount = document.querySelectorAll('div.font-claude-message').length;
+  console.log(`Initial Claude message count: ${initialMessageCount}`);
+  
+  // Direct approach: Find the New Chat link in the upper left corner and click it
+  const newChatLink = document.querySelector('a[href="/new"]');
+  
+  if (newChatLink) {
+    console.log("Found New Chat link, clicking it");
+    newChatLink.click();
+    
+    // Check after a delay if it worked
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Count current Claude messages
+        const currentMessageCount = document.querySelectorAll('div.font-claude-message').length;
+        console.log(`Current Claude message count: ${currentMessageCount}`);
+        
+        if (currentMessageCount === 0 || currentMessageCount < initialMessageCount) {
+          resolve({
+            success: true,
+            message: "New chat created successfully in Claude",
+            method: "direct-link-click",
+            initialMessageCount,
+            finalMessageCount: currentMessageCount
+          });
+        } else {
+          // If the direct click didn't work, try URL navigation as fallback
+          console.log("Direct link click didn't work, trying URL navigation");
+          
+          // Store current URL to check if it changes
+          const currentUrl = window.location.href;
+          
+          // Navigate to /new directly
+          window.location.href = 'https://claude.ai/new';
+          
+          setTimeout(() => {
+            const finalMessageCount = document.querySelectorAll('div.font-claude-message').length;
+            
+            if (window.location.href !== currentUrl || finalMessageCount === 0 || finalMessageCount < initialMessageCount) {
+              resolve({
+                success: true,
+                message: "Created new chat by navigating to new chat URL",
+                method: "url-navigation",
+                initialMessageCount,
+                finalMessageCount
+              });
+            } else {
+              resolve({
+                success: false,
+                message: "Failed to create new chat in Claude",
+                method: "all-failed",
+                initialMessageCount,
+                finalMessageCount
+              });
+            }
+          }, 1500);
+        }
+      }, 1000);
+    });
+  } else {
+    console.log("New Chat link not found, trying URL navigation");
+    
+    // Fallback to URL navigation
+    const currentUrl = window.location.href;
+    window.location.href = 'https://claude.ai/new';
+    
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const finalMessageCount = document.querySelectorAll('div.font-claude-message').length;
+        
+        if (window.location.href !== currentUrl || finalMessageCount === 0 || finalMessageCount < initialMessageCount) {
+          resolve({
+            success: true,
+            message: "Created new chat by navigating to new chat URL",
+            method: "url-navigation-direct",
+            initialMessageCount,
+            finalMessageCount
+          });
+        } else {
+          resolve({
+            success: false,
+            message: "Failed to create new chat in Claude - couldn't find new chat link",
+            method: "navigation-failed",
+            initialMessageCount,
+            finalMessageCount
+          });
+        }
+      }, 1500);
+    });
+  }
+}
+

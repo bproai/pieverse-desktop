@@ -509,3 +509,100 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+
+/* Add this to your styles.css file */
+
+/* Connection settings styling */
+.connection-group {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.connection-label {
+  width: 80px;
+  font-size: 12px;
+  color: #999;
+  padding-top: 8px;
+}
+
+.connection-inputs {
+  flex: 1;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+}
+
+.input-group input[type="text"] {
+  flex: 2;
+  margin-right: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.input-separator {
+  display: inline-block;
+  padding: 0 5px;
+  color: #666;
+  font-weight: bold;
+  background: #222222;
+  border-top: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  line-height: 32px;
+}
+
+.input-group input[type="number"] {
+  flex: 1;
+  margin-left: 0;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Make form help more compact */
+.form-help {
+  font-size: 10px;
+  color: #666666;
+  margin-top: 2px;
+  display: block;
+}
+
+/* Adjust spacing between sections */
+.settings-group {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  padding-top: 5px;
+}
+
+.settings-group h4 {
+  font-size: 12px;
+  margin: 0 0 8px 0;
+  color: #999999;
+  font-weight: 500;
+}
+
+/* Smaller toggle spacing */
+.toggle-group {
+  margin-bottom: 10px;
+}
+
+.toggle-label small {
+  margin-top: 0;
+}
+
+/* Dark mode style for the "Clear Q&A Cache" button */
+#clearCacheButton {
+  background-color: #ff3b30; /* red background for a "destructive" look */
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+#clearCacheButton:hover {
+  background-color: #e62e24; /* slightly darker red on hover */
+  opacity: 0.95;
+}
