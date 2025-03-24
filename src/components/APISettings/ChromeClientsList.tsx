@@ -6,7 +6,8 @@ import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
 import { Image } from '@mantine/core'; // Make sure to import the correct Image component
 import { openUrl } from '@tauri-apps/plugin-opener';
-                                
+import { safeOpenUrl, formatUrl } from '../../utils/urlUtils';                                
+import { SafeFavicon } from "../common/SafeFavicon";
 
 export function ChromeClientsList() {
   const [clients, setClients] = useState<ClientInfo[]>([]);
@@ -59,16 +60,6 @@ export function ChromeClientsList() {
   const formatTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString();
   };
-
-  // Format URL for display (hostname only)
-  const formatUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname;
-    } catch (e) {
-      return url;
-    }
-  };
   
   return (
     <Card className="w-full" shadow="sm" padding="lg">
@@ -105,18 +96,7 @@ export function ChromeClientsList() {
                     {/* Display URL if available */}
                     {client.tab_url && (
                       <Group spacing={4} nowrap='true'>
-                        <Image
-                        src={client.favicon}
-                        alt="Site favicon"
-                        withplaceholder="true"
-                        placeholder={<Globe size={12} />}
-                        style={{ 
-                            width: '16px', 
-                            height: '16px', 
-                            objectFit: 'contain',
-                            flexShrink: 0
-                        }}
-                        />
+                        <SafeFavicon url={client.favicon} size={16} />
                         
                         <Tooltip label={client.tab_url} position="top">
                           <Text size="xs" color="dimmed" style={{ 
@@ -132,7 +112,7 @@ export function ChromeClientsList() {
                             onClick={async (e) => {
                                 e.stopPropagation();
                                 try {
-                                await openUrl(client.tab_url);
+                                  await safeOpenUrl(client.tab_url);
                                 console.log("URL opened successfully");
                                 } catch (err) {
                                 console.error("Failed to open URL:", err);

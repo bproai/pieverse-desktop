@@ -2,6 +2,7 @@
 import React, { forwardRef } from 'react';
 import { Group, Text, Badge } from '@mantine/core';
 import { Globe } from 'lucide-react';
+import { SafeFavicon } from '../common/SafeFavicon';
 
 // First update the interface to include the favicon prop
 interface ClientSelectItemProps extends React.ComponentPropsWithoutRef<'div'> {
@@ -20,21 +21,7 @@ export const ClientSelectItem = forwardRef<HTMLDivElement, ClientSelectItemProps
           <div style={{ maxWidth: 'calc(100% - 24px)' }}>
             <Group spacing="xs" nowrap='true'>
               {/* Favicon first */}
-              {favicon ? (
-                <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-                  <img 
-                    src={favicon}
-                    alt="Site favicon"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain'
-                    }}
-                  />
-                </div>
-              ) : (
-                <Globe size={12} />
-              )}
+              <SafeFavicon url={favicon} size={12} />
               
               {/* Then active indicator */}
               {active && (

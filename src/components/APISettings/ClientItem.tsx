@@ -2,6 +2,8 @@
 import { Card, Text, Group, Stack, Badge, ActionIcon, Tooltip } from '@mantine/core';
 import { Globe, ExternalLink } from 'lucide-react';
 import { ClientInfo } from '../../services/WebSocketService';
+import { safeOpenInNewTab, formatUrl } from '../../utils/urlUtils';
+import { SafeFavicon } from '../common/SafeFavicon';
 
 interface ClientItemProps {
   client: ClientInfo;
@@ -12,16 +14,6 @@ interface ClientItemProps {
 export function ClientItem({ client, selected, onClick }: ClientItemProps) {
   const formatTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString();
-  };
-
-  // Format URL for display (hostname only)
-  const formatUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname;
-    } catch (e) {
-      return url;
-    }
   };
   
   // Calculate how long since last active
@@ -64,21 +56,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
           {/* Display URL if available */}
           {client.tab_url && (
             <Group spacing={4} nnowrap='true'>
-              {client.favicon ? (
-      <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-        <img 
-          src={client.favicon}
-          alt="Site favicon"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
-      </div>
-    ) : (
-      <Globe size={12} />
-    )}  
+              <SafeFavicon url={client.favicon} size={12} />
               <Tooltip label={client.tab_url} position="top">
                 <Text size="xs" color="dimmed" style={{ 
                   overflow: 'hidden',
@@ -92,7 +70,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
                 size="xs" 
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent parent click
-                  window.open(client.tab_url, '_blank');
+                  safeOpenInNewTab(client.tab_url);
                 }}
               >
                 <ExternalLink size={12} />

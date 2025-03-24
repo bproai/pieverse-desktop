@@ -8,6 +8,7 @@ import { listen } from '@tauri-apps/api/event';
 import { notifications } from '@mantine/notifications';
 import { ChromeClientsList } from './ChromeClientsList';
 import { forwardRef } from 'react';
+import { SafeFavicon } from '../common/SafeFavicon';
 
 
 export function APISettingsPanel() {
@@ -164,21 +165,7 @@ export function APISettingsPanel() {
     ({ label, favicon, ...others }, ref) => (
       <div ref={ref} {...others}>
         <Group spacing={4} nowrap='true'>
-          {favicon ? (
-            <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-              <img 
-                src={favicon}
-                alt="Platform favicon"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain'
-                }}
-              />
-            </div>
-          ) : (
-            <Globe size={12} />
-          )}
+          <SafeFavicon url={favicon} size={12} />
           <span>{label}</span>
         </Group>
       </div>
@@ -634,21 +621,7 @@ export function APISettingsPanel() {
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
                     <Group spacing={4} nowrap='true'>
-                      {option.favicon ? (
-                        <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-                          <img 
-                            src={option.favicon}
-                            alt="Platform favicon"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain'
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <Globe size={12} />
-                      )}
+                      <SafeFavicon url={option.favicon} size={12} />
                       <span>{option.label}</span>
                     </Group>
                   )}
@@ -667,21 +640,7 @@ export function APISettingsPanel() {
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
                       <Group nowrap='true' spacing="xs">
-                        {option.favicon ? (
-                          <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-                            <img 
-                              src={option.favicon}
-                              alt="Site favicon"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain'
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <Globe size={12} />
-                        )}
+                        <SafeFavicon url={option.favicon} size={12} />
                         
                         {option.active && (
                           <div 
@@ -758,21 +717,7 @@ export function APISettingsPanel() {
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
                     <Group spacing={4} nowrap='true'>
-                      {option.favicon ? (
-                        <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-                          <img 
-                            src={option.favicon}
-                            alt="Platform favicon"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain'
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <Globe size={12} />
-                      )}
+                      <SafeFavicon url={option.favicon} size={12} />
                       <span>{option.label}</span>
                     </Group>
                   )}
@@ -791,21 +736,7 @@ export function APISettingsPanel() {
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
                       <Group nowrap='true' spacing="xs">
-                        {option.favicon ? (
-                          <div style={{ width: '12px', height: '12px', flexShrink: 0 }}>
-                            <img 
-                              src={option.favicon}
-                              alt="Site favicon"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain'
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <Globe size={12} />
-                        )}
+                        <SafeFavicon url={option.favicon} size={12} />
                         
                         {option.active && (
                           <div 
