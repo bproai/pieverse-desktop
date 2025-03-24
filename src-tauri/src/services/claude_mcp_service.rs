@@ -44,40 +44,6 @@ pub struct FileInfo {
 }
 
 //
-// Check if a path is allowed
-//
-// Update the is_path_allowed function to match the more secure implementation
-fn is_path_safe(app_handle: &AppHandle, path: &Path, allowed_dirs: &[PathBuf]) -> Result<PathBuf, String> {
-    // Get the app's data directory as a safe base directory
-    let app_data_dir = app_handle.path().app_data_dir()
-        .map_err(|_| "Failed to get app data directory".to_string())?;
-    
-    // Get user's home directory as another allowed location
-    let home_dir = dirs::home_dir()
-        .ok_or_else(|| "Failed to get home directory".to_string())?;
-    
-    // Canonicalize the path to resolve any symlinks or ".." components
-    let canonical_path = path.canonicalize()
-        .map_err(|e| format!("Failed to resolve path: {}", e))?;
-    
-    // Check if the path is within allowed directories (custom ones or default safe ones)
-    if canonical_path.starts_with(&app_data_dir) || 
-       canonical_path.starts_with(&home_dir) ||
-       allowed_dirs.iter().any(|dir| {
-           if let Ok(canonical_dir) = dir.canonicalize() {
-               canonical_path.starts_with(canonical_dir)
-           } else {
-               false
-           }
-       }) {
-        Ok(canonical_path)
-    } else {
-        Err(format!("Access denied: Path is outside of allowed directories: {}", 
-            path.display()))
-    }
-}
-
-//
 // Start the MCP server
 //
 #[command]

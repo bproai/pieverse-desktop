@@ -45,9 +45,8 @@ class MySQLPromptService {
     }
 
     async getPrompts(): Promise<Prompt[]> {
-        const result = await MySQLService.executeQuery(
-            `SELECT * FROM ${this.database}.prompts ORDER BY category, display_order`
-        );
+        const query = `SELECT * FROM ${this.database}.prompts ORDER BY category, display_order`;
+        const result = await MySQLService.executeQuery(query);
         return result as Prompt[];
     }
 
@@ -55,40 +54,57 @@ class MySQLPromptService {
         const query = `
             INSERT INTO ${this.database}.prompts 
             (title, description, category, display_order, is_active)
-            VALUES (
-                '${prompt.title}',
-                ${prompt.description ? `'${prompt.description}'` : 'NULL'},
-                '${prompt.category}',
-                ${prompt.display_order},
-                ${prompt.is_active}
-            )`;
+            VALUES (?, ?, ?, ?, ?)`;
 
-        await MySQLService.executeQuery(query);
+        const params = [
+            prompt.title,
+            prompt.description,
+            prompt.category,
+            prompt.display_order,
+            prompt.is_active
+        ];
+
+        await MySQLService.executeParamQuery(query, params);
     }
 
     async updatePrompt(id: number, updates: Partial<Prompt>): Promise<void> {
-        const updateFields = Object.entries(updates)
-            .filter(([key]) => !['id', 'created_at', 'updated_at'].includes(key))
-            .map(([key, value]) => {
-                if (value === null) {
-                    return `${key} = NULL`;
-                }
-                if (typeof value === 'string') {
-                    return `${key} = '${value}'`;
-                }
-                return `${key} = ${value}`;
-            })
-            .join(', ');
+        const allowedFields = ['title', 'description', 'category', 'display_order', 'is_active'];
+        const updateFields: string[] = [];
+        const params: any[] = [];
 
-        await MySQLService.executeQuery(
-            `UPDATE ${this.database}.prompts SET ${updateFields} WHERE id = ${id}`
-        );
+        // Build the SET clause and parameters
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key)) {
+                updateFields.push(`${key} = ?`);
+                params.push(value);
+            }
+        }
+
+        if (updateFields.length === 0) {
+            return; // Nothing to update
+        }
+
+        // Add the ID parameter for the WHERE clause
+        params.push(id);
+
+        const query = `
+            UPDATE ${this.database}.prompts 
+            SET ${updateFields.join(', ')} 
+            WHERE id = ?`;
+
+        await MySQLService.executeParamQuery(query, params);
     }
 
     async deletePrompt(id: number): Promise<void> {
-        await MySQLService.executeQuery(
-            `DELETE FROM ${this.database}.prompts WHERE id = ${id}`
-        );
+        const query = `DELETE FROM ${this.database}.prompts WHERE id = ?`;
+        await MySQLService.executeParamQuery(query, [id]);
+    }
+
+    async bulkImport(prompts: Array<Omit<Prompt, 'id' | 'created_at' | 'updated_at'>>): Promise<void> {
+        // Process prompts sequentially
+        for (const prompt of prompts) {
+          await this.createPrompt(prompt);
+        }
     }
 }
 

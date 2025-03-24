@@ -47,6 +47,82 @@ const renameFile = async (oldPath: string, newPath: string) => {
 };
 
 class FileSystemService {
+  // Array of allowed base directories
+  private allowedDirectories: string[] = [];
+  
+  constructor() {
+    // Initialize with some default allowed directories if needed
+    // You might load these from settings or configuration
+  }
+
+  /**
+   * Add an allowed directory path
+   */
+  async addAllowedDirectory(dirPath: string): Promise<boolean> {
+    // Check if directory exists
+    const dirExists = await this.exists(dirPath);
+    if (!dirExists) {
+      console.error(`Directory does not exist: ${dirPath}`);
+      return false;
+    }
+
+    // Add to allowed directories if not already present
+    if (!this.allowedDirectories.includes(dirPath)) {
+      this.allowedDirectories.push(dirPath);
+    }
+    return true;
+  }
+
+  /**
+   * Remove an allowed directory path
+   */
+  removeAllowedDirectory(dirPath: string): boolean {
+    const index = this.allowedDirectories.indexOf(dirPath);
+    if (index !== -1) {
+      this.allowedDirectories.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get all allowed directories
+   */
+  getAllowedDirectories(): string[] {
+    return [...this.allowedDirectories];
+  }
+
+  /**
+   * Check if a path is within allowed directories
+   * This is our key security function to prevent path traversal attacks
+   */
+  async isPathAllowed(filePath: string): Promise<boolean> {
+    // If no allowed directories are set, use safer APIs directly
+    if (this.allowedDirectories.length === 0) {
+      return false;
+    }
+
+    try {
+      // Resolve to absolute path
+      const resolvedPath = await path.resolve(filePath);
+      
+      // Check if path is within any allowed directory
+      for (const allowedDir of this.allowedDirectories) {
+        const resolvedAllowedDir = await path.resolve(allowedDir);
+        
+        // Check if resolvedPath starts with resolvedAllowedDir
+        if (resolvedPath.startsWith(resolvedAllowedDir)) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error(`Error checking if path is allowed: ${error}`);
+      return false;
+    }
+  }
+
   /**
    * Check if a file or directory exists
    */
@@ -60,7 +136,7 @@ class FileSystemService {
   }
 
   /**
-   * Read a text file
+   * Read a text file with path validation
    */
   async readTextFile(filePath: string): Promise<string | null> {
     try {
@@ -68,6 +144,13 @@ class FileSystemService {
       const fileExists = await this.exists(filePath);
       if (!fileExists) {
         console.error(`File does not exist: ${filePath}`);
+        return null;
+      }
+
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(filePath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${filePath}`);
         return null;
       }
 
@@ -80,10 +163,17 @@ class FileSystemService {
   }
 
   /**
-   * Write content to a text file
+   * Write content to a text file with path validation
    */
   async writeTextFile(filePath: string, content: string): Promise<boolean> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(filePath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${filePath}`);
+        return false;
+      }
+
       await writeTextFile(filePath, content);
       return true;
     } catch (error) {
@@ -93,10 +183,19 @@ class FileSystemService {
   }
 
   /**
-   * Copy a file from source to destination
+   * Copy a file from source to destination with path validation
    */
   async copyFile(source: string, destination: string): Promise<boolean> {
     try {
+      // Path safety checks
+      const isSourceAllowed = await this.isPathAllowed(source);
+      const isDestinationAllowed = await this.isPathAllowed(destination);
+      
+      if (!isSourceAllowed || !isDestinationAllowed) {
+        console.error(`Security error: Source or destination path is not within allowed directories`);
+        return false;
+      }
+
       await copyFile(source, destination);
       return true;
     } catch (error) {
@@ -106,10 +205,17 @@ class FileSystemService {
   }
 
   /**
- * Create a new file (without any content)
- */
-async createFile(filePath: string): Promise<boolean> {
+   * Create a new file (without any content) with path validation
+   */
+  async createFile(filePath: string): Promise<boolean> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(filePath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${filePath}`);
+        return false;
+      }
+
       // Use create function to create an empty file
       await create(filePath);
       return true;
@@ -120,11 +226,17 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * Create a directory (and parent directories if needed)
+   * Create a directory (and parent directories if needed) with path validation
    */
   async createDirectory(dirPath: string, recursive: boolean = true): Promise<boolean> {
     try {
-      // Use the correct function name 'create' instead of 'createDir'
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(dirPath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${dirPath}`);
+        return false;
+      }
+
       await mkdir(dirPath, { recursive });
       return true;
     } catch (error) {
@@ -134,10 +246,17 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * Remove a file
+   * Remove a file with path validation
    */
   async removeFile(filePath: string): Promise<boolean> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(filePath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${filePath}`);
+        return false;
+      }
+
       await removeFile(filePath);
       return true;
     } catch (error) {
@@ -147,10 +266,17 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * Remove a directory
+   * Remove a directory with path validation
    */
   async removeDirectory(dirPath: string, recursive: boolean = true): Promise<boolean> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(dirPath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${dirPath}`);
+        return false;
+      }
+
       await removeDir(dirPath, { recursive });
       return true;
     } catch (error) {
@@ -160,10 +286,19 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * Rename a file or directory
+   * Rename a file or directory with path validation
    */
   async rename(oldPath: string, newPath: string): Promise<boolean> {
     try {
+      // Path safety checks
+      const isOldPathAllowed = await this.isPathAllowed(oldPath);
+      const isNewPathAllowed = await this.isPathAllowed(newPath);
+      
+      if (!isOldPathAllowed || !isNewPathAllowed) {
+        console.error(`Security error: Source or destination path is not within allowed directories`);
+        return false;
+      }
+
       await renameFile(oldPath, newPath);
       return true;
     } catch (error) {
@@ -173,10 +308,17 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * List contents of a directory
+   * List contents of a directory with path validation
    */
   async listDirectory(dirPath: string, recursive: boolean = false): Promise<FileEntry[]> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(dirPath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${dirPath}`);
+        return [];
+      }
+
       const entries = await readDir(dirPath, { recursive });
       
       // Convert to our FileEntry format
@@ -195,6 +337,9 @@ async createFile(filePath: string): Promise<boolean> {
       return [];
     }
   }
+
+  // Dialog methods don't need path validation as they use native OS dialogs
+  // which already have their own security measures
 
   /**
    * Open file dialog
@@ -278,6 +423,9 @@ async createFile(filePath: string): Promise<boolean> {
         return null;
       }
       
+      // Add the dialog-selected path to allowed directories temporarily
+      await this.addAllowedDirectory(await path.dirname(filePath));
+      
       const content = await this.readTextFile(filePath);
       
       if (content === null) {
@@ -305,6 +453,9 @@ async createFile(filePath: string): Promise<boolean> {
       if (!filePath) {
         return null;
       }
+      
+      // Add the dialog-selected path to allowed directories temporarily
+      await this.addAllowedDirectory(await path.dirname(filePath));
       
       const success = await this.writeTextFile(filePath, content);
       
@@ -341,10 +492,17 @@ async createFile(filePath: string): Promise<boolean> {
   }
 
   /**
-   * Copy file content to clipboard
+   * Copy file content to clipboard with path validation
    */
   async copyToClipboard(filePath: string): Promise<boolean> {
     try {
+      // Path safety check
+      const isAllowed = await this.isPathAllowed(filePath);
+      if (!isAllowed) {
+        console.error(`Security error: Path is not within allowed directories: ${filePath}`);
+        return false;
+      }
+      
       const content = await this.readTextFile(filePath);
       
       if (content === null) {

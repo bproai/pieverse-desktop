@@ -54,6 +54,25 @@ export class MySQLService {
     }
   }
 
+  // Add this method to the MySQLService class
+  static async executeParamQuery(query: string, params: any[]): Promise<any> {
+    if (!this.isConnected) {
+      const isConnected = await this.testConnection();
+      if (!isConnected) {
+        throw new Error('MySQL is not connected');
+      }
+    }
+    
+    // Remove any extra whitespace and newlines
+    const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+    console.log('Executing parameterized query:', normalizedQuery);
+    
+    return core.invoke('mysql_execute_param_query', { 
+      query: normalizedQuery,
+      params: params
+    });
+  }
+
   static getConnectionStatus(): boolean {
     return this.isConnected;
   }

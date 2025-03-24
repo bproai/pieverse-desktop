@@ -20,6 +20,7 @@ use services::{
         MySqlService,
         mysql_connect,
         mysql_execute_query,
+        mysql_execute_param_query,
         mysql_test_connection,
         mysql_get_tables,
         mysql_get_table_schema,
@@ -220,6 +221,7 @@ pub fn run() {
             mysql_get_tables,
             mysql_get_table_schema,
             mysql_disconnect,
+            mysql_execute_param_query,
             // Python commands
             python_init,
             python_execute,

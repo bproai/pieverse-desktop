@@ -193,6 +193,97 @@ impl MySqlService {
             Err(MySqlError::ConnectionError("Not connected".to_string()))
         }
     }
+
+    // Add this method to the MySqlService implementation
+    pub async fn execute_param_query(&self, query: &str, params: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, MySqlError> {
+        let pool_guard = self.pool.lock().await;
+        if let Some(pool) = &*pool_guard {
+            // Create a query builder
+            let mut query_builder = sqlx::query(query);
+            
+            // Bind parameters
+            for param in params {
+                match param {
+                    serde_json::Value::Null => {
+                        query_builder = query_builder.bind(None::<String>);
+                    },
+                    serde_json::Value::Bool(b) => {
+                        query_builder = query_builder.bind(b);
+                    },
+                    serde_json::Value::Number(n) => {
+                        if n.is_i64() {
+                            query_builder = query_builder.bind(n.as_i64().unwrap());
+                        } else if n.is_u64() {
+                            query_builder = query_builder.bind(n.as_u64().unwrap() as i64);
+                        } else if n.is_f64() {
+                            query_builder = query_builder.bind(n.as_f64().unwrap());
+                        } else {
+                            // Default to string
+                            query_builder = query_builder.bind(n.to_string());
+                        }
+                    },
+                    serde_json::Value::String(s) => {
+                        query_builder = query_builder.bind(s);
+                    },
+                    _ => {
+                        // Arrays and Objects are serialized to strings
+                        query_builder = query_builder.bind(param.to_string());
+                    }
+                }
+            }
+
+            // Execute the query
+            let rows = query_builder
+                .fetch_all(pool)
+                .await
+                .map_err(|e| MySqlError::QueryError(e.to_string()))?;
+
+            // Process the results the same way as in execute_query
+            let results = rows.iter().map(|row| {
+                // Reuse the same code as in your execute_query method
+                let columns = row.columns();
+                let mut map = serde_json::Map::new();
+                
+                for (i, column) in columns.iter().enumerate() {
+                    let column_name = column.name();
+                    let type_info = column.type_info();
+                    
+                    let value = match (column_name, type_info.name()) {
+                        // Handle datetime columns
+                        ("date" | "timestamp", _) => {
+                            match row.try_get::<sqlx::types::time::PrimitiveDateTime, _>(i) {
+                                Ok(dt) => serde_json::Value::String(dt.to_string()),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        },
+                        // Handle boolean/tinyint columns
+                        (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
+                            match row.try_get::<i8, _>(i) {
+                                Ok(v) => serde_json::Value::Number(v.into()),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        },
+                        // ... other type handling ...
+                        _ => {
+                            match row.try_get::<String, _>(i) {
+                                Ok(v) => serde_json::Value::String(v),
+                                Err(_) => serde_json::Value::Null
+                            }
+                        }
+                    };
+                    
+                    map.insert(column_name.to_string(), value);
+                }
+                
+                serde_json::Value::Object(map)
+            }).collect();
+
+            Ok(results)
+        } else {
+            Err(MySqlError::ConnectionError("Not connected".to_string()))
+        }
+    }
+
 }
 
 #[tauri::command]
@@ -238,4 +329,14 @@ pub async fn mysql_disconnect(
     _state: tauri::State<'_, MySqlService>,
 ) -> Result<(), String> {
     Ok(()) // Implement if needed
+}
+
+// Add the Tauri command for parameterized queries
+#[tauri::command]
+pub async fn mysql_execute_param_query(
+    state: tauri::State<'_, MySqlService>,
+    query: String,
+    params: Vec<serde_json::Value>,
+) -> Result<Vec<serde_json::Value>, String> {
+    state.execute_param_query(&query, params).await.map_err(|e| e.to_string())
 }
