@@ -468,7 +468,7 @@ async fn process_chrome_messages(
                                             let tab_url = json.get("url").and_then(|u| u.as_str()).map(String::from);
                                             let favicon = json.get("favicon").and_then(|f| f.as_str()).map(String::from);
                                             
-                                            println!("Received tab info for tab {}: title={:?}, url={:?}", tab_id, tab_title, tab_url);
+                                            // println!("Received tab info for tab {}: title={:?}, url={:?}", tab_id, tab_title, tab_url);
                                             
                                             // Important: Look for client with "tab_" prefix
                                             let client_id = format!("tab_{}", tab_id);
