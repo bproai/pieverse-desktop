@@ -381,6 +381,9 @@ async fn process_chrome_messages(
     client_id: String,
     clients: Arc<Mutex<HashMap<String, ClientInfo>>>
 ) {
+    // Define the expected auth token
+    const AUTH_TOKEN: &str = "K9FnT7X3pL2QzA8mB6vD1yG5sH4jR0cE";
+
     // Subscribe to broadcasts
     let mut rx = BroadcastStream::new(tx.subscribe());
     
@@ -397,6 +400,14 @@ async fn process_chrome_messages(
                         
                         // Try to parse message
                         if let Ok(json) = serde_json::from_str::<serde_json::Value>(text) {
+                            // Validate token before processing
+                            let token = json.get("token").and_then(|t| t.as_str());
+                            
+                            if token.is_none() || token.unwrap() != AUTH_TOKEN {
+                                println!("Dropping message: Invalid or missing token from {}", addr);
+                                continue; // Skip this message
+                            }
+                                                        
                             // Update client's last_active timestamp
                             if let Ok(mut client_map) = clients.lock() {
                                 if let Some(client) = client_map.get_mut(&client_id) {
