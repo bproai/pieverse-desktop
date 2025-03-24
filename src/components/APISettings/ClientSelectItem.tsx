@@ -1,7 +1,6 @@
 // src/components/APISettings/ClientSelectItem.tsx
 import React, { forwardRef } from 'react';
 import { Group, Text, Badge } from '@mantine/core';
-import { Globe } from 'lucide-react';
 import { SafeFavicon } from '../common/SafeFavicon';
 
 // First update the interface to include the favicon prop

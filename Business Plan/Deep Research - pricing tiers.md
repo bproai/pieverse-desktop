@@ -1,7 +1,3 @@
-Here's the revised pricing description with the updated wording:
-
----
-
 ## Clean, Pure Pricing Model
 
 ### Free Trial
@@ -9,7 +5,7 @@ Here's the revised pricing description with the updated wording:
 - **Purpose:** Allow both individual developers and business users to experience the full capabilities of the tool risk-free.
 
 ### Personal Tier
-- **Price:** $9.99 per month (or approximately $95.88/year with a 20% annual discount)  
+- **Price:** $2.99 per month (or $28.70/year with 20% annual discount when paid in full)  
 - **Key Features:**  
   - Full access to core AI coding assistance and advanced control features  
   - Unlimited (or very high limit) usage for individual developers  
@@ -39,9 +35,3 @@ To unlock the full functionality of our product, users must have their own ChatG
   Designed for mid-to-advanced developers, our tool offers production-grade features and superior control, helping you work more efficiently with your preferred AI service.  
 - **Clear Account Requirement:**  
   Please note that to use the full capabilities of our tool, you must have an active ChatGPT or Claude account and/or obtain the necessary API key(s). This ensures you understand that our product is a value-added enhancement to your existing AI platform.
-
----
-
-This two-tier model, combined with clear communication about the account and API key requirements, positions your product as a powerful, value-enhancing tool for developers who are already investing in ChatGPT or Claude services.
-
-Would you like further adjustments or additional details on this pricing page copy?

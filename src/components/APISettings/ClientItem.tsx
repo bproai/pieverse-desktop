@@ -1,6 +1,6 @@
 // src/components/APISettings/ClientItem.tsx
 import { Card, Text, Group, Stack, Badge, ActionIcon, Tooltip } from '@mantine/core';
-import { Globe, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { ClientInfo } from '../../services/WebSocketService';
 import { safeOpenInNewTab, formatUrl } from '../../utils/urlUtils';
 import { SafeFavicon } from '../common/SafeFavicon';
