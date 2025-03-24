@@ -50,7 +50,9 @@ export const useCategories = (prompts: Prompt[], setPrompts: React.Dispatch<Reac
   // Add a new category
   const addCategory = (categoryName: string) => {
     if (categoryName.trim() === '') return;
-    if (categories.includes(categoryName.trim())) {
+    
+    // Case-insensitive check for existing category
+    if (categories.some(cat => cat.toLowerCase() === categoryName.trim().toLowerCase())) {
       notifications.show({
         title: 'Error',
         message: 'Category already exists',
@@ -191,17 +193,23 @@ export const useCategories = (prompts: Prompt[], setPrompts: React.Dispatch<Reac
     return { type: 'letter', letter: firstChar, color: 'gray' };
   };
 
-
-  // Add this function inside the useCategories hook, before the return statement
   const reconcileCategories = (promptCategories: string[]) => {
-    // Find categories that exist in prompts but not in our list
-    const missingCategories = promptCategories.filter(
-      cat => cat && !categories.includes(cat)
-    );
+    if (!promptCategories || promptCategories.length === 0) return;
+    
+    // Filter out empty categories and get only ones that don't already exist
+    const missingCategories = promptCategories
+      .filter(cat => cat && cat.trim() !== '')
+      .filter(cat => !categories.some(existingCat => 
+        existingCat.toLowerCase() === cat.toLowerCase()
+      ));
     
     // If we found new categories, add them to our list
     if (missingCategories.length > 0) {
-      setCategories(prev => [...prev, ...missingCategories]);
+      setCategories(prev => {
+        // Create a new Set from the combined arrays to remove any duplicates
+        // (though there shouldn't be any if the filter above is working correctly)
+        return [...new Set([...prev, ...missingCategories])];
+      });
     }
   };
 
