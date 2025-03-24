@@ -15,7 +15,8 @@ import {
   LoadingOverlay,
   Alert,
   Select,
-  SegmentedControl
+  Badge,
+  ThemeIcon
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
@@ -31,19 +32,20 @@ import {
   AlertCircle,
   Upload,
   ArrowLeftRight,
-  Download
+  Download,
+  Settings
 } from 'lucide-react';
 import { MySQLService } from '../MySQL/MySQLService';
 import promptService from '../../services/MySQLPromptService';
 import SQLitePromptService from '../../services/SQLitePromptService';
 import type { Prompt } from '../../services/MySQLPromptService';
+import CategoryManager from './CategoryManager';
+import { useCategories } from './categoryHooks';
 
 interface PromptsManagerProps {
   backend: 'mysql' | 'sqlite';
   onBackendChange: (backend: 'mysql' | 'sqlite') => void;
 }
-
-const CATEGORIES = ['WRITING & ANALYSIS', 'FINANCE & MARKETS', 'CODE & DEVELOPMENT'];
 
 const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -56,11 +58,23 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [expandedPromptId, setExpandedPromptId] = useState<number | null>(null);
   const [lastHoveredPromptId, setLastHoveredPromptId] = useState<number | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   
   const [deleteConfirmation, setDeleteConfirmation] = useState<{prompt: Prompt, opened: boolean}>({
     prompt: null as any,
     opened: false
   });
+
+  // Use the custom categories hook
+  const { 
+    categories, 
+    addCategory, 
+    updateCategory, 
+    deleteCategory,
+    reorderCategories,
+    getCategoryIcon,
+    reconcileCategories  // Add this line
+  } = useCategories(prompts, setPrompts, backend);
 
   // Get the active service based on backend selection
   const activeService = backend === 'sqlite' ? SQLitePromptService : promptService;
@@ -112,11 +126,58 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
         ...prompt,
         is_active: tinyintToBoolean(Number(prompt.is_active))
       }));
+      
       setPrompts(convertedPrompts);
+      
+      // Extract unique categories from prompts
+      const promptCategories = Array.from(
+        new Set(convertedPrompts.map(prompt => prompt.category))
+      );
+      
+      // Reconcile categories from prompts with our existing list
+      reconcileCategories(promptCategories);
+      
     } catch (error) {
       console.error('Failed to load prompts:', error);
       setError('Failed to load prompts. Please try again.');
     }
+  };
+
+  // Render the category icon based on the configuration from the hook
+  const renderCategoryIcon = (categoryName: string) => {
+    const iconConfig = getCategoryIcon(categoryName);
+    
+    if (iconConfig.type === 'icon') {
+      // Render predefined icons
+      if (iconConfig.name === 'book') {
+        return (
+          <ThemeIcon size="sm" color={iconConfig.color} variant="light">
+            <Book size={20} />
+          </ThemeIcon>
+        );
+      } else if (iconConfig.name === 'chart-bar') {
+        return (
+          <ThemeIcon size="sm" color={iconConfig.color} variant="light">
+            <ChartBar size={20} />
+          </ThemeIcon>
+        );
+      } else if (iconConfig.name === 'code') {
+        return (
+          <ThemeIcon size="sm" color={iconConfig.color} variant="light">
+            <Code size={20} />
+          </ThemeIcon>
+        );
+      }
+    } else if (iconConfig.type === 'letter') {
+      // Render letter icon for custom categories
+      return (
+        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold">
+          {iconConfig.letter}
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   const handleTransferPrompts = async () => {
@@ -231,10 +292,11 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
         }
       }
       
-      if (!CATEGORIES.includes(prompt.category)) {
+      // Category validation is more flexible now - if a category doesn't exist, we'll add it
+      if (typeof prompt.category !== 'string' || prompt.category.trim() === '') {
         return { 
           isValid: false, 
-          error: `Item ${i + 1} has invalid category. Must be one of: ${CATEGORIES.join(', ')}` 
+          error: `Item ${i + 1} has invalid category. Must be a non-empty string.` 
         };
       }
       
@@ -265,6 +327,24 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       if (!validation.isValid) {
         setJsonError(validation.error);
         return;
+      }
+
+      // Extract any new categories from the import data
+      const newCats = new Set(categories);
+      data.forEach((prompt: any) => {
+        if (prompt.category && !categories.includes(prompt.category)) {
+          newCats.add(prompt.category);
+        }
+      });
+      
+      // Update categories list if new ones were found
+      if (newCats.size > categories.length) {
+        // Since we're using the custom hook now, add each new category
+        Array.from(newCats).forEach(cat => {
+          if (!categories.includes(cat as string)) {
+            addCategory(cat as string);
+          }
+        });
       }
 
       setLoading(true);
@@ -330,19 +410,6 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
     setIsModalOpen(true);
   };
 
-  const getCategoryIcon = (categoryName: string) => {
-    switch (categoryName) {
-      case 'WRITING & ANALYSIS':
-        return <Book size={20} className="text-blue-500" />;
-      case 'FINANCE & MARKETS':
-        return <ChartBar size={20} className="text-green-500" />;
-      case 'CODE & DEVELOPMENT':
-        return <Code size={20} className="text-purple-500" />;
-      default:
-        return null;
-    }
-  };
-
   if (error && backend === 'mysql') {
     return (
       <Stack spacing="md">
@@ -366,10 +433,21 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
     );
   }
 
-  const promptsByCategory = CATEGORIES.reduce((acc, category) => {
+  const promptsByCategory = categories.reduce((acc, category) => {
     acc[category] = prompts.filter(p => p.category === category);
     return acc;
   }, {} as Record<string, Prompt[]>);
+
+  // Check for prompts with categories not in our categories list
+  const uncategorizedPrompts = prompts.filter(prompt => !categories.includes(prompt.category));
+  if (uncategorizedPrompts.length > 0) {
+    // Add any missing categories from prompts
+    uncategorizedPrompts.forEach(prompt => {
+      if (prompt.category && !categories.includes(prompt.category)) {
+        promptsByCategory[prompt.category] = prompts.filter(p => p.category === prompt.category);
+      }
+    });
+  }
 
   return (
     <div className="relative min-h-[calc(100vh-200px)]">
@@ -406,6 +484,13 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
         <Group>
           <Button
             variant="outline"
+            leftSection={<Settings size={16} />}
+            onClick={() => setIsCategoryModalOpen(true)}
+          >
+            Manage Categories
+          </Button>
+          <Button
+            variant="outline"
             leftSection={<ArrowLeftRight size={16} />}
             onClick={handleTransferPrompts}
           >
@@ -433,7 +518,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                 id: 0,
                 title: '',
                 description: '',
-                category: CATEGORIES[0],
+                category: categories[0] || '',
                 display_order: 0,
                 is_active: true,
                 created_at: '',
@@ -447,13 +532,15 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
         </Group>
       </Group>
 
-      {CATEGORIES.map(category => (
+      {/* Display categories and prompts */}
+      {categories.map(category => (
         <div key={category} className="mb-8">
           <Group className="mb-4">
-            {getCategoryIcon(category)}
+            {renderCategoryIcon(category)}
             <Text size="sm" className="text-gray-500 uppercase tracking-wider font-medium">
               {category}
             </Text>
+            <Badge size="sm" color="gray">{promptsByCategory[category]?.length || 0}</Badge>
           </Group>
           <Stack spacing="md">
             {promptsByCategory[category]?.map(prompt => (
@@ -468,7 +555,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                 <Group position="apart" align="flex-start" style={{ width: "100%" }}>
                 <Group align="flex-start" style={{ flexGrow: 1, minWidth: 0, flexWrap: 'nowrap' }}>
                     <div style={{ flexShrink: 0 }}>
-                      {getCategoryIcon(category)}
+                      {renderCategoryIcon(category)}
                     </div>
                     <div className="overflow-hidden flex-grow" style={{ minWidth: '50%' }}>
                       <Text size="lg" weight={500}>{prompt.title}</Text>
@@ -515,11 +602,16 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                 </Group>
               </Card>
             ))}
+            {promptsByCategory[category]?.length === 0 && (
+              <Text color="dimmed" align="center" italic size="sm">
+                No prompts in this category
+              </Text>
+            )}
           </Stack>
         </div>
       ))}
 
-      {/* Edit Modal */}
+      {/* Edit Prompt Modal */}
       <Modal
         opened={isModalOpen}
         onClose={() => {
@@ -554,10 +646,10 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             <Select
               label="Category"
               required
-              data={CATEGORIES}
-              value={editingPrompt?.category || CATEGORIES[0]}
+              data={categories}
+              value={editingPrompt?.category || categories[0]}
               onChange={(value) => setEditingPrompt(prev => 
-                prev ? { ...prev, category: value || CATEGORIES[0] } : null
+                prev ? { ...prev, category: value || categories[0] } : null
               )}
             />
 
@@ -673,6 +765,19 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Category Management Modal */}
+      <CategoryManager 
+        isOpen={isCategoryModalOpen} 
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={categories}
+        promptsByCategory={promptsByCategory}
+        onAddCategory={addCategory}
+        onUpdateCategory={updateCategory}
+        onDeleteCategory={deleteCategory}
+        onReorderCategories={reorderCategories}
+        getCategoryIcon={getCategoryIcon}
+      />
     </div>
   );
 };
