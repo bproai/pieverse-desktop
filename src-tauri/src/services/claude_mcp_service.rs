@@ -46,18 +46,35 @@ pub struct FileInfo {
 //
 // Check if a path is allowed
 //
-fn is_path_allowed(path: &Path, allowed_dirs: &[PathBuf]) -> bool {
-    let canonical_path = match path.canonicalize() {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
-    allowed_dirs.iter().any(|dir| {
-        if let Ok(canonical_dir) = dir.canonicalize() {
-            canonical_path.starts_with(canonical_dir)
-        } else {
-            false
-        }
-    })
+// Update the is_path_allowed function to match the more secure implementation
+fn is_path_safe(app_handle: &AppHandle, path: &Path, allowed_dirs: &[PathBuf]) -> Result<PathBuf, String> {
+    // Get the app's data directory as a safe base directory
+    let app_data_dir = app_handle.path().app_data_dir()
+        .map_err(|_| "Failed to get app data directory".to_string())?;
+    
+    // Get user's home directory as another allowed location
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| "Failed to get home directory".to_string())?;
+    
+    // Canonicalize the path to resolve any symlinks or ".." components
+    let canonical_path = path.canonicalize()
+        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+    
+    // Check if the path is within allowed directories (custom ones or default safe ones)
+    if canonical_path.starts_with(&app_data_dir) || 
+       canonical_path.starts_with(&home_dir) ||
+       allowed_dirs.iter().any(|dir| {
+           if let Ok(canonical_dir) = dir.canonicalize() {
+               canonical_path.starts_with(canonical_dir)
+           } else {
+               false
+           }
+       }) {
+        Ok(canonical_path)
+    } else {
+        Err(format!("Access denied: Path is outside of allowed directories: {}", 
+            path.display()))
+    }
 }
 
 //
@@ -540,12 +557,35 @@ async fn handle_request(
                         .and_then(|v| v.as_bool())
                         .unwrap_or(true);
                     let path = Path::new(directory);
-                    if !is_path_allowed(path, &allowed_dirs) {
+                    
+                    // Try to canonicalize the path first to check if it exists
+                    let canonical_path = match path.canonicalize() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            return Ok(response_builder
+                                .status(StatusCode::BAD_REQUEST)
+                                .body(hyper::Body::from(format!(r#"{{"error":"Invalid directory path: {}"}}"#, e)))
+                                .unwrap());
+                        }
+                    };
+                    
+                    // Check if path is within allowed directories using simplified is_path_safe
+                    let is_allowed = allowed_dirs.iter().any(|dir| {
+                        if let Ok(canonical_dir) = dir.canonicalize() {
+                            canonical_path.starts_with(&canonical_dir)
+                        } else {
+                            false
+                        }
+                    });
+                    
+                    if !is_allowed {
                         return Ok(response_builder
                             .status(StatusCode::FORBIDDEN)
                             .body(hyper::Body::from(r#"{"error":"Access denied: Directory not in allowed list"}"#))
                             .unwrap());
                     }
+                    
+                    // Check if the pattern is a valid regex before using it
                     let pattern_regex = match Regex::new(pattern) {
                         Ok(re) => re,
                         Err(_) => {
@@ -555,15 +595,60 @@ async fn handle_request(
                                 .unwrap());
                         }
                     };
+                    
+                    // Use the canonicalized path for walking the directory
                     let mut files = Vec::new();
-                    let walker = walkdir::WalkDir::new(path)
-                        .follow_links(true)
+                    let walker = walkdir::WalkDir::new(&canonical_path)
+                        .follow_links(false)  // Don't follow symlinks for security
                         .max_depth(if recursive { usize::MAX } else { 1 });
+                        
+                    // Set a reasonable limit to prevent DoS
+                    let max_files = 1000;
+                    let mut file_count = 0;
+                    
                     for entry in walker.into_iter().filter_map(Result::ok) {
-                        let entry_path = entry.path();
+                        // Check file count limit
+                        file_count += 1;
+                        if file_count > max_files {
+                            break;
+                        }
+                        
+                        // We need to create owned variables from entry for use in the async operation
+                        let entry_path = entry.path().to_path_buf(); // Create owned PathBuf
+                        
+                        // Skip any paths that are no longer within the allowed directory
+                        // This is a double-check for security using the same simplified check
+                        let entry_allowed = allowed_dirs.iter().any(|dir| {
+                            if let Ok(canonical_dir) = dir.canonicalize() {
+                                if let Ok(canonical_entry) = entry_path.canonicalize() {
+                                    canonical_entry.starts_with(&canonical_dir)
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        });
+                        
+                        if !entry_allowed {
+                            continue;
+                        }
+                        
                         if let Some(file_name) = entry_path.file_name() {
                             if let Some(file_name_str) = file_name.to_str() {
-                                if pattern_regex.is_match(file_name_str) {
+                                let file_name_owned = file_name_str.to_string(); // Create owned String
+                                let pattern_regex_clone = pattern_regex.clone(); // Clone the regex
+                                
+                                // Add timeout protection for regex to prevent ReDoS attacks
+                                let pattern_match = match tokio::time::timeout(
+                                    std::time::Duration::from_millis(100),
+                                    tokio::task::spawn_blocking(move || pattern_regex_clone.is_match(&file_name_owned))
+                                ).await {
+                                    Ok(Ok(result)) => result,
+                                    _ => false, // Timeout or error means no match
+                                };
+                                
+                                if pattern_match {
                                     if let Some(path_str) = entry_path.to_str() {
                                         files.push(path_str.to_string());
                                     }
@@ -571,7 +656,12 @@ async fn handle_request(
                             }
                         }
                     }
-                    let result = serde_json::json!({ "files": files });
+                    
+                    let result = serde_json::json!({ 
+                        "files": files,
+                        "truncated": file_count > max_files  // Indicate if results were limited
+                    });
+                    
                     Ok(response_builder
                         .status(StatusCode::OK)
                         .body(hyper::Body::from(serde_json::to_string(&result).unwrap()))
@@ -588,13 +678,63 @@ async fn handle_request(
                         }
                     };
                     let path = Path::new(file_path);
-                    if !is_path_allowed(path, &allowed_dirs) {
+                    
+                    // Try to canonicalize the path first to check if it exists
+                    let canonical_path = match path.canonicalize() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            return Ok(response_builder
+                                .status(StatusCode::BAD_REQUEST)
+                                .body(hyper::Body::from(format!(r#"{{"error":"Invalid file path: {}"}}"#, e)))
+                                .unwrap());
+                        }
+                    };
+                    
+                    // Check if path is within allowed directories
+                    let is_allowed = allowed_dirs.iter().any(|dir| {
+                        if let Ok(canonical_dir) = dir.canonicalize() {
+                            canonical_path.starts_with(&canonical_dir)
+                        } else {
+                            false
+                        }
+                    });
+                    
+                    if !is_allowed {
                         return Ok(response_builder
                             .status(StatusCode::FORBIDDEN)
                             .body(hyper::Body::from(r#"{"error":"Access denied: File not in allowed directory"}"#))
                             .unwrap());
                     }
-                    match fs::read_to_string(path) {
+                    
+                    // Check file size before reading to prevent DoS attacks
+                    let metadata = match fs::metadata(&canonical_path) {
+                        Ok(meta) => meta,
+                        Err(e) => {
+                            return Ok(response_builder
+                                .status(StatusCode::BAD_REQUEST)
+                                .body(hyper::Body::from(format!(r#"{{"error":"Failed to get file metadata: {}"}}"#, e)))
+                                .unwrap());
+                        }
+                    };
+                    
+                    if !metadata.is_file() {
+                        return Ok(response_builder
+                            .status(StatusCode::BAD_REQUEST)
+                            .body(hyper::Body::from(r#"{"error":"Path is not a file"}"#))
+                            .unwrap());
+                    }
+                    
+                    // Set a reasonable size limit (10MB) to prevent DoS
+                    const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
+                    if metadata.len() > MAX_FILE_SIZE {
+                        return Ok(response_builder
+                            .status(StatusCode::BAD_REQUEST)
+                            .body(hyper::Body::from(format!(r#"{{"error":"File too large: {} bytes (max: {} bytes)"}}"#, metadata.len(), MAX_FILE_SIZE)))
+                            .unwrap());
+                    }
+                    
+                    // Read the canonicalized path instead of the original path
+                    match fs::read_to_string(&canonical_path) {
                         Ok(content) => {
                             let result = serde_json::json!({ "content": content });
                             Ok(response_builder
@@ -610,7 +750,7 @@ async fn handle_request(
                                 .unwrap())
                         }
                     }
-                },
+                },                
                 "list_directory" => {
                     let dir_path = match params.get("path").and_then(|v| v.as_str()) {
                         Some(path) => path,
@@ -622,29 +762,110 @@ async fn handle_request(
                         }
                     };
                     let path = Path::new(dir_path);
-                    if !is_path_allowed(path, &allowed_dirs) {
+                    
+                    // Try to canonicalize the path first to check if it exists
+                    let canonical_path = match path.canonicalize() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            return Ok(response_builder
+                                .status(StatusCode::BAD_REQUEST)
+                                .body(hyper::Body::from(format!(r#"{{"error":"Invalid directory path: {}"}}"#, e)))
+                                .unwrap());
+                        }
+                    };
+                    
+                    // Check if path is within allowed directories
+                    let is_allowed = allowed_dirs.iter().any(|dir| {
+                        if let Ok(canonical_dir) = dir.canonicalize() {
+                            canonical_path.starts_with(&canonical_dir)
+                        } else {
+                            false
+                        }
+                    });
+                    
+                    if !is_allowed {
                         return Ok(response_builder
                             .status(StatusCode::FORBIDDEN)
                             .body(hyper::Body::from(r#"{"error":"Access denied: Directory not in allowed list"}"#))
                             .unwrap());
                     }
-                    match fs::read_dir(path) {
+                    
+                    // Verify the path is actually a directory
+                    let metadata = match fs::metadata(&canonical_path) {
+                        Ok(meta) => meta,
+                        Err(e) => {
+                            return Ok(response_builder
+                                .status(StatusCode::BAD_REQUEST)
+                                .body(hyper::Body::from(format!(r#"{{"error":"Failed to get directory metadata: {}"}}"#, e)))
+                                .unwrap());
+                        }
+                    };
+                    
+                    if !metadata.is_dir() {
+                        return Ok(response_builder
+                            .status(StatusCode::BAD_REQUEST)
+                            .body(hyper::Body::from(r#"{"error":"Path is not a directory"}"#))
+                            .unwrap());
+                    }
+                    
+                    // Read the canonicalized directory
+                    match fs::read_dir(&canonical_path) {
                         Ok(entries) => {
                             let mut contents = Vec::new();
-                            for entry in entries.filter_map(Result::ok) {
+                            
+                            // Set a reasonable limit to prevent DoS
+                            let max_entries = 1000;
+                            let mut entry_count = 0;
+                            let mut truncated = false;
+                            
+                            for entry_result in entries {
+                                // Check entry count limit
+                                entry_count += 1;
+                                if entry_count > max_entries {
+                                    truncated = true;
+                                    break;
+                                }
+                                
+                                let entry = match entry_result {
+                                    Ok(e) => e,
+                                    Err(_) => continue,
+                                };
+                                
                                 let path = entry.path();
+                                
+                                // Skip any paths that are no longer within the allowed directories
+                                let entry_allowed = allowed_dirs.iter().any(|dir| {
+                                    if let Ok(canonical_dir) = dir.canonicalize() {
+                                        if let Ok(canonical_entry) = path.canonicalize() {
+                                            canonical_entry.starts_with(&canonical_dir)
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        false
+                                    }
+                                });
+                                
+                                if !entry_allowed {
+                                    continue;
+                                }
+                                
                                 let metadata = match fs::metadata(&path) {
                                     Ok(meta) => meta,
                                     Err(_) => continue,
                                 };
+                                
                                 let name = path.file_name()
                                     .and_then(|n| n.to_str())
                                     .unwrap_or("")
                                     .to_string();
+                                
                                 let path_str = path.to_string_lossy().to_string();
+                                
                                 let modified = metadata.modified().ok()
                                     .and_then(|time| time.duration_since(SystemTime::UNIX_EPOCH).ok())
                                     .map(|duration| duration.as_secs());
+                                
                                 contents.push(FileInfo {
                                     name,
                                     path: path_str,
@@ -653,7 +874,12 @@ async fn handle_request(
                                     modified,
                                 });
                             }
-                            let result = serde_json::json!({ "contents": contents });
+                            
+                            let result = serde_json::json!({ 
+                                "contents": contents,
+                                "truncated": truncated  // Indicate if results were limited
+                            });
+                            
                             Ok(response_builder
                                 .status(StatusCode::OK)
                                 .body(hyper::Body::from(serde_json::to_string(&result).unwrap()))
@@ -668,6 +894,7 @@ async fn handle_request(
                         }
                     }
                 },
+
                 _ => {
                     Ok(response_builder
                         .status(StatusCode::NOT_FOUND)
