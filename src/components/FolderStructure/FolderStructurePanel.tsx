@@ -52,6 +52,11 @@ interface FilterOptions {
   exclude_patterns: string;
 }
 
+// Storage keys for persisting settings
+const STORAGE_KEY_FILTERS = 'pieverse-folder-structure-filters';
+const STORAGE_KEY_PATH = 'pieverse-folder-structure-path';
+const STORAGE_KEY_INCLUDE_FILES = 'pieverse-folder-structure-include-files';
+
 const FolderStructurePanel: React.FC = () => {
   const theme = useMantineTheme();
   const [projectPath, setProjectPath] = useState<string>('');
@@ -67,7 +72,7 @@ const FolderStructurePanel: React.FC = () => {
     exclude_build: true,
     exclude_hidden: true,
     custom_excludes: true,
-    exclude_patterns: "monaco-editor|Business Plan|lessons-learned",
+    exclude_patterns: "monaco-editor,Business Plan,lessons-learned,*.db",
   });
   const [showFilterOptions, setShowFilterOptions] = useState<boolean>(false);
   const [treeText, setTreeText] = useState<string>('');
@@ -80,6 +85,62 @@ const FolderStructurePanel: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<FileNode[]>([]);
   const dragPreviewRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Load saved settings from localStorage on component mount
+  useEffect(() => {
+    const loadSavedSettings = () => {
+      try {
+        // Load saved filter options
+        const savedFilters = localStorage.getItem(STORAGE_KEY_FILTERS);
+        if (savedFilters) {
+          setFilterOptions(JSON.parse(savedFilters));
+        }
+        
+        // Load saved project path
+        const savedPath = localStorage.getItem(STORAGE_KEY_PATH);
+        if (savedPath) {
+          setProjectPath(savedPath);
+        }
+        
+        // Load saved include files setting
+        const savedIncludeFiles = localStorage.getItem(STORAGE_KEY_INCLUDE_FILES);
+        if (savedIncludeFiles !== null) {
+          setIncludeFiles(JSON.parse(savedIncludeFiles));
+        }
+      } catch (error) {
+        console.error('Error loading saved settings:', error);
+      }
+    };
+    
+    loadSavedSettings();
+  }, []);
+
+  // Save filter options whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify(filterOptions));
+    } catch (error) {
+      console.error('Error saving filter options:', error);
+    }
+  }, [filterOptions]);
+
+  // Save project path whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PATH, projectPath);
+    } catch (error) {
+      console.error('Error saving project path:', error);
+    }
+  }, [projectPath]);
+
+  // Save include files setting whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_INCLUDE_FILES, JSON.stringify(includeFiles));
+    } catch (error) {
+      console.error('Error saving include files setting:', error);
+    }
+  }, [includeFiles]);
 
   useEffect(() => {
     console.log('Active tab changed to:', activeTab);
@@ -115,6 +176,22 @@ const FolderStructurePanel: React.FC = () => {
     };
   };
 
+  // Process the pattern string to convert user-friendly formats to valid regex
+  const processPatterns = (patterns: string): string => {
+    if (!patterns) return "";
+    return patterns.split(',')
+      .map(pattern => {
+        pattern = pattern.trim();
+        // Replace wildcard patterns like *.db with proper regex
+        if (pattern.startsWith('*.')) {
+          // *.db becomes .*\.db$
+          return `.*\\.${pattern.substring(2)}$`;
+        }
+        return pattern;
+      })
+      .join('|');
+  };
+
   // Load project structure
   const loadProjectStructure = async () => {
     if (!isPathValid) return;
@@ -128,12 +205,16 @@ const FolderStructurePanel: React.FC = () => {
         exclude_build: filterOptions.exclude_build,
         exclude_hidden: filterOptions.exclude_hidden,
         custom_excludes: filterOptions.custom_excludes,
-        exclude_patterns: filterOptions.custom_excludes ? filterOptions.exclude_patterns : null,
+        exclude_patterns: filterOptions.custom_excludes ? processPatterns(filterOptions.exclude_patterns) : null,
       };
+      
+      console.log('Using filters:', filters);
+      
       const structure = await core.invoke("get_project_structure", { 
         path: projectPath,
         filters,
       }) as FileNode;
+      
       setFileTree(processNode(structure, true));
       setActiveTab("tree");
       setSelectedFiles([]);
@@ -154,9 +235,12 @@ const FolderStructurePanel: React.FC = () => {
         node: fileTree,
         includeFiles: includeFiles
       }) as string;
+      
       console.log('Generated tree text:', text ? text.substring(0, 100) + '...' : 'empty');
       setTreeText(text);
-      const context = `Project Structure:\n\`\`\`\n${text}\`\`\`\n\nThis is the folder structure of the project.`;
+      
+      // Using string concatenation instead of template literals to avoid syntax issues
+      const context = "Project Structure:\n```\n" + text + "```\n\nThis is the folder structure of the project.";
       setLlmContext(context);
     } catch (error: any) {
       console.error('Error generating tree text:', error);
@@ -781,12 +865,17 @@ const FolderStructurePanel: React.FC = () => {
                   onChange={(e) => setFilterOptions({...filterOptions, custom_excludes: e.currentTarget.checked})}
                 />
                 {filterOptions.custom_excludes && (
-                  <TextInput
-                    label="Custom exclude patterns (regex, separate with |)"
-                    placeholder="e.g. \.bak$|\.tmp$|logs/"
-                    value={filterOptions.exclude_patterns}
-                    onChange={(e) => setFilterOptions({...filterOptions, exclude_patterns: e.currentTarget.value})}
-                  />
+                  <>
+                    <TextInput
+                      label="Custom exclude patterns (separate with commas)"
+                      placeholder="e.g. *.db, .bak$, .tmp$, logs/"
+                      value={filterOptions.exclude_patterns}
+                      onChange={(e) => setFilterOptions({...filterOptions, exclude_patterns: e.currentTarget.value})}
+                    />
+                    <Text size="xs" color="dimmed" mt="xs">
+                      Supports wildcard patterns like *.db and regular expressions
+                    </Text>
+                  </>
                 )}
               </Stack>
             </Card>
