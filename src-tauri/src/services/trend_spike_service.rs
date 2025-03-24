@@ -8,6 +8,7 @@ use tokio::time::{sleep, Duration};
 use tokio::task;
 use std::collections::HashMap;
 use dirs;
+use regex::Regex;
 
 // Define types for trend spike predictions
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -105,6 +106,15 @@ impl TrendSpikeService {
         }
     }
     
+    fn validate_keyword(&self, keyword: &str) -> Result<(), String> {
+        // Only allow alphanumeric characters, spaces, and limited special chars
+        let valid_pattern = regex::Regex::new(r"^[a-zA-Z0-9 _\-\.]+$").unwrap();
+        if !valid_pattern.is_match(keyword) {
+            return Err("Invalid keyword format: only alphanumeric characters, spaces, and basic punctuation allowed".to_string());
+        }
+        Ok(())
+    }
+    
     // Helper method to find Python scripts
     fn find_python_script(&self, script_name: &str) -> Option<String> {
         // First, check if we have resource directory stored
@@ -146,6 +156,9 @@ impl TrendSpikeService {
     
     // Add a keyword to monitor for a specific category
     pub fn add_keyword(&self, category: &str, keyword: &str) -> bool {
+        if let Err(_) = self.validate_keyword(keyword) {
+            return false;
+        }        
         let mut keywords = self.monitoring_keywords.lock().unwrap();
         
         let category_keywords = keywords.entry(category.to_string()).or_insert(Vec::new());
@@ -160,6 +173,9 @@ impl TrendSpikeService {
     
     // Remove a keyword from monitoring
     pub fn remove_keyword(&self, category: &str, keyword: &str) -> bool {
+        if let Err(_) = self.validate_keyword(keyword) {
+            return false;
+        }        
         let mut keywords = self.monitoring_keywords.lock().unwrap();
         
         if let Some(category_keywords) = keywords.get_mut(category) {
@@ -301,6 +317,7 @@ impl TrendSpikeService {
     
     // Get signal sources for a keyword
     pub async fn get_signal_sources(&self, keyword: String) -> Result<serde_json::Value, String> {
+        self.validate_keyword(&keyword)?;        
         let db_path = self.db_path.lock().unwrap().clone();
         
         // Find the Python script - use helper method
@@ -360,6 +377,7 @@ impl TrendSpikeService {
     
     // Run a prediction for a single keyword
     pub async fn predict_spike(&self, keyword: String) -> Result<TrendPrediction, String> {
+        self.validate_keyword(&keyword)?;
         let db_path = self.db_path.lock().unwrap().clone();
         let threshold = *self.threshold.lock().unwrap();
         
@@ -489,6 +507,11 @@ async fn monitor_keywords(
     threshold: f64,
     category: Option<&str>
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    for keyword in &keywords {
+        if let Err(e) = service.validate_keyword(keyword) {
+            return Err(e.into());
+        }
+    }    
     // Get the location of the Python script using the helper method
     let script_path_str = match service.find_python_script("trend_spike_predictor.py") {
         Some(path) => path,

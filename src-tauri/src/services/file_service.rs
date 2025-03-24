@@ -4,7 +4,30 @@ use std::fs;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
-use tauri::command;
+use tauri::{command, AppHandle, Manager};
+
+// Add this function to validate paths
+fn is_path_safe(app_handle: &AppHandle, path: &Path) -> Result<PathBuf, String> {
+    // Use the Manager trait methods to get app_handle
+    let app_data_dir = app_handle.path().app_data_dir()
+        .map_err(|_| "Failed to get app data directory".to_string())?;
+    
+    // Get user's home directory as another allowed location
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| "Failed to get home directory".to_string())?;
+    
+    // Canonicalize the path to resolve any symlinks or ".." components
+    let canonical_path = path.canonicalize()
+        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+    
+    // Check if the path is within allowed directories
+    if canonical_path.starts_with(&app_data_dir) || canonical_path.starts_with(&home_dir) {
+        Ok(canonical_path)
+    } else {
+        Err(format!("Access denied: Path is outside of allowed directories: {}", 
+            path.display()))
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileInfo {
@@ -46,19 +69,22 @@ impl Default for SearchOptions {
 }
 
 #[command]
-pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
+pub async fn get_file_info(app_handle: AppHandle, path: String) -> Result<FileInfo, String> {
     let path_obj = Path::new(&path);
     
-    if !path_obj.exists() {
-        return Err(format!("Path does not exist: {}", path));
+    // Validate path safety
+    let canonical_path = is_path_safe(&app_handle, path_obj)?;
+    
+    if !canonical_path.exists() {
+        return Err(format!("Path does not exist: {}", canonical_path.display()));
     }
     
-    let metadata = match fs::metadata(&path) {
+    let metadata = match fs::metadata(&canonical_path) {
         Ok(meta) => meta,
         Err(e) => return Err(format!("Failed to get metadata: {}", e)),
     };
     
-    let name = path_obj.file_name()
+    let name = canonical_path.file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
@@ -73,7 +99,7 @@ pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
     
     Ok(FileInfo {
         name,
-        path,
+        path: canonical_path.to_string_lossy().to_string(),
         is_directory: metadata.is_dir(),
         size: metadata.len(),
         modified,
@@ -83,13 +109,18 @@ pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
 
 #[command]
 pub async fn search_files(
+    app_handle: AppHandle,
     directory: String, 
     query: String, 
     options: Option<SearchOptions>
 ) -> Result<Vec<FileInfo>, String> {
     let path = PathBuf::from(&directory);
-    if !path.exists() || !path.is_dir() {
-        return Err(format!("Invalid directory: {}", directory));
+    
+    // Validate path safety
+    let canonical_path = is_path_safe(&app_handle, &path)?;
+    
+    if !canonical_path.exists() || !canonical_path.is_dir() {
+        return Err(format!("Invalid directory: {}", canonical_path.display()));
     }
     
     let options = options.unwrap_or_default();
@@ -104,8 +135,9 @@ pub async fn search_files(
         None
     };
     
+    // Pass the canonical path to search_directory
     search_directory(
-        &path, 
+        &canonical_path, 
         &query, 
         &options, 
         &regex, 
@@ -231,27 +263,36 @@ fn search_directory(
 }
 
 #[command]
-pub async fn copy_directory(source: String, destination: String) -> Result<(), String> {
+pub async fn copy_directory(
+    app_handle: AppHandle, 
+    source: String, 
+    destination: String
+) -> Result<(), String> {
     let src_path = Path::new(&source);
     let dst_path = Path::new(&destination);
     
-    if !src_path.exists() {
-        return Err(format!("Source directory does not exist: {}", source));
+    // Validate both source and destination paths
+    let canonical_src = is_path_safe(&app_handle, src_path)?;
+    let canonical_dst = is_path_safe(&app_handle, dst_path)?;
+    
+    if !canonical_src.exists() {
+        return Err(format!("Source directory does not exist: {}", canonical_src.display()));
     }
     
-    if !src_path.is_dir() {
-        return Err(format!("Source path is not a directory: {}", source));
+    if !canonical_src.is_dir() {
+        return Err(format!("Source path is not a directory: {}", canonical_src.display()));
     }
     
     // Create destination directory if it doesn't exist
-    if !dst_path.exists() {
-        if let Err(e) = fs::create_dir_all(dst_path) {
+    if !canonical_dst.exists() {
+        if let Err(e) = fs::create_dir_all(&canonical_dst) {
             return Err(format!("Failed to create destination directory: {}", e));
         }
     }
     
-    // Copy all contents recursively
-    copy_dir_contents(src_path, dst_path).map_err(|e| format!("Failed to copy directory: {}", e))
+    // Copy all contents recursively using canonical paths
+    copy_dir_contents(&canonical_src, &canonical_dst)
+        .map_err(|e| format!("Failed to copy directory: {}", e))
 }
 
 fn copy_dir_contents(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -272,19 +313,22 @@ fn copy_dir_contents(src: &Path, dst: &Path) -> std::io::Result<()> {
 }
 
 #[command]
-pub async fn read_text_file_secure(file_path: String, max_size: Option<u64>) -> Result<String, String> {
+pub async fn read_text_file_secure(app_handle: AppHandle, file_path: String, max_size: Option<u64>) -> Result<String, String> {
     let max_size = max_size.unwrap_or(10 * 1024 * 1024); // Default to 10MB
     let path = Path::new(&file_path);
     
-    if !path.exists() {
-        return Err(format!("File does not exist: {}", file_path));
+    // Validate path safety
+    let canonical_path = is_path_safe(&app_handle, path)?;
+    
+    if !canonical_path.exists() {
+        return Err(format!("File does not exist: {}", canonical_path.display()));
     }
     
-    if !path.is_file() {
-        return Err(format!("Path is not a file: {}", file_path));
+    if !canonical_path.is_file() {
+        return Err(format!("Path is not a file: {}", canonical_path.display()));
     }
     
-    let metadata = match fs::metadata(&file_path) {
+    let metadata = match fs::metadata(&canonical_path) {
         Ok(meta) => meta,
         Err(e) => return Err(format!("Failed to get file metadata: {}", e)),
     };
@@ -293,18 +337,21 @@ pub async fn read_text_file_secure(file_path: String, max_size: Option<u64>) -> 
         return Err(format!("File is too large: {} bytes (max: {} bytes)", metadata.len(), max_size));
     }
     
-    match fs::read_to_string(&file_path) {
+    match fs::read_to_string(&canonical_path) {
         Ok(content) => Ok(content),
         Err(e) => Err(format!("Failed to read file: {}", e)),
     }
 }
 
 #[command]
-pub async fn write_text_file_secure(file_path: String, content: String) -> Result<(), String> {
+pub async fn write_text_file_secure(app_handle: AppHandle, file_path: String, content: String) -> Result<(), String> {
     let path = Path::new(&file_path);
     
+    // Validate path safety
+    let canonical_path = is_path_safe(&app_handle, path)?;
+    
     // Create parent directories if needed
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = canonical_path.parent() {
         if !parent.exists() {
             if let Err(e) = fs::create_dir_all(parent) {
                 return Err(format!("Failed to create parent directories: {}", e));
@@ -312,37 +359,46 @@ pub async fn write_text_file_secure(file_path: String, content: String) -> Resul
         }
     }
     
-    match fs::write(&file_path, content) {
+    match fs::write(&canonical_path, content) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to write file: {}", e)),
     }
 }
 
 #[command]
-pub async fn generate_file_tree(directory: String, include_files: bool, max_depth: Option<usize>) -> Result<String, String> {
+pub async fn generate_file_tree(
+    app_handle: AppHandle,
+    directory: String, 
+    include_files: bool, 
+    max_depth: Option<usize>
+) -> Result<String, String> {
     let path = Path::new(&directory);
-    if !path.exists() {
-        return Err(format!("Directory does not exist: {}", directory));
+    
+    // Validate path safety
+    let canonical_path = is_path_safe(&app_handle, path)?;
+    
+    if !canonical_path.exists() {
+        return Err(format!("Directory does not exist: {}", canonical_path.display()));
     }
     
-    if !path.is_dir() {
-        return Err(format!("Path is not a directory: {}", directory));
+    if !canonical_path.is_dir() {
+        return Err(format!("Path is not a directory: {}", canonical_path.display()));
     }
     
     let max_depth = max_depth.unwrap_or(std::usize::MAX);
     let mut output = String::new();
     
-    let dir_name = path.file_name()
+    let dir_name = canonical_path.file_name()
         .and_then(|n| n.to_str())
         .unwrap_or_else(|| {
             // If file_name() returns None (e.g., for root directories),
             // use the full path string
-            path.to_str().unwrap_or("Unknown")
+            canonical_path.to_str().unwrap_or("Unknown")
         });
     
     output.push_str(&format!("{}/\n", dir_name));
     
-    generate_tree_text(path, "", include_files, max_depth, 0, &mut output)?;
+    generate_tree_text(&canonical_path, "", include_files, max_depth, 0, &mut output)?;
     
     Ok(output)
 }

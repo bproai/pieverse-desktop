@@ -162,24 +162,21 @@ impl ApiServer {
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
         Json(prompt): Json<Prompt>
     ) -> Result<Json<Value>, ApiError> {
-        let title = prompt.title.replace('\'', "''");
-        let description = prompt.description
-            .map(|d| d.replace('\'', "''"))
-            .map_or("NULL".to_string(), |d| format!("'{}'", d));
-        let category = prompt.category.replace('\'', "''");
-
-        let query = format!(
-            "INSERT INTO prompts (title, description, category, display_order, is_active) 
-             VALUES ('{}', {}, '{}', {}, {})",
-            title,
-            description,
-            category,
-            prompt.display_order,
-            if prompt.is_active { 1 } else { 0 }
-        );
-
+        // No need for manual escaping with parameterized queries
+        let query = "INSERT INTO prompts (title, description, category, display_order, is_active) 
+                     VALUES (?, ?, ?, ?, ?)";
+    
         let sqlite_guard = sqlite.lock().await;
-        match sqlite_guard.execute_query(&query) {
+        match sqlite_guard.execute_parameterized(
+            query,
+            params![
+                prompt.title,
+                prompt.description,
+                prompt.category,
+                prompt.display_order,
+                if prompt.is_active { 1 } else { 0 }
+            ]
+        ) {
             Ok(_) => Ok(Json(serde_json::json!({ 
                 "status": "success",
                 "message": "Prompt created successfully" 
@@ -193,36 +190,33 @@ impl ApiServer {
         Path(id): Path<i64>,
         Json(prompt): Json<Prompt>
     ) -> Result<Json<Value>, ApiError> {
-        let title = prompt.title.replace('\'', "''");
-        let description = prompt.description
-            .map(|d| d.replace('\'', "''"))
-            .map_or("NULL".to_string(), |d| format!("'{}'", d));
-        let category = prompt.category.replace('\'', "''");
 
-        let query = format!(
-            "UPDATE prompts SET 
-             title = '{}',
-             description = {},
-             category = '{}',
-             display_order = {},
-             is_active = {},
-             updated_at = CURRENT_TIMESTAMP
-             WHERE id = {}",
-            title,
-            description,
-            category,
+        let query = "UPDATE prompts SET 
+        title = ?,
+        description = ?,
+        category = ?,
+        display_order = ?,
+        is_active = ?,
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?";
+
+        let sqlite_guard = sqlite.lock().await;
+        match sqlite_guard.execute_parameterized(
+        query,
+        params![
+            prompt.title,
+            prompt.description,
+            prompt.category,
             prompt.display_order,
             if prompt.is_active { 1 } else { 0 },
             id
-        );
-
-        let sqlite_guard = sqlite.lock().await;
-        match sqlite_guard.execute_query(&query) {
-            Ok(_) => Ok(Json(serde_json::json!({ 
-                "status": "success",
-                "message": "Prompt updated successfully" 
-            }))),
-            Err(e) => Err(ApiError(e.to_string()))
+        ]
+        ) {
+        Ok(_) => Ok(Json(serde_json::json!({ 
+            "status": "success",
+            "message": "Prompt updated successfully" 
+        }))),
+        Err(e) => Err(ApiError(e.to_string()))
         }
     }
 
@@ -230,9 +224,9 @@ impl ApiServer {
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
         Path(id): Path<i64>
     ) -> Result<Json<Value>, ApiError> {
-        let query = format!("DELETE FROM prompts WHERE id = {}", id);
+        let query = "DELETE FROM prompts WHERE id = ?";
         let sqlite_guard = sqlite.lock().await;
-        match sqlite_guard.execute_query(&query) {
+        match sqlite_guard.execute_parameterized(query, params![id]) {
             Ok(_) => Ok(Json(serde_json::json!({ 
                 "status": "success",
                 "message": "Prompt deleted successfully" 
@@ -338,12 +332,10 @@ impl ApiServer {
             println!("Dev Log: Updating question answered status for question_id: {}", answer.question_id);
             
             // Update the question's answered status
-            let update_query = format!(
-                "UPDATE qa_questions SET answered = 1 WHERE id = '{}'",
-                answer.question_id
-            );
-            
-            match sqlite_guard.execute_query(&update_query) {
+            match sqlite_guard.execute_parameterized(
+                "UPDATE qa_questions SET answered = 1 WHERE id = ?",
+                params![answer.question_id]
+            ) {
                 Ok(_) => {
                     #[cfg(debug_assertions)]
                     println!("Dev Log: Successfully updated question answered status");
@@ -398,7 +390,6 @@ impl ApiServer {
         })))
     }    
     
-    
     async fn get_qa_data(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
         query_params: axum::extract::Query<std::collections::HashMap<String, String>>
@@ -410,69 +401,78 @@ impl ApiServer {
         
         let sqlite_guard = sqlite.lock().await;
         
-        // Construct the query
-        let mut query_conditions = Vec::new();
-        let mut query_params = Vec::new();
+        // Build a base query with placeholders
+        let base_query = r#"
+        SELECT 
+            q.id AS question_id,
+            q.platform,
+            q.question,
+            q.timestamp AS question_timestamp,
+            q.answered,
+            a.id AS answer_id,
+            a.message_id,
+            a.answer,
+            a.model,
+            a.timestamp AS answer_timestamp,
+            a.turn_number,
+            a.metadata
+        FROM qa_questions q
+        LEFT JOIN qa_answers a ON q.id = a.question_id
+        "#;
+        
+        // Similar base query for count
+        let base_count_query = r#"
+        SELECT COUNT(DISTINCT q.id) AS total
+        FROM qa_questions q
+        LEFT JOIN qa_answers a ON q.id = a.question_id
+        "#;
+        
+        // Build where clause and gather parameter values
+        let mut conditions = Vec::new();
+        let mut param_values: Vec<rusqlite::types::Value> = Vec::new();
         
         if let Some(platform_value) = platform {
             if platform_value != "all" {
-                query_conditions.push("q.platform = ?");
-                query_params.push(platform_value.clone());
+                conditions.push("q.platform = ?");
+                param_values.push(platform_value.clone().into());
             }
         }
         
         if let Some(search_value) = search {
             if !search_value.is_empty() {
-                query_conditions.push("(q.question LIKE ? OR a.answer LIKE ?)");
+                conditions.push("(q.question LIKE ? OR a.answer LIKE ?)");
                 let search_pattern = format!("%{}%", search_value);
-                query_params.push(search_pattern.clone());
-                query_params.push(search_pattern);
+                param_values.push(search_pattern.clone().into());
+                param_values.push(search_pattern.into());
             }
         }
         
-        let where_clause = if !query_conditions.is_empty() {
-            format!("WHERE {}", query_conditions.join(" AND "))
+        // Create the full parameterized query
+        let where_clause = if !conditions.is_empty() {
+            format!("WHERE {}", conditions.join(" AND "))
         } else {
             String::new()
         };
         
-        let query = format!(
-            "SELECT 
-                q.id AS question_id,
-                q.platform,
-                q.question,
-                q.timestamp AS question_timestamp,
-                q.answered,
-                a.id AS answer_id,
-                a.message_id,
-                a.answer,
-                a.model,
-                a.timestamp AS answer_timestamp,
-                a.turn_number,
-                a.metadata
-            FROM qa_questions q
-            LEFT JOIN qa_answers a ON q.id = a.question_id
-            {}
-            ORDER BY q.timestamp DESC
-            LIMIT {} OFFSET {}",
-            where_clause,
-            limit,
-            offset
-        );
-        
-        let result = sqlite_guard.execute_query(&query)
-            .map_err(|e| ApiError(e.to_string()))?;
-        
-        // Count total
-        let count_query = format!(
-            "SELECT COUNT(DISTINCT q.id) AS total
-            FROM qa_questions q
-            LEFT JOIN qa_answers a ON q.id = a.question_id
-            {}",
+        let main_query = format!(
+            "{} {} ORDER BY q.timestamp DESC LIMIT ? OFFSET ?", 
+            base_query, 
             where_clause
         );
         
-        let count_result = sqlite_guard.execute_query(&count_query)
+        let count_query = format!("{} {}", base_count_query, where_clause);
+        
+        // Add limit and offset to parameters for main query
+        let mut main_params = param_values.clone();
+        main_params.push(limit.into());
+        main_params.push(offset.into());
+        
+        // Use the new query_parameterized method
+        let result = sqlite_guard.query_parameterized(&main_query, rusqlite::params_from_iter(main_params))
+            .map_err(|e| ApiError(e.to_string()))?;
+        
+        // Get total count with the same conditions
+        let count_result = sqlite_guard.query_parameterized(&count_query, rusqlite::params_from_iter(param_values))
             .map_err(|e| ApiError(e.to_string()))?;
         
         let total = if !count_result.is_empty() {

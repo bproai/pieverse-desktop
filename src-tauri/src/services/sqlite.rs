@@ -124,6 +124,25 @@ impl SqliteService {
             .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
         
         Ok(())
+    }
+
+    pub fn query_parameterized<P>(&self, query: &str, params: P) -> Result<Vec<Value>, SqliteError> 
+    where 
+        P: rusqlite::Params
+    {
+        let conn_guard = self.connection.lock().unwrap();
+        let conn = conn_guard.as_ref()
+            .ok_or_else(|| SqliteError::DatabaseError("Database not initialized".to_string()))?;
+
+        let mut stmt = conn.prepare(query)
+            .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
+
+        let rows = stmt.query_map(params, |row| {
+            Ok(Self::row_to_json(row).unwrap())
+        }).map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| SqliteError::DatabaseError(e.to_string()))
     }    
     
 }
