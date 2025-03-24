@@ -239,20 +239,11 @@ class WebSocketService {
   }
 
   private notifyListeners(event: string, data: any): void {
-    // Validate incoming data
-    if (!this.validateMessage(data)) {
-      console.error(`Invalid message received for event ${event}`);
-      return;
-    }
-    
-    // Remove the token before passing to listeners
-    const { token, ...dataWithoutToken } = data;
-  
     // Notify specific event listeners
     if (this.eventListeners.has(event)) {
       this.eventListeners.get(event)!.forEach(callback => {
         try {
-          callback(dataWithoutToken);
+          callback(data);
         } catch (error) {
           console.error(`Error in ${event} listener:`, error);
         }
@@ -263,7 +254,7 @@ class WebSocketService {
     if (event !== 'message' && this.eventListeners.has('message')) {
       this.eventListeners.get('message')!.forEach(callback => {
         try {
-          callback({ type: event, data: dataWithoutToken });
+          callback({ type: event, data });
         } catch (error) {
           console.error(`Error in message listener:`, error);
         }
