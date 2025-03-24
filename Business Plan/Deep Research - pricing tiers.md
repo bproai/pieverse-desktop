@@ -13,7 +13,7 @@
   - Regular product updates and standard email support
 
 ### Business Tier
-- **Price:** $39.99 per user/month  
+- **Price:** $9.99 per user/month (or $95.90 per user/year with 20% discount when paid in full)  
 - **Key Features:**  
   - Everything included in the Personal Tier for each user  
   - Business-specific tools such as centralized billing and administrative controls  
