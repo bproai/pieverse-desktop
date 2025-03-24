@@ -40,6 +40,39 @@ class WebSocketService {
     this.checkStatus();
   }
 
+  // Add this to WebSocketService.ts
+  private validateMessage(message: any): boolean {
+    // Size limit - increasing to 128KB to accommodate larger content
+    const messageStr = typeof message === 'string' 
+      ? message 
+      : JSON.stringify(message);
+    
+    const MAX_SIZE = 128 * 1024; // 128KB
+    if (messageStr.length > MAX_SIZE) {
+      console.error(`Message exceeds size limit of ${MAX_SIZE} bytes`);
+      return false;
+    }
+    
+    // Basic structure validation
+    if (typeof message === 'object') {
+      // Ensure message has a type property
+      if (!message.type || typeof message.type !== 'string') {
+        console.error('Invalid message structure: missing or invalid type');
+        return false;
+      }
+      
+      // Allow HTML content but log potentially dangerous patterns
+      if (message.type === 'insertPrompt' && typeof message.prompt === 'string') {
+        // Log potentially dangerous script content but don't block it
+        if (/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i.test(message.prompt)) {
+          console.warn('Message contains script tags - potential security risk');
+        }
+      }
+    }
+    
+    return true;
+  }
+
   private async setupEventListeners(): Promise<void> {
     const eventTypes = [
       'chrome-extension-request',
@@ -110,7 +143,12 @@ class WebSocketService {
     if (!this.isRunning) {
       throw new Error("WebSocket server is not running");
     }
-
+  
+    // Validate the message before sending
+    if (!this.validateMessage(message)) {
+      throw new Error("Message validation failed");
+    }
+  
     const messageStr = typeof message === 'string' 
       ? message 
       : JSON.stringify(message);
@@ -142,7 +180,12 @@ class WebSocketService {
     if (!this.isRunning) {
       throw new Error("WebSocket server is not running");
     }
-
+  
+    // Validate the message before sending
+    if (!this.validateMessage(message)) {
+      throw new Error("Message validation failed");
+    }
+  
     const messageStr = typeof message === 'string' 
       ? message 
       : JSON.stringify(message);
@@ -174,6 +217,12 @@ class WebSocketService {
   }
 
   private notifyListeners(event: string, data: any): void {
+    // Validate incoming data
+    if (!this.validateMessage(data)) {
+      console.error(`Invalid message received for event ${event}`);
+      return;
+    }
+  
     // Notify specific event listeners
     if (this.eventListeners.has(event)) {
       this.eventListeners.get(event)!.forEach(callback => {
