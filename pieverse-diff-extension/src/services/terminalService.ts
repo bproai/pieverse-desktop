@@ -4,8 +4,27 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ExtensionGlobals } from '../extension';
 
-// Import node-pty correctly
-import * as nodePty from 'node-pty';
+// Import node-pty with fallback
+let nodePty: any;
+try {
+  nodePty = require('node-pty');
+} catch (error) {
+  console.error('Error loading node-pty synchronously:', error);
+  
+  const loadTimeout = setTimeout(() => {
+    console.warn('Timeout reached while loading node-pty');
+    vscode.window.showWarningMessage('Terminal integration limited: node-pty module failed to load');
+  }, 15000);
+  
+  import('node-pty').then(pty => {
+    clearTimeout(loadTimeout);
+    nodePty = pty;
+    console.log('node-pty loaded asynchronously');
+  }).catch(err => {
+    clearTimeout(loadTimeout);
+    console.error('Failed to load node-pty asynchronously:', err);
+  });
+}
 
 /**
  * Service to handle terminal functionality
@@ -16,7 +35,7 @@ export class TerminalService {
   private pieVerseTerminal: vscode.Terminal | null = null;
   private activeCommandId: string | null = null;
   private activeCommand = '';
-  private shellProcess: nodePty.IPty | null = null;
+  private shellProcess: any | null = null; // Use any type to avoid namespace issues
   private userInputBuffer = '';
   private isReadingCommand = true;
   
@@ -185,7 +204,7 @@ export class TerminalService {
           });
     
           // When the shell exits, report it
-          this.shellProcess.onExit(({ exitCode }) => {
+          this.shellProcess.onExit(({ exitCode }: { exitCode: number }) => {
             writeEmitter.fire(`\r\nShell exited with code ${exitCode}\r\n`);
             this.sendTerminalEvent('terminalClosed');
           });

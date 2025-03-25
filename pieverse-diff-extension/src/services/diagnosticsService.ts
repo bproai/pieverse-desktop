@@ -2,19 +2,6 @@
 import * as vscode from 'vscode';
 import { ExtensionGlobals } from '../extension';
 
-/**
- * Interface for diagnostic data structure
- */
-interface DiagnosticItem {
-  severity: vscode.DiagnosticSeverity;
-  message: string;
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
-  code?: string | number | { value: string | number; target: vscode.Uri };
-  source?: string;
-}
 
 
 /**
