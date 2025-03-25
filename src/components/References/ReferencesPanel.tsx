@@ -196,11 +196,28 @@ const ReferencesPanel: React.FC = () => {
   };
   
   const addTag = () => {
-    if (tagInput && !newReference.tags.includes(tagInput)) {
-      setNewReference({
-        ...newReference,
-        tags: [...newReference.tags, tagInput],
-      });
+    if (tagInput) {
+      // Split the input by commas and filter out empty strings
+      const tagsToAdd = tagInput
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag !== '');
+      
+      // Create a Set from existing tags for efficient deduplication
+      const existingTagsSet = new Set(newReference.tags);
+      
+      // Filter out duplicates
+      const newTags = tagsToAdd.filter(tag => !existingTagsSet.has(tag));
+      
+      // Only update if we have new tags to add
+      if (newTags.length > 0) {
+        setNewReference({
+          ...newReference,
+          tags: [...newReference.tags, ...newTags],
+        });
+      }
+      
+      // Clear the input field
       setTagInput('');
     }
   };
