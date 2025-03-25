@@ -16,13 +16,6 @@ interface DiagnosticItem {
   source?: string;
 }
 
-/**
- * Interface for file diagnostics
- */
-interface FileDiagnostics {
-  file: string;
-  diagnostics: DiagnosticItem[];
-}
 
 /**
  * Interface for the simplified diagnostic that we send over the wire
@@ -97,7 +90,7 @@ export class DiagnosticsService {
    */
   private setupDiagnosticsListener(): void {
     // Register the diagnostics change event listener
-    const diagnosticsListener = vscode.languages.onDidChangeDiagnostics((event) => {
+    const diagnosticsListener = vscode.languages.onDidChangeDiagnostics(() => {
       // Don't block the main thread, collect diagnostics asynchronously
       setTimeout(() => this.collectAndQueueDiagnostics(), 0);
     });

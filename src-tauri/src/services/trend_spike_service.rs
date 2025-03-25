@@ -1,6 +1,5 @@
 // src-tauri/src/services/trend_spike_service.rs
 use dirs;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;

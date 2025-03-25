@@ -284,7 +284,7 @@ export class WebSocketService {
         this.sendCodeActionResult(false, 'Invalid code action request data');
         return;
       }
-
+  
       const file = data.file;
       const codeAction = data.codeAction;
       
@@ -335,6 +335,19 @@ export class WebSocketService {
               matchingAction.command.command,
               ...(matchingAction.command.arguments || [])
             );
+          }
+          
+          // Add this section to save the document after applying changes
+          try {
+            // Get the document again to ensure we have the latest version
+            document = await vscode.workspace.openTextDocument(uri);
+            // Save the document
+            await document.save();
+            console.log(`Document saved: ${file}`);
+          } catch (saveError) {
+            console.error('Error saving document:', saveError);
+            // Even if save fails, we still consider the code action applied
+            // since the edits were successfully made
           }
           
           applied = true;
@@ -487,7 +500,7 @@ export class WebSocketService {
   /**
    * Handle connection error
    */
-  private handleConnectionError(error: unknown, wsUrl: string, globals: ExtensionGlobals): void {
+  private handleConnectionError(error: unknown, _wsUrl: string, globals: ExtensionGlobals): void {
     globals.statusBarItem.text = "$(error) PieVerse";
     globals.statusBarItem.tooltip = "PieVerse: Connection failed";
     console.error('Failed to create WebSocket connection:', error);
