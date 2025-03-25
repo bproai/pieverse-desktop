@@ -10,7 +10,6 @@ import {
   Stack, 
   Alert, 
   Badge, 
-  Switch,
   Code,
   Textarea,
   Tabs,
@@ -574,7 +573,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                           </ActionIcon>
                         }
                         rightSectionWidth={50}
-                        styles={{ rightSection: { pointerEvents: 'auto' } }}
+                        styles={{ section: { pointerEvents: 'auto' } }}
                       />
                       
                       <TextInput
