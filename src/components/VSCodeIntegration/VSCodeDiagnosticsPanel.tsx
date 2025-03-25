@@ -70,9 +70,10 @@ interface FileDiagnostics {
 
 interface VSCodeDiagnosticsPanelProps {
   isServerRunning: boolean;
+  isConnectionOpen: boolean;
 }
 
-const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServerRunning }) => {
+const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServerRunning, isConnectionOpen }) => {
   const [diagnostics, setDiagnostics] = useState<FileDiagnostics[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [severityFilter, setSeverityFilter] = useState<number>(-1); // -1 = all, 0 = error, 1 = warning, etc.
@@ -453,7 +454,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
           </Button>
         </Group>
         
-        <ScrollArea style={{ height: 'calc(100vh - 250px)' }}>
+        <ScrollArea style={{ height: isConnectionOpen ? 'calc(40vh)': 'calc(60vh)' }}>
           {filteredDiagnostics.length === 0 ? (
             <Alert
               color="blue"

@@ -645,7 +645,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
             </Tabs.Panel>
 
             <Tabs.Panel value="diagnostics" p="md">
-              <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} />
+              <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} 
+              isConnectionOpen={isConnectionOpen}
+              />
             </Tabs.Panel>
 
             <Tabs.Panel value="terminal" p="md">
