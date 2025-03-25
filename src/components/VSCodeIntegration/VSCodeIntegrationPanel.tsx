@@ -11,7 +11,6 @@ import {
   Alert, 
   Badge, 
   Code,
-  Textarea,
   Tabs,
   Tooltip,
   ActionIcon,
@@ -56,12 +55,6 @@ const getLanguageFromExtension = (ext: string): string => {
       return 'plaintext';
   }
 };
-
-interface CodeEditorProps {
-  code: string;
-  fileExtension: string; // e.g., "js", "py", "html", etc.
-  onChange: (value: string) => void;
-}
 
 interface VSCodeStatus {
   isRunning: boolean;
@@ -439,7 +432,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 <Text size="sm" mt="md" fw={600}>
                   VS Code Extension Settings:
                 </Text>
-                <Code block size="xs">
+                <Code block>
                   {`{"pieverse-diff.websocketUrl": "ws://localhost:${status.port}"}`}
                 </Code>
               </Alert>
@@ -452,7 +445,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     ? `Active connection URL: ws://localhost:${status.port}`
                     : "Port for VS Code extension to connect to"}
                   value={port}
-                  onChange={(val) => setPort(val || 3001)}
+                  onChange={(value: string | number) => setPort(typeof value === 'number' ? value : 3001)}
                   min={1024}
                   max={65535}
                   disabled={status.isRunning}
@@ -460,303 +453,303 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 
                 {!status.isRunning ? (
                   <Button 
-                    onClick={startServer}
-                    loading={loading}
-                    leftSection={<RefreshCw size={14} />}
-                  >
-                    Start Server
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={stopServer}
-                    loading={loading}
-                    color="red"
-                    leftSection={<AlertCircle size={14} />}
-                  >
-                    Stop Server
-                  </Button>
-                )}
-                
-                <Button 
-                  variant="outline"
-                  onClick={fetchStatus}
+                  onClick={startServer}
+                  loading={loading}
                   leftSection={<RefreshCw size={14} />}
                 >
-                  Refresh Status
+                  Start Server
                 </Button>
-              </Group>
-            </div>
-          </Collapse>
-
-          {error && (
-            <Alert color="red" title="Error" icon={<AlertCircle size={16} />}>
-              {error}
-            </Alert>
-          )}
-          
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Tabs
-              defaultValue="diff"
-              value={activeTab}
-              onChange={setActiveTab}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-            >
-              <Tabs.List>
-                <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
-                  Diff
-                </Tabs.Tab>
-                <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
-                  Chat
-                </Tabs.Tab>
-                <Tabs.Tab value="diagnostics" leftSection={<AlertCircle size={16} />}>
-                  Diagnostics
-                </Tabs.Tab>
-                <Tabs.Tab value="terminal" leftSection={<Terminal size={16} />}>
-                  Terminal
-                </Tabs.Tab>
-                <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
-                  Debug
-                </Tabs.Tab>
-              </Tabs.List>
-
-              <Tabs.Panel value="diff" p="md" style={{ flex: 1 }}>
-                <Card
-                  withBorder
-                  p="lg"
-                  mt="md"
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    height: isConnectionOpen ? 'calc(100% - 15px)' : 'calc(100% + 9px)',
-                    flex: 1,
-                    transition: 'height 0.3s ease'
-                  }}
+              ) : (
+                <Button 
+                  onClick={stopServer}
+                  loading={loading}
+                  color="red"
+                  leftSection={<AlertCircle size={14} />}
                 >
-                    {/* Card contents remain the same... */}                  
-                  {/* Fixed-height section for inputs */}
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <Stack spacing="sm">
-                      <TextInput
-                        label={
-                          <Tooltip label="Path to the original file that will be modified">
-                            <Text size="sm" style={{ cursor: 'help' }}>Original File Path</Text>
-                          </Tooltip>
+                  Stop Server
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline"
+                onClick={fetchStatus}
+                leftSection={<RefreshCw size={14} />}
+              >
+                Refresh Status
+              </Button>
+            </Group>
+          </div>
+        </Collapse>
+
+        {error && (
+          <Alert color="red" title="Error" icon={<AlertCircle size={16} />}>
+            {error}
+          </Alert>
+        )}
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <Tabs
+            defaultValue="diff"
+            value={activeTab}
+            onChange={setActiveTab}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+          >
+            <Tabs.List>
+              <Tabs.Tab value="diff" leftSection={<FileCode size={16} />}>
+                Diff
+              </Tabs.Tab>
+              <Tabs.Tab value="chat" leftSection={<MessageSquare size={16} />}>
+                Chat
+              </Tabs.Tab>
+              <Tabs.Tab value="diagnostics" leftSection={<AlertCircle size={16} />}>
+                Diagnostics
+              </Tabs.Tab>
+              <Tabs.Tab value="terminal" leftSection={<Terminal size={16} />}>
+                Terminal
+              </Tabs.Tab>
+              <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
+                Debug
+              </Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="diff" p="md" style={{ flex: 1 }}>
+              <Card
+                withBorder
+                p="lg"
+                mt="md"
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  height: isConnectionOpen ? 'calc(100% - 15px)' : 'calc(100% + 9px)',
+                  flex: 1,
+                  transition: 'height 0.3s ease'
+                }}
+              >
+                  {/* Card contents remain the same... */}                  
+                {/* Fixed-height section for inputs */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <Stack gap="sm">
+                    <TextInput
+                      label={
+                        <Tooltip label="Path to the original file that will be modified">
+                          <Text size="sm" style={{ cursor: 'help' }}>Original File Path</Text>
+                        </Tooltip>
+                      }
+                      placeholder="/path/to/your/file.js"
+                      value={originalFile}
+                      onChange={(e) => setOriginalFile(e.currentTarget.value)}
+                      onBlur={() => {
+                        if (originalFile.trim()) {
+                          validateAndLoadFile(originalFile);
                         }
-                        placeholder="/path/to/your/file.js"
-                        value={originalFile}
-                        onChange={(e) => setOriginalFile(e.currentTarget.value)}
-                        onBlur={() => {
-                          if (originalFile.trim()) {
-                            validateAndLoadFile(originalFile);
-                          }
-                        }}
-                        onPaste={(e) => {
-                          // Allow default paste behavior to update the input value
-                          setTimeout(() => {
-                            // Check if the pasted content looks like a file path
-                            const value = e.currentTarget.value;
-                            if (value && (value.includes('/') || value.includes('\\'))) {
-                              validateAndLoadFile(value);
-                            }
-                          }, 100);
-                        }}
-                        rightSection={
-                          <ActionIcon
-                            onClick={browseForFile}
-                            variant="subtle"
-                            size="lg"
-                            title="Browse for file"
-                            style={{ marginRight: '8px' }}
-                            color="blue"
-                          >
-                            <Folder size={16} />
-                          </ActionIcon>
-                        }
-                        rightSectionWidth={50}
-                        styles={{ section: { pointerEvents: 'auto' } }}
-                      />
-                      
-                      <TextInput
-                        label={
-                          <Tooltip label="Description of the proposed change">
-                            <Text size="sm" style={{ cursor: 'help' }}>Description</Text>
-                          </Tooltip>
-                        }
-                        placeholder="Refactor function for better performance"
-                        value={description}
-                        onChange={(e) => setDescription(e.currentTarget.value)}
-                      />
-                    </Stack>
-                  </div>
-                  
-                  {/* Editor that takes available space but allows room for buttons */}
-                  <div style={{ 
-                    flex: 1, 
-                    minHeight: '150px',
-                    height: isConnectionOpen ? 'auto' : 'auto', // Adjust this value based on your layout
-                    transition: 'height 0.3s ease'
-                  }}>
-                    <Editor
-                      key={language}
-                      height={isConnectionOpen ? 'calc(97% + 6px)' : 'calc(93% + 10px)'}
-                      language={language}
-                      value={suggestedContent}
-                      onChange={(value) => setSuggestedContent(value || '')}
-                      theme={colorScheme === 'dark' ? 'vs-dark' : 'light'} // Add this line
-                      options={{
-                        wordWrap: 'on',
-                        minimap: { enabled: false },
-                        automaticLayout: true,
-                        fontSize: 14
                       }}
+                      onPaste={(e) => {
+                        // Allow default paste behavior to update the input value
+                        setTimeout(() => {
+                          // Check if the pasted content looks like a file path
+                          const value = e.currentTarget.value;
+                          if (value && (value.includes('/') || value.includes('\\'))) {
+                            validateAndLoadFile(value);
+                          }
+                        }, 100);
+                      }}
+                      rightSection={
+                        <ActionIcon
+                          onClick={browseForFile}
+                          variant="subtle"
+                          size="lg"
+                          title="Browse for file"
+                          style={{ marginRight: '8px' }}
+                          color="blue"
+                        >
+                          <Folder size={16} />
+                        </ActionIcon>
+                      }
+                      rightSectionWidth={50}
+                      styles={{ section: { pointerEvents: 'auto' } }}
                     />
-                  </div>
-                                  
-                  {/* Button group with minimal margin to maximize editor space */}
-                  <Group position="apart" mt="12px">
+                    
+                    <TextInput
+                      label={
+                        <Tooltip label="Description of the proposed change">
+                          <Text size="sm" style={{ cursor: 'help' }}>Description</Text>
+                        </Tooltip>
+                      }
+                      placeholder="Refactor function for better performance"
+                      value={description}
+                      onChange={(e) => setDescription(e.currentTarget.value)}
+                    />
+                  </Stack>
+                </div>
+                
+                {/* Editor that takes available space but allows room for buttons */}
+                <div style={{ 
+                  flex: 1, 
+                  minHeight: '150px',
+                  height: isConnectionOpen ? 'auto' : 'auto', // Adjust this value based on your layout
+                  transition: 'height 0.3s ease'
+                }}>
+                  <Editor
+                    key={language}
+                    height={isConnectionOpen ? 'calc(97% + 6px)' : 'calc(93% + 10px)'}
+                    language={language}
+                    value={suggestedContent}
+                    onChange={(value) => setSuggestedContent(value || '')}
+                    theme={colorScheme === 'dark' ? 'vs-dark' : 'light'} // Add this line
+                    options={{
+                      wordWrap: 'on',
+                      minimap: { enabled: false },
+                      automaticLayout: true,
+                      fontSize: 14
+                    }}
+                  />
+                </div>
+                                
+                {/* Button group with minimal margin to maximize editor space */}
+                <Group justify="space-between" mt="12px">
+                  <Button
+                    onClick={sendTestDiff}
+                    loading={loading}
+                    disabled={!status.isRunning}
+                    title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
+                  >
+                    Send Diff
+                  </Button>
+                  
+                  <Group gap="xs">
                     <Button
-                      onClick={sendTestDiff}
-                      loading={loading}
-                      disabled={!status.isRunning}
-                      title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
+                      variant="subtle"
+                      color="red"
+                      onClick={resetSuggestedContent}
+                      leftSection={<X size={14} />}
+                      size="sm"
                     >
-                      Send Diff
+                      Clear Content Only
                     </Button>
                     
-                    <Group spacing="xs">
-                      <Button
-                        variant="subtle"
-                        color="red"
-                        onClick={resetSuggestedContent}
-                        leftSection={<X size={14} />}
-                        size="sm"
-                      >
-                        Clear Content Only
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        color="gray"
-                        onClick={resetForm}
-                        leftSection={<Eraser size={14} />}
-                      >
-                        Reset All Fields
-                      </Button>
-                    </Group>
-                  </Group>
-                </Card>
-              </Tabs.Panel>
-              
-              <Tabs.Panel value="chat" p="md">
-                <VSCodeChat isServerRunning={status.isRunning} />
-              </Tabs.Panel>
-
-              <Tabs.Panel value="diagnostics" p="md">
-                <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} />
-              </Tabs.Panel>
-
-              <Tabs.Panel value="terminal" p="md">
-                <VSCodeTerminalPanel isServerRunning={status.isRunning} />
-              </Tabs.Panel>
-              
-              <Tabs.Panel value="debug" p="md">
-                <Card withBorder p="md" mt="md">
-                  <Text weight={600} mb="md">Debug Information</Text>
-                  <Stack gap="md">
-                    <Alert 
-                      icon={<AlertCircle size={16} />} 
-                      color="blue" 
-                      title="Debug Mode"
+                    <Button
+                      variant="outline"
+                      color="gray"
+                      onClick={resetForm}
+                      leftSection={<Eraser size={14} />}
                     >
-                      This panel shows debug information to help diagnose connection issues.
-                    </Alert>
-                    
-                    {statusInfo && (
-                      <Alert 
-                        color="blue" 
-                        title="Status Information" 
-                        icon={<CheckCircle size={16} />}
-                        withCloseButton
-                        onClose={() => setStatusInfo(null)}
-                      >
-                        {statusInfo}
-                      </Alert>
-                    )}
+                      Reset All Fields
+                    </Button>
+                  </Group>
+                </Group>
+              </Card>
+            </Tabs.Panel>
+            
+            <Tabs.Panel value="chat" p="md">
+              <VSCodeChat isServerRunning={status.isRunning} />
+            </Tabs.Panel>
 
-                    <Text size="sm" fw={600}>Current Request Payload:</Text>
-                    <Code block>
-                      {JSON.stringify({
-                        originalFile,
-                        suggestedContent: suggestedContent.length > 100 
-                          ? suggestedContent.substring(0, 100) + '...' 
-                          : suggestedContent,
-                        description
-                      }, null, 2)}
-                    </Code>
+            <Tabs.Panel value="diagnostics" p="md">
+              <VSCodeDiagnosticsPanel isServerRunning={status.isRunning} />
+            </Tabs.Panel>
+
+            <Tabs.Panel value="terminal" p="md">
+              <VSCodeTerminalPanel isServerRunning={status.isRunning} />
+            </Tabs.Panel>
+            
+            <Tabs.Panel value="debug" p="md">
+              <Card withBorder p="md" mt="md">
+                <Text fw={600} mb="md">Debug Information</Text>
+                <Stack gap="md">
+                  <Alert 
+                    icon={<AlertCircle size={16} />} 
+                    color="blue" 
+                    title="Debug Mode"
+                  >
+                    This panel shows debug information to help diagnose connection issues.
+                  </Alert>
+                  
+                  {statusInfo && (
+                    <Alert 
+                      color="blue" 
+                      title="Status Information" 
+                      icon={<CheckCircle size={16} />}
+                      withCloseButton
+                      onClose={() => setStatusInfo(null)}
+                    >
+                      {statusInfo}
+                    </Alert>
+                  )}
+
+                  <Text size="sm" fw={600}>Current Request Payload:</Text>
+                  <Code block>
+                    {JSON.stringify({
+                      originalFile,
+                      suggestedContent: suggestedContent.length > 100 
+                        ? suggestedContent.substring(0, 100) + '...' 
+                        : suggestedContent,
+                      description
+                    }, null, 2)}
+                  </Code>
+                  
+                  <Text size="sm" fw={600}>Connection Status:</Text>
+                  <Code block>
+                    {JSON.stringify(status, null, 2)}
+                  </Code>
+                  
+                  {error && (
+                    <>
+                      <Text size="sm" fw={600} color="red">Error Details:</Text>
+                      <Code block>
+                        {error}
+                      </Code>
+                    </>
+                  )}
+                  
+                  <Group>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const wsStatus = await core.invoke('get_vscode_ws_status');
+                          setStatusInfo(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
+                          setError(null); // Clear any existing errors
+                        } catch (e: any) {
+                          setError(`Failed to get status: ${e.toString()}`);
+                          setStatusInfo(null);
+                        }
+                      }}
+                    >
+                      Check WebSocket Status
+                    </Button>
                     
-                    <Text size="sm" fw={600}>Connection Status:</Text>
-                    <Code block>
-                      {JSON.stringify(status, null, 2)}
-                    </Code>
-                    
-                    {error && (
-                      <>
-                        <Text size="sm" fw={600} color="red">Error Details:</Text>
-                        <Code block>
-                          {error}
-                        </Code>
-                      </>
-                    )}
-                    
-                    <Group>
-                      <Button
-                        variant="outline"
-                        onClick={async () => {
-                          try {
-                            const wsStatus = await core.invoke('get_vscode_ws_status');
-                            setStatusInfo(`WebSocket Status: ${JSON.stringify(wsStatus, null, 2)}`);
-                            setError(null); // Clear any existing errors
-                          } catch (e: any) {
-                            setError(`Failed to get status: ${e.toString()}`);
-                            setStatusInfo(null);
-                          }
-                        }}
-                      >
-                        Check WebSocket Status
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        color="yellow"
-                        onClick={async () => {
-                          try {
-                            // Just invoke the send_code_diff_to_vscode command directly with test data
-                            const testData = {
-                              diffRequest: {
-                                originalFile: "/test/file.js",
-                                suggestedContent: "// Test content",
-                                description: "Test description"
-                              }
-                            };
-                            await core.invoke('send_code_diff_to_vscode', testData);
-                            setError(`Test diff sent successfully with: ${JSON.stringify(testData, null, 2)}`);
-                          } catch (e: any) {
-                            setError(`Failed to send test diff: ${e.toString()}`);
-                          }
-                        }}
-                      >
-                        Send Test Data
-                      </Button>
-                    </Group>
-                  </Stack>
-                </Card>
-              </Tabs.Panel>
-            </Tabs>
-          </div>
-        </Stack>
-      </Card>
-    </div>
-  );
+                    <Button
+                      variant="outline"
+                      color="yellow"
+                      onClick={async () => {
+                        try {
+                          // Just invoke the send_code_diff_to_vscode command directly with test data
+                          const testData = {
+                            diffRequest: {
+                              originalFile: "/test/file.js",
+                              suggestedContent: "// Test content",
+                              description: "Test description"
+                            }
+                          };
+                          await core.invoke('send_code_diff_to_vscode', testData);
+                          setError(`Test diff sent successfully with: ${JSON.stringify(testData, null, 2)}`);
+                        } catch (e: any) {
+                          setError(`Failed to send test diff: ${e.toString()}`);
+                        }
+                      }}
+                    >
+                      Send Test Data
+                    </Button>
+                  </Group>
+                </Stack>
+              </Card>
+            </Tabs.Panel>
+          </Tabs>
+        </div>
+      </Stack>
+    </Card>
+  </div>
+);
 };
 
 export default VSCodeIntegrationPanel;

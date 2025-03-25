@@ -7,164 +7,86 @@ mod tray;
 use tauri::Manager; // Add this import for the state() method
 
 use services::{
+    api_server::{start_api_server, stop_api_server, ApiServerState},
     mongodb::{
-        MongoDBState,
-        start_mongodb,
-        stop_mongodb,
-        list_mongodb_databases,
-        list_mongodb_collections,
-        test_mongodb_connection
+        list_mongodb_collections, list_mongodb_databases, start_mongodb, stop_mongodb,
+        test_mongodb_connection, MongoDBState,
     },
     mysql::{
-        MySqlService,
-        mysql_connect,
-        mysql_execute_query,
-        mysql_execute_param_query,
-        mysql_test_connection,
-        mysql_get_tables,
-        mysql_get_table_schema,
-        mysql_disconnect
+        mysql_connect, mysql_disconnect, mysql_execute_param_query, mysql_execute_query,
+        mysql_get_table_schema, mysql_get_tables, mysql_test_connection, MySqlService,
     },
-    python::{
-        PythonService,
-        python_init,
-        python_execute,
-        python_reset
-    },
-    sqlite::{
-        SqliteService,
-        sqlite_init,
-        sqlite_execute_query
-    },
+    python::{python_execute, python_init, python_reset, PythonService},
+    sqlite::{sqlite_execute_query, sqlite_init, SqliteService},
     sqlite_prompts::{
-        sqlite_get_prompts,
-        sqlite_create_prompt,
-        sqlite_update_prompt,
-        sqlite_delete_prompt
+        sqlite_create_prompt, sqlite_delete_prompt, sqlite_get_prompts, sqlite_update_prompt,
     },
-    api_server::{
-        ApiServerState,
-        start_api_server,
-        stop_api_server
-    }
 };
 
 // Import the whisper module functions
 use services::whisper::{
-    transcribe_audio,
-    play_last_recording,
-    save_audio_recording,
-    openai_4o_mini
+    openai_4o_mini, play_last_recording, save_audio_recording, transcribe_audio,
 };
 
 // Import the brand sound module functions
-use services::brand_sound::{
-    get_brand_sound_path,
-    check_brand_sound_exists
-};
+use services::brand_sound::{check_brand_sound_exists, get_brand_sound_path};
 
 // Import the Google Trends functions
-use services::google_trends::{
-    get_google_trends,
-    get_related_queries,
-    export_trends_data
-};
+use services::google_trends::{export_trends_data, get_google_trends, get_related_queries};
 
 // Import the new Trend Spike Prediction functions
 use services::trend_spike_service::{
-    TrendSpikeService,
-    init_default_keywords,
-    get_trend_predictions,
-    get_saved_trend_predictions,
-    predict_trend_spike,
-    add_trend_spike_keyword,
-    remove_trend_spike_keyword,
-    start_trend_spike_monitoring,
-    stop_trend_spike_monitoring,
-    get_trend_spike_monitored_keywords,
-    set_trend_spike_threshold,
-    set_trend_spike_interval,
-    is_trend_spike_monitoring_active,
-    get_trend_spike_sources
+    add_trend_spike_keyword, get_saved_trend_predictions, get_trend_predictions,
+    get_trend_spike_monitored_keywords, get_trend_spike_sources, init_default_keywords,
+    is_trend_spike_monitoring_active, predict_trend_spike, remove_trend_spike_keyword,
+    set_trend_spike_interval, set_trend_spike_threshold, start_trend_spike_monitoring,
+    stop_trend_spike_monitoring, TrendSpikeService,
 };
 use std::sync::Arc;
 
 // Import the screenshot functions
 use services::screenshot::{
-    take_screenshot, 
+    save_clipboard_image, // Add this line
+    take_screenshot,
     take_screenshot_to_clipboard,
-    save_clipboard_image  // Add this line
 };
 
 use services::chrome_debugger::fetch_chrome_targets;
 use services::chrome_debugger::open_chrome_in_terminal;
 
 use services::project_structure::{
-    get_project_structure,
-    generate_structure_text,
-    is_valid_path,
-    create_copies_for_files,
-    check_drag_drop_dir_exists,
-    open_drag_drop_dir
+    check_drag_drop_dir_exists, create_copies_for_files, generate_structure_text,
+    get_project_structure, is_valid_path, open_drag_drop_dir,
 };
-use services::references::{
-    load_references,
-    save_references
-};
+use services::references::{load_references, save_references};
 use services::vscode_ws::{
-    VSCodeWebSocketState,
-    start_vscode_ws_server,
-    stop_vscode_ws_server,
-    get_vscode_ws_status,
-    send_code_diff_to_vscode,
-    send_chat_to_vscode,
-    send_open_file_to_vscode
+    get_vscode_ws_status, send_chat_to_vscode, send_code_diff_to_vscode, send_open_file_to_vscode,
+    start_vscode_ws_server, stop_vscode_ws_server, VSCodeWebSocketState,
 };
 
 use services::file_service::{
-    get_file_info,
-    search_files,
-    copy_directory,
-    read_text_file_secure,
+    copy_directory, generate_file_tree, get_file_info, read_text_file_secure, search_files,
     write_text_file_secure,
-    generate_file_tree
 };
 
 use services::claude_mcp_service::{
-    ClaudeMcpState,
-    start_claude_mcp_server,
-    stop_claude_mcp_server,
-    get_claude_mcp_status,
-    add_claude_mcp_directory,
-    remove_claude_mcp_directory
+    add_claude_mcp_directory, get_claude_mcp_status, remove_claude_mcp_directory,
+    start_claude_mcp_server, stop_claude_mcp_server, ClaudeMcpState,
 };
 
 // Import MCP client service
 use services::mcp_client_service::{
-    PuppeteerMcpState,
-    start_puppeteer_mcp_server,
-    stop_puppeteer_mcp_server,
-    get_puppeteer_mcp_status,
-    get_puppeteer_mcp_directories,
-    add_puppeteer_mcp_directory,
-    update_puppeteer_mcp_directory,
-    remove_puppeteer_mcp_directory,
-    get_puppeteer_mcp_config,
-    update_puppeteer_mcp_config,
-    send_to_puppeteer_mcp,
-    get_puppeteer_mcp_tools
+    add_puppeteer_mcp_directory, get_puppeteer_mcp_config, get_puppeteer_mcp_directories,
+    get_puppeteer_mcp_status, get_puppeteer_mcp_tools, remove_puppeteer_mcp_directory,
+    send_to_puppeteer_mcp, start_puppeteer_mcp_server, stop_puppeteer_mcp_server,
+    update_puppeteer_mcp_config, update_puppeteer_mcp_directory, PuppeteerMcpState,
 };
 
 use services::chrome_extension_ws::{
+    get_chrome_ws_clients, get_chrome_ws_status, send_message_to_chrome,
+    send_targeted_message_to_chrome, start_chrome_ws_server, stop_chrome_ws_server,
     ChromeExtWebSocketState,
-    start_chrome_ws_server,
-    stop_chrome_ws_server,
-    get_chrome_ws_status,
-    send_message_to_chrome,
-    get_chrome_ws_clients,
-    send_targeted_message_to_chrome
 };
-
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -176,18 +98,22 @@ pub fn run() {
     let trend_spike_service_for_setup = trend_spike_service.clone();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(move |app| {
             // Setup tray icon handlers
             tray::setup_tray_handler(&app.handle());
-            
+
             // Store resource directory path in the trend spike service.
             // Note the use of `.ok()` to convert the Result to an Option.
             if let Some(resource_dir) = app.handle().path().resource_dir().ok() {
                 if let Ok(mut paths) = trend_spike_service_for_setup.script_paths.lock() {
-                    paths.insert("resource_dir".to_string(), resource_dir.to_string_lossy().to_string());
+                    paths.insert(
+                        "resource_dir".to_string(),
+                        resource_dir.to_string_lossy().to_string(),
+                    );
                 }
             }
-            
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -326,23 +252,23 @@ pub fn run() {
 //       use cocoa::base::{id, nil};
 //       use cocoa::foundation::NSString;
 //       use objc::{class, msg_send, sel, sel_impl};
-      
+
 //       let app: id = NSApp();
-      
+
 //       let appearance_name = if dark { "NSAppearanceNameDarkAqua" } else { "NSAppearanceNameAqua" };
 //       println!("Updating appearance to: {}", appearance_name);
-      
+
 //       let ns_string_class = class!(NSString);
 //       let ns_appearance_name: id = msg_send![ns_string_class, stringWithUTF8String:appearance_name.as_ptr()];
-      
+
 //       let nsappearance_class = class!(NSAppearance);
 //       let appearance: id = msg_send![nsappearance_class, appearanceNamed:ns_appearance_name];
-      
+
 //       let _: () = msg_send![app, setAppearance:appearance];
-      
+
 //       let windows: id = msg_send![app, windows];
 //       let count: usize = msg_send![windows, count];
-      
+
 //       println!("Found {} windows to update", count);
 //       for i in 0..count {
 //         let window: id = msg_send![windows, objectAtIndex:i];
@@ -350,19 +276,19 @@ pub fn run() {
 //         println!("Updated window at index {}", i);
 //       }
 //     }
-    
+
 //     // Then also try with AppleScript as a backup approach
 //     // This will affect the entire system appearance which will include our window
 //     use std::process::Command;
-    
-//     let script = format!("tell application \"System Events\" to tell appearance preferences to set dark mode to {}", 
+
+//     let script = format!("tell application \"System Events\" to tell appearance preferences to set dark mode to {}",
 //                         if dark { "true" } else { "false" });
-    
+
 //     match Command::new("osascript").arg("-e").arg(script).output() {
 //       Ok(_) => println!("System appearance updated via AppleScript"),
 //       Err(e) => println!("Failed to update system appearance via AppleScript: {}", e)
 //     }
 //   }
-  
+
 //   Ok(())
 // }

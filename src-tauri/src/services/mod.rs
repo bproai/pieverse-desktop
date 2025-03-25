@@ -8,9 +8,9 @@ pub mod sqlite_prompts;
 
 // AI and API services
 pub mod api_server;
-pub mod whisper;
 pub mod brand_sound;
 pub mod python;
+pub mod whisper;
 
 // Google Trends services
 pub mod google_trends;

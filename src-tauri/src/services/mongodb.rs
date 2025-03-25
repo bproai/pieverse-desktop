@@ -1,4 +1,4 @@
-use mongodb::{Client, options::ClientOptions};
+use mongodb::{options::ClientOptions, Client};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -29,8 +29,7 @@ pub async fn start_mongodb(state: tauri::State<'_, MongoDBState>) -> Result<Stri
         .await
         .map_err(|e| e.to_string())?;
 
-    let client = Client::with_options(client_options)
-        .map_err(|e| e.to_string())?;
+    let client = Client::with_options(client_options).map_err(|e| e.to_string())?;
 
     // Test the connection
     client
@@ -42,7 +41,7 @@ pub async fn start_mongodb(state: tauri::State<'_, MongoDBState>) -> Result<Stri
         let mut client_state = state.client.lock().await;
         *client_state = Some(client);
     }
-    
+
     {
         let mut status = state.status.lock().await;
         *status = "running".to_string();
@@ -74,15 +73,15 @@ pub async fn stop_mongodb(state: tauri::State<'_, MongoDBState>) -> Result<Strin
 }
 
 #[tauri::command]
-pub async fn list_mongodb_databases(state: tauri::State<'_, MongoDBState>) -> Result<Vec<String>, String> {
+pub async fn list_mongodb_databases(
+    state: tauri::State<'_, MongoDBState>,
+) -> Result<Vec<String>, String> {
     let client_state = state.client.lock().await;
     match &*client_state {
-        Some(client) => {
-            client
-                .list_database_names()
-                .await
-                .map_err(|e| e.to_string())
-        }
+        Some(client) => client
+            .list_database_names()
+            .await
+            .map_err(|e| e.to_string()),
         None => Err("MongoDB is not connected".to_string()),
     }
 }
@@ -96,24 +95,22 @@ pub async fn list_mongodb_collections(
     match &*client_state {
         Some(client) => {
             let db = client.database(&database_name);
-            db.list_collection_names()
-                .await
-                .map_err(|e| e.to_string())
+            db.list_collection_names().await.map_err(|e| e.to_string())
         }
         None => Err("MongoDB is not connected".to_string()),
     }
 }
 
 #[tauri::command]
-pub async fn test_mongodb_connection(state: tauri::State<'_, MongoDBState>) -> Result<bool, String> {
+pub async fn test_mongodb_connection(
+    state: tauri::State<'_, MongoDBState>,
+) -> Result<bool, String> {
     let client_state = state.client.lock().await;
     match &*client_state {
-        Some(client) => {
-            match client.list_database_names().await {
-                Ok(_) => Ok(true),
-                Err(e) => Err(e.to_string()),
-            }
-        }
+        Some(client) => match client.list_database_names().await {
+            Ok(_) => Ok(true),
+            Err(e) => Err(e.to_string()),
+        },
         None => Ok(false),
     }
 }

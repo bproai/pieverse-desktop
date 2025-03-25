@@ -1,21 +1,20 @@
 // src-tauri/src/services/api_server.rs
-use axum::{
-    routing::{get, post, put, delete},
-    Router,
-    Json,
-    extract::{State, Path},
-    response::IntoResponse,
-    http::StatusCode,
-};
-use serde_json::Value;
-use std::sync::Arc;
-use std::net::TcpListener;
-use tokio::sync::{Mutex, watch};
-use tower_http::cors::CorsLayer;
 use crate::services::sqlite::SqliteService;
 use crate::services::sqlite_prompts::Prompt;
-use serde::{Deserialize, Serialize};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{delete, get, post, put},
+    Json, Router,
+};
 use rusqlite::params;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::net::TcpListener;
+use std::sync::Arc;
+use tokio::sync::{watch, Mutex};
+use tower_http::cors::CorsLayer;
 
 // Changed to single error type since ServerError is never used
 #[derive(Debug)]
@@ -53,8 +52,8 @@ pub struct ApiServer {
 impl ApiServer {
     pub fn new(sqlite: Arc<Mutex<SqliteService>>, port: u16) -> Self {
         let (shutdown_tx, _) = watch::channel(false);
-        Self { 
-            sqlite, 
+        Self {
+            sqlite,
             port,
             shutdown: shutdown_tx,
         }
@@ -97,7 +96,7 @@ impl ApiServer {
         println!("API server successfully bound to address");
 
         let mut shutdown_rx = self.shutdown.subscribe();
-        
+
         tokio::spawn(async move {
             println!("Starting API server...");
             let server = axum::serve(listener, router);
@@ -131,7 +130,7 @@ impl ApiServer {
     }
 
     async fn health_check(
-        State(sqlite): State<Arc<Mutex<SqliteService>>>
+        State(sqlite): State<Arc<Mutex<SqliteService>>>,
     ) -> Result<Json<Value>, ApiError> {
         let sqlite_guard = sqlite.lock().await;
         match sqlite_guard.execute_query("SELECT 1") {
@@ -140,32 +139,32 @@ impl ApiServer {
                 "sqlite": "connected",
                 "timestamp": chrono::Utc::now().to_rfc3339()
             }))),
-            Err(e) => Err(ApiError(format!("SQLite check failed: {}", e)))
+            Err(e) => Err(ApiError(format!("SQLite check failed: {}", e))),
         }
     }
 
     async fn get_prompts(
-        State(sqlite): State<Arc<Mutex<SqliteService>>>
+        State(sqlite): State<Arc<Mutex<SqliteService>>>,
     ) -> Result<Json<Value>, ApiError> {
         let query = "SELECT * FROM prompts ORDER BY category, display_order";
         let sqlite_guard = sqlite.lock().await;
         match sqlite_guard.execute_query(query) {
-            Ok(prompts) => Ok(Json(serde_json::json!({ 
+            Ok(prompts) => Ok(Json(serde_json::json!({
                 "status": "success",
-                "prompts": prompts 
+                "prompts": prompts
             }))),
-            Err(e) => Err(ApiError(e.to_string()))
+            Err(e) => Err(ApiError(e.to_string())),
         }
     }
 
     async fn create_prompt(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
-        Json(prompt): Json<Prompt>
+        Json(prompt): Json<Prompt>,
     ) -> Result<Json<Value>, ApiError> {
         // No need for manual escaping with parameterized queries
         let query = "INSERT INTO prompts (title, description, category, display_order, is_active) 
                      VALUES (?, ?, ?, ?, ?)";
-    
+
         let sqlite_guard = sqlite.lock().await;
         match sqlite_guard.execute_parameterized(
             query,
@@ -175,22 +174,21 @@ impl ApiServer {
                 prompt.category,
                 prompt.display_order,
                 if prompt.is_active { 1 } else { 0 }
-            ]
+            ],
         ) {
-            Ok(_) => Ok(Json(serde_json::json!({ 
+            Ok(_) => Ok(Json(serde_json::json!({
                 "status": "success",
-                "message": "Prompt created successfully" 
+                "message": "Prompt created successfully"
             }))),
-            Err(e) => Err(ApiError(e.to_string()))
+            Err(e) => Err(ApiError(e.to_string())),
         }
     }
 
     async fn update_prompt(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
         Path(id): Path<i64>,
-        Json(prompt): Json<Prompt>
+        Json(prompt): Json<Prompt>,
     ) -> Result<Json<Value>, ApiError> {
-
         let query = "UPDATE prompts SET 
         title = ?,
         description = ?,
@@ -202,49 +200,49 @@ impl ApiServer {
 
         let sqlite_guard = sqlite.lock().await;
         match sqlite_guard.execute_parameterized(
-        query,
-        params![
-            prompt.title,
-            prompt.description,
-            prompt.category,
-            prompt.display_order,
-            if prompt.is_active { 1 } else { 0 },
-            id
-        ]
+            query,
+            params![
+                prompt.title,
+                prompt.description,
+                prompt.category,
+                prompt.display_order,
+                if prompt.is_active { 1 } else { 0 },
+                id
+            ],
         ) {
-        Ok(_) => Ok(Json(serde_json::json!({ 
-            "status": "success",
-            "message": "Prompt updated successfully" 
-        }))),
-        Err(e) => Err(ApiError(e.to_string()))
+            Ok(_) => Ok(Json(serde_json::json!({
+                "status": "success",
+                "message": "Prompt updated successfully"
+            }))),
+            Err(e) => Err(ApiError(e.to_string())),
         }
     }
 
     async fn delete_prompt(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
-        Path(id): Path<i64>
+        Path(id): Path<i64>,
     ) -> Result<Json<Value>, ApiError> {
         let query = "DELETE FROM prompts WHERE id = ?";
         let sqlite_guard = sqlite.lock().await;
         match sqlite_guard.execute_parameterized(query, params![id]) {
-            Ok(_) => Ok(Json(serde_json::json!({ 
+            Ok(_) => Ok(Json(serde_json::json!({
                 "status": "success",
-                "message": "Prompt deleted successfully" 
+                "message": "Prompt deleted successfully"
             }))),
-            Err(e) => Err(ApiError(e.to_string()))
+            Err(e) => Err(ApiError(e.to_string())),
         }
     }
 
     async fn store_qa_data(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
-        Json(data): Json<QAData>
+        Json(data): Json<QAData>,
     ) -> Result<Json<Value>, ApiError> {
         // Log inbound data in development mode
         #[cfg(debug_assertions)]
         println!("Dev Log: Inbound QA upload received: {:?}", data);
-    
+
         let sqlite_guard = sqlite.lock().await;
-        
+
         // Create QA tables if they don't exist
         let create_questions = "CREATE TABLE IF NOT EXISTS qa_questions (
                     id TEXT PRIMARY KEY,
@@ -264,16 +262,18 @@ impl ApiServer {
                     turn_number INTEGER,
                     metadata TEXT
                 )";
-        sqlite_guard.execute_query(create_questions)
+        sqlite_guard
+            .execute_query(create_questions)
             .map_err(|e| ApiError(e.to_string()))?;
-        sqlite_guard.execute_query(create_answers)
+        sqlite_guard
+            .execute_query(create_answers)
             .map_err(|e| ApiError(e.to_string()))?;
-        
+
         // Process each question
         for question in &data.questions {
             #[cfg(debug_assertions)]
             println!("Dev Log: Processing question: {:?}", question);
-            
+
             sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_questions (id, platform, question, timestamp, answered)
                 VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -286,19 +286,23 @@ impl ApiServer {
                 ],
             ).map_err(|e| ApiError(e.to_string()))?;
         }
-        
+
         // Process each answer
         for answer in &data.answers {
             #[cfg(debug_assertions)]
             println!("Dev Log: Processing answer: {:?}", answer);
-            
-            let answer_id = answer.id.clone().unwrap_or_else(|| {
-                format!("a_{}", chrono::Utc::now().timestamp_millis())
-            });
-            
+
+            let answer_id = answer
+                .id
+                .clone()
+                .unwrap_or_else(|| format!("a_{}", chrono::Utc::now().timestamp_millis()));
+
             #[cfg(debug_assertions)]
-            println!("Dev Log: Executing parameterized query for answer_id: {}", answer_id);
-            
+            println!(
+                "Dev Log: Executing parameterized query for answer_id: {}",
+                answer_id
+            );
+
             // Execute the parameterized query
             match sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_answers 
@@ -326,20 +330,23 @@ impl ApiServer {
                     return Err(ApiError(e.to_string()));
                 }
             }
-            
+
             // More debug info for update
             #[cfg(debug_assertions)]
-            println!("Dev Log: Updating question answered status for question_id: {}", answer.question_id);
-            
+            println!(
+                "Dev Log: Updating question answered status for question_id: {}",
+                answer.question_id
+            );
+
             // Update the question's answered status
             match sqlite_guard.execute_parameterized(
                 "UPDATE qa_questions SET answered = 1 WHERE id = ?",
-                params![answer.question_id]
+                params![answer.question_id],
             ) {
                 Ok(_) => {
                     #[cfg(debug_assertions)]
                     println!("Dev Log: Successfully updated question answered status");
-                },
+                }
                 Err(e) => {
                     #[cfg(debug_assertions)]
                     println!("Dev Log: Error updating question answered status: {}", e);
@@ -347,20 +354,25 @@ impl ApiServer {
                 }
             }
         }
-        
+
         #[cfg(debug_assertions)]
-        println!("Dev Log: Finished processing QA data. Stored {} questions and {} answers",
-                 data.questions.len(), data.answers.len());
-        
+        println!(
+            "Dev Log: Finished processing QA data. Stored {} questions and {} answers",
+            data.questions.len(),
+            data.answers.len()
+        );
+
         // Clean up older unanswered questions
-        sqlite_guard.execute_parameterized(
-            "DELETE FROM qa_questions 
+        sqlite_guard
+            .execute_parameterized(
+                "DELETE FROM qa_questions 
             WHERE answered = 0
             AND timestamp < (
                 SELECT MAX(timestamp) FROM qa_questions
             )",
-            params![],
-        ).map_err(|e| ApiError(e.to_string()))?;
+                params![],
+            )
+            .map_err(|e| ApiError(e.to_string()))?;
 
         #[cfg(debug_assertions)]
         println!("Dev Log: Older unanswered questions cleaned up");
@@ -383,24 +395,29 @@ impl ApiServer {
         #[cfg(debug_assertions)]
         println!("Dev Log: Duplicate answers cleaned up - keeping only the latest per question");
 
-    
         Ok(Json(serde_json::json!({
             "status": "success",
             "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
         })))
-    }    
-    
+    }
+
     async fn get_qa_data(
         State(sqlite): State<Arc<Mutex<SqliteService>>>,
-        query_params: axum::extract::Query<std::collections::HashMap<String, String>>
+        query_params: axum::extract::Query<std::collections::HashMap<String, String>>,
     ) -> Result<Json<Value>, ApiError> {
         let platform = query_params.get("platform");
-        let limit = query_params.get("limit").map(|s| s.parse::<i64>().unwrap_or(10)).unwrap_or(10);
-        let offset = query_params.get("offset").map(|s| s.parse::<i64>().unwrap_or(0)).unwrap_or(0);
+        let limit = query_params
+            .get("limit")
+            .map(|s| s.parse::<i64>().unwrap_or(10))
+            .unwrap_or(10);
+        let offset = query_params
+            .get("offset")
+            .map(|s| s.parse::<i64>().unwrap_or(0))
+            .unwrap_or(0);
         let search = query_params.get("search");
-        
+
         let sqlite_guard = sqlite.lock().await;
-        
+
         // Build a base query with placeholders
         let base_query = r#"
         SELECT 
@@ -419,25 +436,25 @@ impl ApiServer {
         FROM qa_questions q
         LEFT JOIN qa_answers a ON q.id = a.question_id
         "#;
-        
+
         // Similar base query for count
         let base_count_query = r#"
         SELECT COUNT(DISTINCT q.id) AS total
         FROM qa_questions q
         LEFT JOIN qa_answers a ON q.id = a.question_id
         "#;
-        
+
         // Build where clause and gather parameter values
         let mut conditions = Vec::new();
         let mut param_values: Vec<rusqlite::types::Value> = Vec::new();
-        
+
         if let Some(platform_value) = platform {
             if platform_value != "all" {
                 conditions.push("q.platform = ?");
                 param_values.push(platform_value.clone().into());
             }
         }
-        
+
         if let Some(search_value) = search {
             if !search_value.is_empty() {
                 conditions.push("(q.question LIKE ? OR a.answer LIKE ?)");
@@ -446,43 +463,45 @@ impl ApiServer {
                 param_values.push(search_pattern.into());
             }
         }
-        
+
         // Create the full parameterized query
         let where_clause = if !conditions.is_empty() {
             format!("WHERE {}", conditions.join(" AND "))
         } else {
             String::new()
         };
-        
+
         let main_query = format!(
-            "{} {} ORDER BY q.timestamp DESC LIMIT ? OFFSET ?", 
-            base_query, 
-            where_clause
+            "{} {} ORDER BY q.timestamp DESC LIMIT ? OFFSET ?",
+            base_query, where_clause
         );
-        
+
         let count_query = format!("{} {}", base_count_query, where_clause);
-        
+
         // Add limit and offset to parameters for main query
         let mut main_params = param_values.clone();
         main_params.push(limit.into());
         main_params.push(offset.into());
-        
+
         // Use the new query_parameterized method
-        let result = sqlite_guard.query_parameterized(&main_query, rusqlite::params_from_iter(main_params))
+        let result = sqlite_guard
+            .query_parameterized(&main_query, rusqlite::params_from_iter(main_params))
             .map_err(|e| ApiError(e.to_string()))?;
-        
+
         // Get total count with the same conditions
-        let count_result = sqlite_guard.query_parameterized(&count_query, rusqlite::params_from_iter(param_values))
+        let count_result = sqlite_guard
+            .query_parameterized(&count_query, rusqlite::params_from_iter(param_values))
             .map_err(|e| ApiError(e.to_string()))?;
-        
+
         let total = if !count_result.is_empty() {
-            count_result[0].get("total")
+            count_result[0]
+                .get("total")
                 .and_then(|v| v.as_i64())
                 .unwrap_or(0)
         } else {
             0
         };
-        
+
         Ok(Json(serde_json::json!({
             "status": "success",
             "data": {
@@ -493,42 +512,39 @@ impl ApiServer {
             }
         })))
     }
-
 }
 
 #[tauri::command]
 pub async fn start_api_server(
     state: tauri::State<'_, SqliteService>,
     api_state: tauri::State<'_, ApiServerState>,
-    port: Option<u16>
+    port: Option<u16>,
 ) -> Result<(), String> {
     let port = port.unwrap_or(3030);
-    
+
     let guard = api_state.server.lock().await;
     if guard.is_some() {
         return Ok(());
     }
     drop(guard);
-    
+
     if !ApiServer::check_port_available(port) {
         return Err(format!("Port {} is already in use", port));
     }
 
     let state_ref = Arc::new(Mutex::new(state.inner().clone()));
     let server = ApiServer::new(state_ref, port);
-    
+
     server.start().await?;
-    
+
     let mut guard = api_state.server.lock().await;
     *guard = Some(server);
-    
+
     Ok(())
 }
 
 #[tauri::command]
-pub async fn stop_api_server(
-    api_state: tauri::State<'_, ApiServerState>,
-) -> Result<(), String> {
+pub async fn stop_api_server(api_state: tauri::State<'_, ApiServerState>) -> Result<(), String> {
     let mut guard = api_state.server.lock().await;
     if let Some(server) = guard.take() {
         server.stop();
@@ -537,7 +553,6 @@ pub async fn stop_api_server(
         Ok(())
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuestionData {

@@ -1,8 +1,8 @@
 // src-tauri/src/services/llm_rules.rs
+use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -50,31 +50,34 @@ pub struct LLMRulesService {
 impl LLMRulesService {
     pub fn new(app_handle: AppHandle) -> Self {
         // Get the app data directory
-        let app_dir = app_handle.path().app_data_dir()
+        let app_dir = app_handle
+            .path()
+            .app_data_dir()
             .expect("Failed to get app data directory");
-        
+
         // Create directory if it doesn't exist
         if !app_dir.exists() {
             fs::create_dir_all(&app_dir).expect("Failed to create app data directory");
         }
-        
+
         let rules_file = app_dir.join("llm_rules.json");
-        
+
         // Create file with default rules if it doesn't exist
         if !rules_file.exists() {
             let default_rules = Self::create_default_rules();
             let json = serde_json::to_string_pretty(&default_rules)
                 .expect("Failed to serialize default rules");
             let mut file = File::create(&rules_file).expect("Failed to create rules file");
-            file.write_all(json.as_bytes()).expect("Failed to write default rules");
+            file.write_all(json.as_bytes())
+                .expect("Failed to write default rules");
         }
-        
+
         Self {
             app_handle,
             rules_file,
         }
     }
-    
+
     fn create_default_rules() -> Vec<LLMRule> {
         vec![
             LLMRule {
@@ -82,7 +85,8 @@ impl LLMRulesService {
                 name: "Expert Coding Assistant".to_string(),
                 description: "Instructions for an LLM to behave as a coding expert".to_string(),
                 model: "gpt-4".to_string(),
-                content: r#"You are an expert software developer specializing in modern web technologies.
+                content:
+                    r#"You are an expert software developer specializing in modern web technologies.
 Follow these guidelines:
 - Provide clean, efficient, and well-commented code
 - Explain your approach before diving into code
@@ -97,8 +101,13 @@ If the user's request is unclear, ask clarifying questions before providing a so
 Use variables like this:
 - Preferred language: {{preferredLanguage}}
 - Project type: {{projectType}}
-- Experience level: {{experienceLevel}}"#.to_string(),
-                tags: vec!["coding".to_string(), "programming".to_string(), "software development".to_string()],
+- Experience level: {{experienceLevel}}"#
+                        .to_string(),
+                tags: vec![
+                    "coding".to_string(),
+                    "programming".to_string(),
+                    "software development".to_string(),
+                ],
                 variables: vec![
                     Variable {
                         name: "preferredLanguage".to_string(),
@@ -106,13 +115,13 @@ Use variables like this:
                         default_value: "JavaScript".to_string(),
                         variable_type: VariableType::Select,
                         options: Some(vec![
-                            "JavaScript".to_string(), 
-                            "TypeScript".to_string(), 
-                            "Python".to_string(), 
-                            "Rust".to_string(), 
-                            "Go".to_string(), 
-                            "Java".to_string(), 
-                            "C#".to_string()
+                            "JavaScript".to_string(),
+                            "TypeScript".to_string(),
+                            "Python".to_string(),
+                            "Rust".to_string(),
+                            "Go".to_string(),
+                            "Java".to_string(),
+                            "C#".to_string(),
                         ]),
                     },
                     Variable {
@@ -128,10 +137,10 @@ Use variables like this:
                         default_value: "Intermediate".to_string(),
                         variable_type: VariableType::Select,
                         options: Some(vec![
-                            "Beginner".to_string(), 
-                            "Intermediate".to_string(), 
-                            "Advanced".to_string(), 
-                            "Expert".to_string()
+                            "Beginner".to_string(),
+                            "Intermediate".to_string(),
+                            "Advanced".to_string(),
+                            "Expert".to_string(),
                         ]),
                     },
                 ],
@@ -159,8 +168,13 @@ Follow these guidelines:
 When reviewing work, consider both technical aspects and creative expression.
 If asked for specific exercises or prompts, tailor them to help the writer develop their skills.
 
-Remember: your goal is to help the writer tell THEIR story better, not to rewrite it as your own."#.to_string(),
-                tags: vec!["writing".to_string(), "creativity".to_string(), "coaching".to_string()],
+Remember: your goal is to help the writer tell THEIR story better, not to rewrite it as your own."#
+                    .to_string(),
+                tags: vec![
+                    "writing".to_string(),
+                    "creativity".to_string(),
+                    "coaching".to_string(),
+                ],
                 variables: vec![
                     Variable {
                         name: "genre".to_string(),
@@ -168,14 +182,14 @@ Remember: your goal is to help the writer tell THEIR story better, not to rewrit
                         default_value: "Fiction".to_string(),
                         variable_type: VariableType::Select,
                         options: Some(vec![
-                            "Fiction".to_string(), 
-                            "Science Fiction".to_string(), 
-                            "Fantasy".to_string(), 
-                            "Mystery".to_string(), 
-                            "Romance".to_string(), 
-                            "Literary".to_string(), 
-                            "Non-fiction".to_string(), 
-                            "Poetry".to_string()
+                            "Fiction".to_string(),
+                            "Science Fiction".to_string(),
+                            "Fantasy".to_string(),
+                            "Mystery".to_string(),
+                            "Romance".to_string(),
+                            "Literary".to_string(),
+                            "Non-fiction".to_string(),
+                            "Poetry".to_string(),
                         ]),
                     },
                     Variable {
@@ -184,11 +198,11 @@ Remember: your goal is to help the writer tell THEIR story better, not to rewrit
                         default_value: "Adult".to_string(),
                         variable_type: VariableType::Select,
                         options: Some(vec![
-                            "Children".to_string(), 
-                            "Young Adult".to_string(), 
-                            "Adult".to_string(), 
-                            "Academic".to_string(), 
-                            "Professional".to_string()
+                            "Children".to_string(),
+                            "Young Adult".to_string(),
+                            "Adult".to_string(),
+                            "Academic".to_string(),
+                            "Professional".to_string(),
                         ]),
                     },
                     Variable {
@@ -197,9 +211,9 @@ Remember: your goal is to help the writer tell THEIR story better, not to rewrit
                         default_value: "Intermediate".to_string(),
                         variable_type: VariableType::Select,
                         options: Some(vec![
-                            "Beginner".to_string(), 
-                            "Intermediate".to_string(), 
-                            "Advanced".to_string()
+                            "Beginner".to_string(),
+                            "Intermediate".to_string(),
+                            "Advanced".to_string(),
                         ]),
                     },
                 ],
@@ -210,29 +224,28 @@ Remember: your goal is to help the writer tell THEIR story better, not to rewrit
             },
         ]
     }
-    
+
     pub fn load_rules(&self) -> Result<Vec<LLMRule>, String> {
         let mut file = File::open(&self.rules_file)
             .map_err(|e| format!("Failed to open rules file: {}", e))?;
-        
+
         let mut contents = String::new();
         file.read_to_string(&mut contents)
             .map_err(|e| format!("Failed to read rules file: {}", e))?;
-        
-        serde_json::from_str(&contents)
-            .map_err(|e| format!("Failed to parse rules file: {}", e))
+
+        serde_json::from_str(&contents).map_err(|e| format!("Failed to parse rules file: {}", e))
     }
-    
+
     pub fn save_rules(&self, rules: Vec<LLMRule>) -> Result<(), String> {
         let json = serde_json::to_string_pretty(&rules)
             .map_err(|e| format!("Failed to serialize rules: {}", e))?;
-        
+
         let mut file = File::create(&self.rules_file)
             .map_err(|e| format!("Failed to create rules file: {}", e))?;
-        
+
         file.write_all(json.as_bytes())
             .map_err(|e| format!("Failed to write rules file: {}", e))?;
-        
+
         Ok(())
     }
 }
@@ -246,7 +259,10 @@ pub async fn load_llm_rules(app_handle: tauri::AppHandle) -> Result<Vec<LLMRule>
 
 // Tauri command to save rules
 #[tauri::command]
-pub async fn save_llm_rules(app_handle: tauri::AppHandle, rules: Vec<LLMRule>) -> Result<(), String> {
+pub async fn save_llm_rules(
+    app_handle: tauri::AppHandle,
+    rules: Vec<LLMRule>,
+) -> Result<(), String> {
     let rules_service = LLMRulesService::new(app_handle);
     rules_service.save_rules(rules)
 }

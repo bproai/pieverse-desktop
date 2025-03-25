@@ -1,10 +1,10 @@
 // src-tauri/src/services/python.rs
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use serde::Serialize;
 use std::ffi::CString;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PythonError {
@@ -34,93 +34,107 @@ impl PythonService {
 
     pub async fn init(&self) -> Result<(), PythonError> {
         let interpreter = self.interpreter.clone();
-        
+
         tokio::task::spawn_blocking(move || {
             Python::with_gil(|py| {
                 // Create a locals dictionary and set builtins.
                 let locals = PyDict::new(py);
-                let builtins = py.import("builtins")
+                let builtins = py
+                    .import("builtins")
                     .map_err(|e| PythonError::InitError(e.to_string()))?;
-                locals.set_item("__builtins__", &builtins)
+                locals
+                    .set_item("__builtins__", &builtins)
                     .map_err(|e| PythonError::InitError(e.to_string()))?;
-    
+
                 // Create a globals dictionary and set builtins.
                 let globals = PyDict::new(py);
-                globals.set_item("__builtins__", &builtins)
+                globals
+                    .set_item("__builtins__", &builtins)
                     .map_err(|e| PythonError::InitError(e.to_string()))?;
-    
+
                 // --- Preload basic packages ---
                 // Import sys, pandas as pd, and numpy as np.
                 let setup_code = r#"
 import pandas as pd
 import numpy as np
 "#;
-                let setup_code_c = CString::new(setup_code)
-                    .map_err(|e| PythonError::InitError(e.to_string()))?;
+                let setup_code_c =
+                    CString::new(setup_code).map_err(|e| PythonError::InitError(e.to_string()))?;
                 // Pass a reference to globals.
                 py.run(setup_code_c.as_c_str(), Some(&globals), None)
                     .map_err(|e| PythonError::InitError(e.to_string()))?;
                 // --- End preload ---
-    
+
                 // Convert globals to Py<PyAny> (using deprecated into_py as desired)
                 let globals_ref = globals.into_py(py);
-                
+
                 // Lock the mutex and store the globals.
                 let mut interpreter_guard = futures::executor::block_on(interpreter.lock());
                 *interpreter_guard = Some(globals_ref);
-    
+
                 Ok(())
             })
-        }).await.map_err(|e| PythonError::InitError(e.to_string()))?
+        })
+        .await
+        .map_err(|e| PythonError::InitError(e.to_string()))?
     }
-    
+
     pub async fn execute(&self, code: &str) -> Result<ExecutionResult, PythonError> {
         let interpreter = self.interpreter.clone();
         let code = code.to_string();
-        
+
         tokio::task::spawn_blocking(move || {
             Python::with_gil(|py| {
                 let interpreter_guard = futures::executor::block_on(interpreter.lock());
-                let env_obj = interpreter_guard.as_ref()
-                    .ok_or_else(|| PythonError::PythonError("Interpreter not initialized".to_string()))?
+                let env_obj = interpreter_guard
+                    .as_ref()
+                    .ok_or_else(|| {
+                        PythonError::PythonError("Interpreter not initialized".to_string())
+                    })?
                     .clone_ref(py);
-    
-                let globals = env_obj.downcast_bound::<PyDict>(py)
+
+                let globals = env_obj
+                    .downcast_bound::<PyDict>(py)
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-    
+
                 // Redirect stdout to capture printed output.
-                let io = py.import("io")
+                let io = py
+                    .import("io")
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-                let stringio = io.getattr("StringIO")
+                let stringio = io
+                    .getattr("StringIO")
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-                let stdout_obj = stringio.call0()
+                let stdout_obj = stringio
+                    .call0()
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
                 let stdout_clone = stdout_obj.clone();
-                let sys = py.import("sys")
+                let sys = py
+                    .import("sys")
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-                let original_stdout = sys.getattr("stdout")
+                let original_stdout = sys
+                    .getattr("stdout")
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
                 sys.setattr("stdout", stdout_obj)
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-    
-                let code_c = CString::new(code)
-                    .map_err(|e| PythonError::PythonError(e.to_string()))?;
-    
+
+                let code_c =
+                    CString::new(code).map_err(|e| PythonError::PythonError(e.to_string()))?;
+
                 // Use py.run to execute the code as statements (supporting multi-line code, imports, print, etc.)
                 py.run(code_c.as_c_str(), Some(&globals), None)
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-    
+
                 // Retrieve any captured printed output.
                 let captured: String = stdout_clone
                     .call_method0("getvalue")
                     .map_err(|e| PythonError::PythonError(e.to_string()))?
                     .extract()
                     .unwrap_or_default();
-    
+
                 // Restore original stdout.
                 sys.setattr("stdout", original_stdout)
                     .map_err(|e| PythonError::PythonError(e.to_string()))?;
-    
+
                 // Since py.run() returns None, use the captured output.
                 Ok(ExecutionResult {
                     output: captured,
@@ -128,9 +142,11 @@ import numpy as np
                     plots: None,
                 })
             })
-        }).await.map_err(|e| PythonError::PythonError(e.to_string()))?
+        })
+        .await
+        .map_err(|e| PythonError::PythonError(e.to_string()))?
     }
-    
+
     pub async fn reset(&self) -> Result<(), PythonError> {
         let mut interpreter = self.interpreter.lock().await;
         *interpreter = None;

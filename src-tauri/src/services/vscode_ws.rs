@@ -1,13 +1,13 @@
 // src-tauri/src/services/vscode_ws.rs
-use std::sync::{Arc, Mutex};
-use std::net::SocketAddr;
-use tokio::net::{TcpListener, TcpStream};
-use tokio_stream::wrappers::{TcpListenerStream, BroadcastStream};
 use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter, Listener, Manager};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio::sync::oneshot;
-use serde::{Serialize, Deserialize};
-use tauri::{AppHandle, Manager, Listener, Emitter};
+use tokio_stream::wrappers::{BroadcastStream, TcpListenerStream};
 use tokio_tungstenite::WebSocketStream;
 
 // Make sure everything is Send + Sync
@@ -32,11 +32,11 @@ pub struct VSCodeWebSocketState {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenFileRequest {
     #[serde(rename = "type")]
-    pub request_type: String,  // "openFile"
-    pub file: String,          // Full path to the file
-    pub line: u32,             // Line number (0-based)
-    pub character: u32,        // Character position (0-based)
-    pub view_column: u32,      // Editor column (1 = left, 2 = right)
+    pub request_type: String, // "openFile"
+    pub file: String,     // Full path to the file
+    pub line: u32,        // Line number (0-based)
+    pub character: u32,   // Character position (0-based)
+    pub view_column: u32, // Editor column (1 = left, 2 = right)
 }
 
 // Enhanced structures for VS Code diagnostics with additional fields
@@ -122,8 +122,8 @@ pub struct FileDiagnostics {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApplyCodeActionRequest {
     #[serde(rename = "type")]
-    pub request_type: String,  // "applyCodeAction"
-    pub file: String,          // File where code action should be applied
+    pub request_type: String, // "applyCodeAction"
+    pub file: String,            // File where code action should be applied
     pub code_action: CodeAction, // The code action to apply
 }
 
@@ -149,28 +149,28 @@ pub fn start_vscode_ws_server(
         Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     if is_running {
         return Err("Server is already running".to_string());
     }
-    
+
     // Extract port
     let server_port = port.unwrap_or(3001);
-    
+
     // Update port in state
     if let Ok(mut port_lock) = state.port.lock() {
         *port_lock = server_port;
     }
-    
+
     // Clone state for the server
     let running = state.server_running.clone();
     let shutdown_sender = state.shutdown_sender.clone();
     let broadcast_tx = state.broadcast_tx.clone();
-    
+
     // Create a broadcast channel
     let (tx, _rx) = broadcast::channel::<String>(16);
     let event_tx = tx.clone();
-    
+
     // Store broadcast sender
     if let Ok(mut tx_lock) = broadcast_tx.lock() {
         *tx_lock = Some(tx.clone());
@@ -182,25 +182,21 @@ pub fn start_vscode_ws_server(
         let payload = event.payload();
         let _ = event_tx.send(payload.to_string());
     });
-    
+
     // Now spawn the async task
     let app_for_server = app;
     tauri::async_runtime::spawn(async move {
         // Start the server
-        if let Err(e) = run_ws_server(
-            app_for_server,
-            server_port,
-            running,
-            shutdown_sender,
-            tx
-        ).await {
+        if let Err(e) =
+            run_ws_server(app_for_server, server_port, running, shutdown_sender, tx).await
+        {
             eprintln!("WebSocket server error: {}", e);
         }
-        
+
         // Clean up event listener when server stops
         let _ = app_for_listen.unlisten(listen_handle);
     });
-    
+
     Ok(())
 }
 
@@ -210,38 +206,38 @@ async fn run_ws_server(
     port: u16,
     running: Arc<Mutex<bool>>,
     shutdown_sender: SendableShutdown,
-    tx: broadcast::Sender<String>
+    tx: broadcast::Sender<String>,
 ) -> Result<(), String> {
     // Create shutdown channel
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
-    
+
     // Store shutdown sender
     if let Ok(mut sender) = shutdown_sender.lock() {
         *sender = Some(shutdown_tx);
     }
-    
+
     // Try to bind to the port
     let addr = format!("127.0.0.1:{}", port);
     let listener = match TcpListener::bind(&addr).await {
         Ok(l) => l,
         Err(e) => return Err(format!("Failed to bind to {}: {}", addr, e)),
     };
-    
+
     let actual_port = match listener.local_addr() {
         Ok(addr) => addr.port(),
         Err(e) => return Err(format!("Failed to get local address: {}", e)),
     };
-    
+
     // Set server as running
     if let Ok(mut is_running) = running.lock() {
         *is_running = true;
     }
-    
+
     println!("VS Code WebSocket server started on port {}", actual_port);
-    
+
     // Start accepting connections
     let mut listener_stream = TcpListenerStream::new(listener);
-    
+
     loop {
         tokio::select! {
             Some(socket_result) = listener_stream.next() => {
@@ -265,12 +261,12 @@ async fn run_ws_server(
             }
         }
     }
-    
+
     // Set server as not running
     if let Ok(mut is_running) = running.lock() {
         *is_running = false;
     }
-    
+
     Ok(())
 }
 
@@ -281,17 +277,17 @@ pub fn stop_vscode_ws_server(state: tauri::State<'_, VSCodeWebSocketState>) -> R
         Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     if !is_running {
         return Err("Server is not running".to_string());
     }
-    
+
     // Get shutdown sender
     let sender = match state.shutdown_sender.lock() {
         Ok(mut lock) => lock.take(),
         Err(_) => return Err("Failed to lock shutdown sender".to_string()),
     };
-    
+
     // Send shutdown signal
     if let Some(tx) = sender {
         let _ = tx.send(());
@@ -315,38 +311,38 @@ pub fn apply_code_action(
         },
         Err(_) => return Err("Failed to lock broadcast sender".to_string()),
     };
-    
+
     // Create the code action request
     let action_request = ApplyCodeActionRequest {
         request_type: "applyCodeAction".to_string(),
         file,
         code_action,
     };
-    
+
     // Serialize and send
     match serde_json::to_string(&action_request) {
-        Ok(payload) => {
-            match tx.send(payload) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("Failed to send code action request: {}", e)),
-            }
+        Ok(payload) => match tx.send(payload) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to send code action request: {}", e)),
         },
         Err(e) => Err(format!("Failed to serialize code action request: {}", e)),
     }
 }
 
 #[tauri::command]
-pub fn get_vscode_ws_status(state: tauri::State<'_, VSCodeWebSocketState>) -> Result<(bool, u16), String> {
+pub fn get_vscode_ws_status(
+    state: tauri::State<'_, VSCodeWebSocketState>,
+) -> Result<(bool, u16), String> {
     let running = match state.server_running.lock() {
         Ok(lock) => *lock,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     let port = match state.port.lock() {
         Ok(lock) => *lock,
         Err(_) => return Err("Failed to get server port".to_string()),
     };
-    
+
     Ok((running, port))
 }
 
@@ -363,20 +359,18 @@ pub fn send_chat_to_vscode(
         },
         Err(_) => return Err("Failed to lock broadcast sender".to_string()),
     };
-    
+
     // Create the chat message payload
     let chat_message = serde_json::json!({
         "type": "chat",
         "content": message
     });
-    
+
     // Serialize and send
     match serde_json::to_string(&chat_message) {
-        Ok(payload) => {
-            match tx.send(payload) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("Failed to send message: {}", e)),
-            }
+        Ok(payload) => match tx.send(payload) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to send message: {}", e)),
         },
         Err(e) => Err(format!("Failed to serialize chat message: {}", e)),
     }
@@ -395,7 +389,7 @@ pub fn send_code_diff_to_vscode(
         },
         Err(_) => return Err("Failed to lock broadcast sender".to_string()),
     };
-    
+
     // Create a JSON object with type field to identify message type
     let message = serde_json::json!({
         "type": "diff",
@@ -403,14 +397,12 @@ pub fn send_code_diff_to_vscode(
         "suggestedContent": diff_request.suggested_content,
         "description": diff_request.description
     });
-    
+
     // Serialize and send
     match serde_json::to_string(&message) {
-        Ok(payload) => {
-            match tx.send(payload) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("Failed to send message: {}", e)),
-            }
+        Ok(payload) => match tx.send(payload) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to send message: {}", e)),
         },
         Err(e) => Err(format!("Failed to serialize diff request: {}", e)),
     }
@@ -429,7 +421,7 @@ pub fn send_open_file_to_vscode(
         },
         Err(_) => return Err("Failed to lock broadcast sender".to_string()),
     };
-    
+
     // Create a JSON object with type field to identify message type
     let message = serde_json::json!({
         "type": "openFile",
@@ -438,14 +430,12 @@ pub fn send_open_file_to_vscode(
         "character": open_file_request.character,
         "viewColumn": open_file_request.view_column
     });
-    
+
     // Serialize and send
     match serde_json::to_string(&message) {
-        Ok(payload) => {
-            match tx.send(payload) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("Failed to send message: {}", e)),
-            }
+        Ok(payload) => match tx.send(payload) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to send message: {}", e)),
         },
         Err(e) => Err(format!("Failed to serialize diff request: {}", e)),
     }
@@ -453,16 +443,19 @@ pub fn send_open_file_to_vscode(
 
 async fn handle_connection(stream: TcpStream, tx: broadcast::Sender<String>, app: AppHandle) {
     // Get peer address for logging
-    let addr = stream.peer_addr().unwrap_or_else(|_| {
-        "unknown".parse().unwrap()
-    });
-    
+    let addr = stream
+        .peer_addr()
+        .unwrap_or_else(|_| "unknown".parse().unwrap());
+
     // Upgrade to WebSocket
     match tokio_tungstenite::accept_async(stream).await {
         Ok(ws_stream) => {
-            println!("WebSocket connection established with VS Code extension: {}", addr);
+            println!(
+                "WebSocket connection established with VS Code extension: {}",
+                addr
+            );
             process_messages(ws_stream, tx, addr, app).await;
-        },
+        }
         Err(e) => println!("Error during WebSocket handshake: {}", e),
     }
 }
@@ -471,14 +464,14 @@ async fn process_messages(
     ws_stream: WebSocketStream<TcpStream>,
     tx: broadcast::Sender<String>,
     addr: SocketAddr,
-    app: AppHandle
+    app: AppHandle,
 ) {
     // Subscribe to broadcasts
     let mut rx = BroadcastStream::new(tx.subscribe());
-    
+
     // Split stream for concurrent read/write
     let (mut write, mut read) = ws_stream.split();
-    
+
     // Task for handling incoming messages
     let mut read_task = tauri::async_runtime::spawn(async move {
         while let Some(result) = read.next().await {
@@ -486,60 +479,79 @@ async fn process_messages(
                 Ok(msg) => {
                     if let Ok(text) = msg.to_text() {
                         println!("Received message from VS Code: {}", text);
-                        
+
                         // Try to parse message
                         if let Ok(json) = serde_json::from_str::<serde_json::Value>(text) {
                             if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
                                 if msg_type == "chat" {
-                                    if let Some(content) = json.get("content").and_then(|c| c.as_str()) {
+                                    if let Some(content) =
+                                        json.get("content").and_then(|c| c.as_str())
+                                    {
                                         // Emit to the frontend
                                         println!("Emitting chat message to frontend: {}", content);
-                                        let _ = app.emit("vscode-chat-message", serde_json::json!({
-                                            "content": content,
-                                            "sender": "vscode"
-                                        }));
+                                        let _ = app.emit(
+                                            "vscode-chat-message",
+                                            serde_json::json!({
+                                                "content": content,
+                                                "sender": "vscode"
+                                            }),
+                                        );
                                     }
                                 } else if msg_type == "diagnostics" {
                                     // Enhanced handling of diagnostics messages with all fields
                                     if let Some(data) = json.get("data") {
                                         println!("Received diagnostics data from VS Code");
-                                        
+
                                         // Try to parse into our enhanced diagnostics structure
-                                        if let Ok(diagnostics_data) = serde_json::from_value::<Vec<FileDiagnostics>>(data.clone()) {
-                                            println!("Successfully parsed {} files with diagnostics", diagnostics_data.len());
-                                            
+                                        if let Ok(diagnostics_data) =
+                                            serde_json::from_value::<Vec<FileDiagnostics>>(
+                                                data.clone(),
+                                            )
+                                        {
+                                            println!(
+                                                "Successfully parsed {} files with diagnostics",
+                                                diagnostics_data.len()
+                                            );
+
                                             // Calculate stats for logging
-                                            let total_diagnostics: usize = diagnostics_data.iter()
+                                            let total_diagnostics: usize = diagnostics_data
+                                                .iter()
                                                 .map(|file| file.diagnostics.len())
                                                 .sum();
-                                                
-                                            let error_count: usize = diagnostics_data.iter()
+
+                                            let error_count: usize = diagnostics_data
+                                                .iter()
                                                 .flat_map(|file| file.diagnostics.iter())
                                                 .filter(|diag| diag.severity == 0)
                                                 .count();
-                                                
-                                            println!("Total of {} diagnostics with {} errors", 
-                                                total_diagnostics, error_count);
+
+                                            println!(
+                                                "Total of {} diagnostics with {} errors",
+                                                total_diagnostics, error_count
+                                            );
                                         }
-                                        
+
                                         // Forward the complete diagnostics data to the frontend
-                                        let _ = app.emit("vscode-diagnostics", serde_json::json!({
-                                            "data": data
-                                        }));
+                                        let _ = app.emit(
+                                            "vscode-diagnostics",
+                                            serde_json::json!({
+                                                "data": data
+                                            }),
+                                        );
                                     }
-                                }
-                                else if msg_type == "terminalEvent" {
+                                } else if msg_type == "terminalEvent" {
                                     // Handle terminal events
                                     println!("Received terminal event from VS Code");
                                     // Forward the terminal event to the frontend
                                     let _ = app.emit("vscode-terminal-event", json);
-                                }
-                                else if msg_type == "codeActionResult" {
+                                } else if msg_type == "codeActionResult" {
                                     // Handle code action results
-                                    if let Some(success) = json.get("success").and_then(|s| s.as_bool()) {
+                                    if let Some(success) =
+                                        json.get("success").and_then(|s| s.as_bool())
+                                    {
                                         let status = if success { "succeeded" } else { "failed" };
                                         println!("Code action application {}", status);
-                                        
+
                                         // Forward result to frontend
                                         let _ = app.emit("vscode-code-action-result", json);
                                     }
@@ -547,7 +559,7 @@ async fn process_messages(
                             }
                         }
                     }
-                },
+                }
                 Err(e) => {
                     println!("Error reading from VS Code connection: {}", e);
                     break;
@@ -555,7 +567,7 @@ async fn process_messages(
             }
         }
     });
-    
+
     // Task for sending broadcast messages
     let mut write_task = tauri::async_runtime::spawn(async move {
         while let Some(result) = rx.next().await {
@@ -566,19 +578,19 @@ async fn process_messages(
                         println!("Error sending to VS Code: {}", e);
                         break;
                     }
-                },
+                }
                 Err(e) => {
                     println!("Error receiving broadcast: {}", e);
                 }
             }
         }
     });
-    
+
     // Wait for either task to complete
     tokio::select! {
         _ = &mut read_task => write_task.abort(),
         _ = &mut write_task => read_task.abort(),
     }
-    
+
     println!("WebSocket connection closed with VS Code: {}", addr);
 }

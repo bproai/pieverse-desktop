@@ -1,6 +1,6 @@
-use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
-use sqlx::{Row, Column, TypeInfo};
 use serde::{Deserialize, Serialize};
+use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
+use sqlx::{Column, Row, TypeInfo};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -46,7 +46,7 @@ impl MySqlService {
 
         let mut pool_guard = self.pool.lock().await;
         *pool_guard = Some(pool);
-        
+
         Ok(())
     }
 
@@ -71,73 +71,66 @@ impl MySqlService {
                 .await
                 .map_err(|e| MySqlError::QueryError(e.to_string()))?;
 
-            let results = rows.iter().map(|row| {
-                let columns = row.columns();
-                let mut map = serde_json::Map::new();
-                
-                for (i, column) in columns.iter().enumerate() {
-                    let column_name = column.name();
-                    let type_info = column.type_info();
-                    
-                    let value = match (column_name, type_info.name()) {
-                        // Handle datetime columns
-                        ("date" | "timestamp", _) => {
-                            match row.try_get::<sqlx::types::time::PrimitiveDateTime, _>(i) {
-                                Ok(dt) => serde_json::Value::String(dt.to_string()),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        },
-                        // Handle boolean/tinyint columns
-                        (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
-                            match row.try_get::<i8, _>(i) {
-                                Ok(v) => serde_json::Value::Number(v.into()),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        },
-                        // Handle specific numeric columns
-                        (_, "DOUBLE") => {
-                            match row.try_get::<f64, _>(i) {
-                                Ok(v) if v.is_finite() => {
-                                    serde_json::Number::from_f64(v)
-                                        .map(serde_json::Value::Number)
-                                        .unwrap_or(serde_json::Value::Null)
+            let results = rows
+                .iter()
+                .map(|row| {
+                    let columns = row.columns();
+                    let mut map = serde_json::Map::new();
+
+                    for (i, column) in columns.iter().enumerate() {
+                        let column_name = column.name();
+                        let type_info = column.type_info();
+
+                        let value = match (column_name, type_info.name()) {
+                            // Handle datetime columns
+                            ("date" | "timestamp", _) => {
+                                match row.try_get::<sqlx::types::time::PrimitiveDateTime, _>(i) {
+                                    Ok(dt) => serde_json::Value::String(dt.to_string()),
+                                    Err(_) => serde_json::Value::Null,
                                 }
-                                _ => serde_json::Value::Null
                             }
-                        },
-                        (_, "BIGINT") => {
-                            match row.try_get::<i64, _>(i) {
+                            // Handle boolean/tinyint columns
+                            (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
+                                match row.try_get::<i8, _>(i) {
+                                    Ok(v) => serde_json::Value::Number(v.into()),
+                                    Err(_) => serde_json::Value::Null,
+                                }
+                            }
+                            // Handle specific numeric columns
+                            (_, "DOUBLE") => match row.try_get::<f64, _>(i) {
+                                Ok(v) if v.is_finite() => serde_json::Number::from_f64(v)
+                                    .map(serde_json::Value::Number)
+                                    .unwrap_or(serde_json::Value::Null),
+                                _ => serde_json::Value::Null,
+                            },
+                            (_, "BIGINT") => match row.try_get::<i64, _>(i) {
                                 Ok(v) => serde_json::Value::Number(v.into()),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        },
-                        (_, "INT") => {
-                            match row.try_get::<i32, _>(i) {
+                                Err(_) => serde_json::Value::Null,
+                            },
+                            (_, "INT") => match row.try_get::<i32, _>(i) {
                                 Ok(v) => serde_json::Value::Number(v.into()),
-                                Err(_) => serde_json::Value::Null
+                                Err(_) => serde_json::Value::Null,
+                            },
+                            // Handle ENUM and CHAR types as strings
+                            (_, "ENUM") | (_, "CHAR") | (_, "VARCHAR") => {
+                                match row.try_get::<String, _>(i) {
+                                    Ok(v) => serde_json::Value::String(v),
+                                    Err(_) => serde_json::Value::Null,
+                                }
                             }
-                        },
-                        // Handle ENUM and CHAR types as strings
-                        (_, "ENUM") | (_, "CHAR") | (_, "VARCHAR") => {
-                            match row.try_get::<String, _>(i) {
+                            // Default fallback
+                            _ => match row.try_get::<String, _>(i) {
                                 Ok(v) => serde_json::Value::String(v),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        },
-                        // Default fallback
-                        _ => {
-                            match row.try_get::<String, _>(i) {
-                                Ok(v) => serde_json::Value::String(v),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        }
-                    };
-                    
-                    map.insert(column_name.to_string(), value);
-                }
-                
-                serde_json::Value::Object(map)
-            }).collect();
+                                Err(_) => serde_json::Value::Null,
+                            },
+                        };
+
+                        map.insert(column_name.to_string(), value);
+                    }
+
+                    serde_json::Value::Object(map)
+                })
+                .collect();
 
             Ok(results)
         } else {
@@ -167,7 +160,10 @@ impl MySqlService {
         }
     }
 
-    pub async fn get_table_schema(&self, table_name: &str) -> Result<Vec<serde_json::Value>, MySqlError> {
+    pub async fn get_table_schema(
+        &self,
+        table_name: &str,
+    ) -> Result<Vec<serde_json::Value>, MySqlError> {
         let pool_guard = self.pool.lock().await;
         if let Some(pool) = &*pool_guard {
             let query = format!("DESCRIBE {}", table_name);
@@ -176,17 +172,20 @@ impl MySqlService {
                 .await
                 .map_err(|e| MySqlError::QueryError(e.to_string()))?;
 
-            let schema = rows.iter().map(|row| {
-                let mut map = serde_json::Map::new();
-                let columns = row.columns();
-                
-                for (i, column) in columns.iter().enumerate() {
-                    let value: String = row.try_get(i).unwrap_or_default();
-                    map.insert(column.name().to_string(), serde_json::Value::String(value));
-                }
-                
-                serde_json::Value::Object(map)
-            }).collect();
+            let schema = rows
+                .iter()
+                .map(|row| {
+                    let mut map = serde_json::Map::new();
+                    let columns = row.columns();
+
+                    for (i, column) in columns.iter().enumerate() {
+                        let value: String = row.try_get(i).unwrap_or_default();
+                        map.insert(column.name().to_string(), serde_json::Value::String(value));
+                    }
+
+                    serde_json::Value::Object(map)
+                })
+                .collect();
 
             Ok(schema)
         } else {
@@ -195,21 +194,25 @@ impl MySqlService {
     }
 
     // Add this method to the MySqlService implementation
-    pub async fn execute_param_query(&self, query: &str, params: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, MySqlError> {
+    pub async fn execute_param_query(
+        &self,
+        query: &str,
+        params: Vec<serde_json::Value>,
+    ) -> Result<Vec<serde_json::Value>, MySqlError> {
         let pool_guard = self.pool.lock().await;
         if let Some(pool) = &*pool_guard {
             // Create a query builder
             let mut query_builder = sqlx::query(query);
-            
+
             // Bind parameters
             for param in params {
                 match param {
                     serde_json::Value::Null => {
                         query_builder = query_builder.bind(None::<String>);
-                    },
+                    }
                     serde_json::Value::Bool(b) => {
                         query_builder = query_builder.bind(b);
-                    },
+                    }
                     serde_json::Value::Number(n) => {
                         if n.is_i64() {
                             query_builder = query_builder.bind(n.as_i64().unwrap());
@@ -221,10 +224,10 @@ impl MySqlService {
                             // Default to string
                             query_builder = query_builder.bind(n.to_string());
                         }
-                    },
+                    }
                     serde_json::Value::String(s) => {
                         query_builder = query_builder.bind(s);
-                    },
+                    }
                     _ => {
                         // Arrays and Objects are serialized to strings
                         query_builder = query_builder.bind(param.to_string());
@@ -239,51 +242,51 @@ impl MySqlService {
                 .map_err(|e| MySqlError::QueryError(e.to_string()))?;
 
             // Process the results the same way as in execute_query
-            let results = rows.iter().map(|row| {
-                // Reuse the same code as in your execute_query method
-                let columns = row.columns();
-                let mut map = serde_json::Map::new();
-                
-                for (i, column) in columns.iter().enumerate() {
-                    let column_name = column.name();
-                    let type_info = column.type_info();
-                    
-                    let value = match (column_name, type_info.name()) {
-                        // Handle datetime columns
-                        ("date" | "timestamp", _) => {
-                            match row.try_get::<sqlx::types::time::PrimitiveDateTime, _>(i) {
-                                Ok(dt) => serde_json::Value::String(dt.to_string()),
-                                Err(_) => serde_json::Value::Null
+            let results = rows
+                .iter()
+                .map(|row| {
+                    // Reuse the same code as in your execute_query method
+                    let columns = row.columns();
+                    let mut map = serde_json::Map::new();
+
+                    for (i, column) in columns.iter().enumerate() {
+                        let column_name = column.name();
+                        let type_info = column.type_info();
+
+                        let value = match (column_name, type_info.name()) {
+                            // Handle datetime columns
+                            ("date" | "timestamp", _) => {
+                                match row.try_get::<sqlx::types::time::PrimitiveDateTime, _>(i) {
+                                    Ok(dt) => serde_json::Value::String(dt.to_string()),
+                                    Err(_) => serde_json::Value::Null,
+                                }
                             }
-                        },
-                        // Handle boolean/tinyint columns
-                        (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
-                            match row.try_get::<i8, _>(i) {
-                                Ok(v) => serde_json::Value::Number(v.into()),
-                                Err(_) => serde_json::Value::Null
+                            // Handle boolean/tinyint columns
+                            (_, "BOOL") | (_, "BOOLEAN") | (_, "TINYINT") => {
+                                match row.try_get::<i8, _>(i) {
+                                    Ok(v) => serde_json::Value::Number(v.into()),
+                                    Err(_) => serde_json::Value::Null,
+                                }
                             }
-                        },
-                        // ... other type handling ...
-                        _ => {
-                            match row.try_get::<String, _>(i) {
+                            // ... other type handling ...
+                            _ => match row.try_get::<String, _>(i) {
                                 Ok(v) => serde_json::Value::String(v),
-                                Err(_) => serde_json::Value::Null
-                            }
-                        }
-                    };
-                    
-                    map.insert(column_name.to_string(), value);
-                }
-                
-                serde_json::Value::Object(map)
-            }).collect();
+                                Err(_) => serde_json::Value::Null,
+                            },
+                        };
+
+                        map.insert(column_name.to_string(), value);
+                    }
+
+                    serde_json::Value::Object(map)
+                })
+                .collect();
 
             Ok(results)
         } else {
             Err(MySqlError::ConnectionError("Not connected".to_string()))
         }
     }
-
 }
 
 #[tauri::command]
@@ -303,9 +306,7 @@ pub async fn mysql_execute_query(
 }
 
 #[tauri::command]
-pub async fn mysql_test_connection(
-    state: tauri::State<'_, MySqlService>,
-) -> Result<bool, String> {
+pub async fn mysql_test_connection(state: tauri::State<'_, MySqlService>) -> Result<bool, String> {
     state.test_connection().await.map_err(|e| e.to_string())
 }
 
@@ -321,13 +322,14 @@ pub async fn mysql_get_table_schema(
     state: tauri::State<'_, MySqlService>,
     table_name: String,
 ) -> Result<Vec<serde_json::Value>, String> {
-    state.get_table_schema(&table_name).await.map_err(|e| e.to_string())
+    state
+        .get_table_schema(&table_name)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn mysql_disconnect(
-    _state: tauri::State<'_, MySqlService>,
-) -> Result<(), String> {
+pub async fn mysql_disconnect(_state: tauri::State<'_, MySqlService>) -> Result<(), String> {
     Ok(()) // Implement if needed
 }
 
@@ -338,5 +340,8 @@ pub async fn mysql_execute_param_query(
     query: String,
     params: Vec<serde_json::Value>,
 ) -> Result<Vec<serde_json::Value>, String> {
-    state.execute_param_query(&query, params).await.map_err(|e| e.to_string())
+    state
+        .execute_param_query(&query, params)
+        .await
+        .map_err(|e| e.to_string())
 }

@@ -6,19 +6,22 @@ use tauri::command;
 pub async fn fetch_chrome_targets(port: u16) -> Result<Value, String> {
     let client = Client::new();
     let url = format!("http://localhost:{}/json", port);
-    
+
     match client.get(&url).send().await {
         Ok(response) => {
             if response.status().is_success() {
                 match response.json::<Value>().await {
                     Ok(data) => Ok(data),
-                    Err(e) => Err(format!("Failed to parse response: {}", e))
+                    Err(e) => Err(format!("Failed to parse response: {}", e)),
                 }
             } else {
-                Err(format!("Failed to fetch Chrome targets: Status {}", response.status()))
+                Err(format!(
+                    "Failed to fetch Chrome targets: Status {}",
+                    response.status()
+                ))
             }
-        },
-        Err(e) => Err(format!("Failed to connect to Chrome: {}", e))
+        }
+        Err(e) => Err(format!("Failed to connect to Chrome: {}", e)),
     }
 }
 
@@ -36,7 +39,7 @@ pub fn open_chrome_in_terminal() -> Result<(), String> {
         .arg(chrome_script)
         .spawn()
         .map_err(|e| e.to_string())?;
-    
+
     // Also launch a visible terminal to run npm run bridge at project root
     let bridge_script = r#"
         tell application "Terminal"
@@ -49,6 +52,6 @@ pub fn open_chrome_in_terminal() -> Result<(), String> {
         .arg(bridge_script)
         .spawn()
         .map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }

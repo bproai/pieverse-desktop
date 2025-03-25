@@ -1,8 +1,8 @@
 // src-tauri/src/services/mcp_client_service.rs
-use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use serde::{Serialize, Deserialize};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 use tower::timeout::Timeout; // for the timeout wrapper
@@ -84,7 +84,9 @@ impl PuppeteerMcpState {
 }
 
 #[tauri::command]
-pub async fn get_puppeteer_mcp_status(state: tauri::State<'_, PuppeteerMcpState>) -> Result<bool, String> {
+pub async fn get_puppeteer_mcp_status(
+    state: tauri::State<'_, PuppeteerMcpState>,
+) -> Result<bool, String> {
     match state.server_running.lock() {
         Ok(running) => Ok(*running),
         Err(_) => Err("Failed to get MCP server status".to_string()),
@@ -109,7 +111,7 @@ pub async fn get_puppeteer_mcp_tools(
         Ok(tools) => {
             let tool_names = tools.iter().map(|t| t.name.clone()).collect();
             Ok(tool_names)
-        },
+        }
         Err(_) => Err("Failed to get available tools".to_string()),
     }
 }
@@ -131,7 +133,7 @@ pub async fn add_puppeteer_mcp_directory(
                 enabled: true,
             });
             Ok(())
-        },
+        }
         Err(_) => Err("Failed to lock allowed directories".to_string()),
     }
 }
@@ -150,7 +152,7 @@ pub async fn update_puppeteer_mcp_directory(
             } else {
                 Err("Directory not found".to_string())
             }
-        },
+        }
         Err(_) => Err("Failed to lock allowed directories".to_string()),
     }
 }
@@ -169,7 +171,7 @@ pub async fn remove_puppeteer_mcp_directory(
             } else {
                 Err("Directory not found".to_string())
             }
-        },
+        }
         Err(_) => Err("Failed to lock allowed directories".to_string()),
     }
 }
@@ -193,7 +195,7 @@ pub async fn update_puppeteer_mcp_config(
         Ok(mut current_config) => {
             *current_config = config;
             Ok(())
-        },
+        }
         Err(_) => Err("Failed to update MCP configuration".to_string()),
     }
 }
@@ -207,16 +209,16 @@ pub async fn start_puppeteer_mcp_server(
         Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     if is_running {
         return Err("MCP server is already running".to_string());
     }
-    
+
     let config = match state.mcp_config.lock() {
         Ok(cfg) => cfg.clone(),
         Err(_) => return Err("Failed to get MCP configuration".to_string()),
     };
-    
+
     let allowed_dirs = match state.allowed_directories.lock() {
         Ok(dirs) => dirs.clone(),
         Err(_) => return Err("Failed to get allowed directories".to_string()),
@@ -237,56 +239,63 @@ pub async fn start_puppeteer_mcp_server(
             env_vars.insert(format!("MCP_ALLOWED_DIR_{}", idx), dir.path.clone());
         }
     }
-    
+
     let cmd_str = format!("{} {}", config.command, config.args.join(" "));
-    let _ = app.emit("mcp-server-output", format!("Executing command: {}", cmd_str));
-    
+    let _ = app.emit(
+        "mcp-server-output",
+        format!("Executing command: {}", cmd_str),
+    );
+
     let server_running = state.server_running.clone();
     let mcp_client = state.mcp_client.clone();
     let available_tools = state.available_tools.clone();
     let app_handle = app.clone();
-    
+
     let rt = match tokio::runtime::Runtime::new() {
         Ok(rt) => rt,
         Err(e) => return Err(format!("Failed to create tokio runtime: {}", e)),
     };
-    
+
     std::thread::spawn(move || {
         rt.block_on(async {
-            let transport = StdioTransport::new(
-                config.command,
-                config.args,
-                env_vars
-            );
-            
+            let transport = StdioTransport::new(config.command, config.args, env_vars);
+
             let transport_handle = match transport.start().await {
                 Ok(handle) => handle,
                 Err(e) => {
-                    let _ = app_handle.emit("mcp-server-output", format!("[ERROR] Failed to start transport: {}", e));
+                    let _ = app_handle.emit(
+                        "mcp-server-output",
+                        format!("[ERROR] Failed to start transport: {}", e),
+                    );
                     if let Ok(mut running) = server_running.lock() {
                         *running = false;
                     }
                     return;
                 }
             };
-            
+
             let service = McpService::with_timeout(transport_handle, Duration::from_secs(10));
-            let mut client = McpClient::new(service);            
-            
-            match client.initialize(
-                ClientInfo {
-                    name: "pieverse-mcp-host".into(),
-                    version: "1.0.0".into(),
-                },
-                ClientCapabilities::default(),
-            ).await {
+            let mut client = McpClient::new(service);
+
+            match client
+                .initialize(
+                    ClientInfo {
+                        name: "pieverse-mcp-host".into(),
+                        version: "1.0.0".into(),
+                    },
+                    ClientCapabilities::default(),
+                )
+                .await
+            {
                 Ok(info) => {
-                    let _ = app_handle.emit("mcp-server-output", format!(
-                        "Connected to MCP server: {} v{}",
-                        info.server_info.name,
-                        info.server_info.version
-                    ));
-                    
+                    let _ = app_handle.emit(
+                        "mcp-server-output",
+                        format!(
+                            "Connected to MCP server: {} v{}",
+                            info.server_info.name, info.server_info.version
+                        ),
+                    );
+
                     if let Ok(mut client_lock) = mcp_client.lock() {
                         *client_lock = Some(Arc::new(client));
                         if let Some(ref client_ref) = *client_lock {
@@ -296,147 +305,177 @@ pub async fn start_puppeteer_mcp_server(
                             let next_cursor: Option<String> = None;
                             match client_ref.list_tools(next_cursor).await {
                                 Ok(tools_response) => {
-                                    let tool_names: Vec<String> = tools_response.tools.iter()
+                                    let tool_names: Vec<String> = tools_response
+                                        .tools
+                                        .iter()
                                         .map(|t| t.name.clone())
                                         .collect();
-                                    
+
                                     if let Ok(mut tools_lock) = available_tools.lock() {
-                                        *tools_lock = tools_response.tools.into_iter().map(|t| ToolDescriptor { name: t.name }).collect();
+                                        *tools_lock = tools_response
+                                            .tools
+                                            .into_iter()
+                                            .map(|t| ToolDescriptor { name: t.name })
+                                            .collect();
                                     }
-                                    
-                                    let _ = app_handle.emit("mcp-server-output", format!(
-                                        "Available tools: {}", 
-                                        tool_names.join(", ")
-                                    ));
-                                },
+
+                                    let _ = app_handle.emit(
+                                        "mcp-server-output",
+                                        format!("Available tools: {}", tool_names.join(", ")),
+                                    );
+                                }
                                 Err(e) => {
-                                    let _ = app_handle.emit("mcp-server-output", format!(
-                                        "[WARNING] Failed to list tools: {}", e
-                                    ));
+                                    let _ = app_handle.emit(
+                                        "mcp-server-output",
+                                        format!("[WARNING] Failed to list tools: {}", e),
+                                    );
                                 }
                             }
                         } else {
-                            let _ = app_handle.emit("mcp-server-output", "[ERROR] Failed to store client");
+                            let _ = app_handle
+                                .emit("mcp-server-output", "[ERROR] Failed to store client");
                             if let Ok(mut running) = server_running.lock() {
                                 *running = false;
                             }
                             return;
                         }
                     } else {
-                        let _ = app_handle.emit("mcp-server-output", "[ERROR] Failed to lock client state");
+                        let _ = app_handle
+                            .emit("mcp-server-output", "[ERROR] Failed to lock client state");
                         if let Ok(mut running) = server_running.lock() {
                             *running = false;
                         }
                         return;
                     }
-                },
+                }
                 Err(e) => {
-                    let _ = app_handle.emit("mcp-server-output", format!("[ERROR] Failed to initialize: {}", e));
+                    let _ = app_handle.emit(
+                        "mcp-server-output",
+                        format!("[ERROR] Failed to initialize: {}", e),
+                    );
                     if let Ok(mut running) = server_running.lock() {
                         *running = false;
                     }
                     return;
                 }
             }
-            
+
             while let Some((tool, args)) = rx.recv().await {
-                let _ = app_handle.emit("mcp-server-output", format!(
-                    "Calling tool '{}' with args: {}", tool, args
-                ));
-                
-                let client_result = mcp_client.lock().ok().and_then(|guard| guard.as_ref().cloned());
-                
+                let _ = app_handle.emit(
+                    "mcp-server-output",
+                    format!("Calling tool '{}' with args: {}", tool, args),
+                );
+
+                let client_result = mcp_client
+                    .lock()
+                    .ok()
+                    .and_then(|guard| guard.as_ref().cloned());
+
                 if let Some(client) = client_result {
                     match client.call_tool(&tool, args).await {
                         Ok(result) => {
                             let is_error = result.is_error.unwrap_or(false);
-                            
+
                             let tool_result = ToolResult {
                                 success: !is_error,
-                                result: serde_json::to_value(&result.content).unwrap_or(serde_json::Value::Null),
-                                error: if is_error { 
-                                    Some(format!("Tool execution failed: {:?}", result.content)) 
-                                } else { 
-                                    None 
-                                }
+                                result: serde_json::to_value(&result.content)
+                                    .unwrap_or(serde_json::Value::Null),
+                                error: if is_error {
+                                    Some(format!("Tool execution failed: {:?}", result.content))
+                                } else {
+                                    None
+                                },
                             };
-                            
+
                             let _ = app_handle.emit("mcp-tool-result", tool_result);
-                            
-                            let _ = app_handle.emit("mcp-server-output", format!(
-                                "Tool '{}' {} with result: {}", 
-                                tool,
-                                if is_error { "failed" } else { "succeeded" },
-                                serde_json::to_string_pretty(&result.content).unwrap_or_else(|_| "".to_string())
-                            ));
-                        },
+
+                            let _ = app_handle.emit(
+                                "mcp-server-output",
+                                format!(
+                                    "Tool '{}' {} with result: {}",
+                                    tool,
+                                    if is_error { "failed" } else { "succeeded" },
+                                    serde_json::to_string_pretty(&result.content)
+                                        .unwrap_or_else(|_| "".to_string())
+                                ),
+                            );
+                        }
                         Err(e) => {
                             let tool_result = ToolResult {
                                 success: false,
                                 result: serde_json::Value::Null,
-                                error: Some(format!("Failed to call tool: {}", e))
+                                error: Some(format!("Failed to call tool: {}", e)),
                             };
-                            
+
                             let _ = app_handle.emit("mcp-tool-result", tool_result);
-                            
-                            let _ = app_handle.emit("mcp-server-output", format!(
-                                "[ERROR] Failed to call tool '{}': {}", tool, e
-                            ));
+
+                            let _ = app_handle.emit(
+                                "mcp-server-output",
+                                format!("[ERROR] Failed to call tool '{}': {}", tool, e),
+                            );
                         }
                     }
                 } else {
-                    let _ = app_handle.emit("mcp-server-output", "[ERROR] Client not available for tool call");
-                    
+                    let _ = app_handle.emit(
+                        "mcp-server-output",
+                        "[ERROR] Client not available for tool call",
+                    );
+
                     let tool_result = ToolResult {
                         success: false,
                         result: serde_json::Value::Null,
-                        error: Some("MCP client not available".to_string())
+                        error: Some("MCP client not available".to_string()),
                     };
-                    
+
                     let _ = app_handle.emit("mcp-tool-result", tool_result);
                 }
             }
-            
-            let _ = app_handle.emit("mcp-server-output", "Command channel closed, shutting down MCP server");
-            
+
+            let _ = app_handle.emit(
+                "mcp-server-output",
+                "Command channel closed, shutting down MCP server",
+            );
+
             if let Ok(mut client_lock) = mcp_client.lock() {
                 *client_lock = None;
             }
-            
+
             if let Ok(mut running) = server_running.lock() {
                 *running = false;
             }
-            
+
             let _ = app_handle.emit("mcp-server-stopped", ());
         });
     });
-    
+
     Ok(())
 }
 
 #[tauri::command]
-pub async fn stop_puppeteer_mcp_server(state: tauri::State<'_, PuppeteerMcpState>) -> Result<(), String> {
+pub async fn stop_puppeteer_mcp_server(
+    state: tauri::State<'_, PuppeteerMcpState>,
+) -> Result<(), String> {
     let is_running = match state.server_running.lock() {
         Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     if !is_running {
         return Ok(());
     }
-    
+
     if let Ok(mut running) = state.server_running.lock() {
         *running = false;
     }
-    
+
     if let Ok(mut sender) = state.command_sender.lock() {
         *sender = None;
     }
-    
+
     if let Ok(mut client) = state.mcp_client.lock() {
         *client = None;
     }
-    
+
     Ok(())
 }
 
@@ -451,24 +490,25 @@ pub async fn send_to_puppeteer_mcp(
         Ok(guard) => *guard,
         Err(_) => return Err("Failed to lock server state".to_string()),
     };
-    
+
     if !is_running {
         return Err("MCP server is not running".to_string());
     }
-    
+
     let sender = match state.command_sender.lock() {
         Ok(sender) => sender.clone(),
         Err(_) => return Err("Failed to lock command sender".to_string()),
     };
-    
+
     if let Some(tx) = sender {
         match tx.send((tool.clone(), args.clone())).await {
             Ok(_) => {
-                let _ = app.emit("mcp-server-output", format!(
-                    "Sent tool request '{}' to MCP server", tool
-                ));
+                let _ = app.emit(
+                    "mcp-server-output",
+                    format!("Sent tool request '{}' to MCP server", tool),
+                );
                 Ok(())
-            },
+            }
             Err(e) => Err(format!("Failed to send command: {}", e)),
         }
     } else {

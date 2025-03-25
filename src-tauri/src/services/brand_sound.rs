@@ -10,7 +10,7 @@ pub fn get_brand_sound_path() -> Result<String, String> {
     // Path to the brand sound in your app's resources
     // This is relative to the compiled executable
     let sound_path = "sounds/brand-sound.mp3";
-    
+
     // Return path that can be used with the asset protocol
     Ok(sound_path.to_string())
 }
@@ -23,7 +23,7 @@ pub fn check_brand_sound_exists() -> Result<bool, String> {
         .parent()
         .ok_or_else(|| "Could not determine app directory".to_string())?
         .to_path_buf();
-    
+
     let sound_path = app_dir.join("sounds/brand-sound.mp3");
     Ok(sound_path.exists())
 }

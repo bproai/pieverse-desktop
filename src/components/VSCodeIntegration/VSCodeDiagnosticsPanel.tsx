@@ -12,17 +12,17 @@ import {
   Stack,
   Alert,
   Select,
-  Code,
   List,
   ThemeIcon,
   Tooltip
 } from '@mantine/core';
-import { AlertCircle, Search, RefreshCw, FileText, X, ExternalLink, Link as LinkIcon, Tag, Info, Code2 } from 'lucide-react';
+import { AlertCircle, Search, RefreshCw, FileText, X, ExternalLink, Link as LinkIcon, Tag, Info, Code2, Clipboard } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
 import { listen } from '@tauri-apps/api/event';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 // Enhanced DiagnosticItem interface with additional VS Code fields
 interface DiagnosticItem {
@@ -337,6 +337,34 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
     }
   };
 
+  const copyFileDiagnostics = async (file: string, fileDiagnostics: DiagnosticItem[]) => {
+    try {
+      // Create a formatted string of diagnostics for this file only
+      const formattedDiagnostics = fileDiagnostics.map(diag => {
+        return `[${getSeverityText(diag.severity)}] ${diag.message}\nLocation: Line ${diag.range.start.line + 1}, Column ${diag.range.start.character + 1}\n`;
+      }).join('\n');
+      
+      // Add file header
+      const diagnosticsText = `Diagnostics for ${file}:\n\n${formattedDiagnostics}`;
+      
+      // Use the imported writeText function directly
+      await writeText(diagnosticsText);
+      
+      notifications.show({
+        title: 'Success',
+        message: `Diagnostics for ${getFileName(file)} copied to clipboard`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Failed to copy diagnostics:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to copy diagnostics: ${error}`,
+        color: 'red'
+      });
+    }
+  };
+
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>
       <Card.Section p="md" className="border-b">
@@ -446,14 +474,27 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                   value={fileDiag.file}
                 >
                   <Accordion.Control>
-                    <Group>
-                      <Text>{getFileName(fileDiag.file)}</Text>
-                      <Badge color={
-                        fileDiag.diagnostics.some(d => d.severity === 0) ? 'red' :
-                        fileDiag.diagnostics.some(d => d.severity === 1) ? 'yellow' : 'blue'
-                      }>
-                        {fileDiag.diagnostics.length} issue{fileDiag.diagnostics.length !== 1 ? 's' : ''}
-                      </Badge>
+                    <Group justify="space-between">
+                      <Group>
+                        <Text>{getFileName(fileDiag.file)}</Text>
+                        <Badge color={
+                          fileDiag.diagnostics.some(d => d.severity === 0) ? 'red' :
+                          fileDiag.diagnostics.some(d => d.severity === 1) ? 'yellow' : 'blue'
+                        }>
+                          {fileDiag.diagnostics.length} issue{fileDiag.diagnostics.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </Group>
+                      <Button
+                        variant="subtle"
+                        size="xs"
+                        leftSection={<Clipboard size={14} />}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent accordion from toggling
+                          copyFileDiagnostics(fileDiag.file, fileDiag.diagnostics);
+                        }}
+                      >
+                        Copy Diagnostics
+                      </Button>
                     </Group>
                   </Accordion.Control>
                   <Accordion.Panel>
