@@ -29,6 +29,16 @@ pub struct VSCodeWebSocketState {
     pub broadcast_tx: SendableTx,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OpenFileRequest {
+    #[serde(rename = "type")]
+    pub request_type: String,  // "openFile"
+    pub file: String,          // Full path to the file
+    pub line: u32,             // Line number (0-based)
+    pub character: u32,        // Character position (0-based)
+    pub view_column: u32,      // Editor column (1 = left, 2 = right)
+}
+
 impl VSCodeWebSocketState {
     pub fn new() -> Self {
         Self {
@@ -270,6 +280,41 @@ pub fn send_code_diff_to_vscode(
         "originalFile": diffRequest.original_file,
         "suggestedContent": diffRequest.suggested_content,
         "description": diffRequest.description
+    });
+    
+    // Serialize and send
+    match serde_json::to_string(&message) {
+        Ok(payload) => {
+            match tx.send(payload) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("Failed to send message: {}", e)),
+            }
+        },
+        Err(e) => Err(format!("Failed to serialize diff request: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub fn send_open_file_to_vscode(
+    state: tauri::State<'_, VSCodeWebSocketState>,
+    open_file_request: OpenFileRequest,
+) -> Result<(), String> {
+    // Get broadcast sender
+    let tx = match state.broadcast_tx.lock() {
+        Ok(lock) => match lock.clone() {
+            Some(tx) => tx,
+            None => return Err("WebSocket server is not running".to_string()),
+        },
+        Err(_) => return Err("Failed to lock broadcast sender".to_string()),
+    };
+    
+    // Create a JSON object with type field to identify message type
+    let message = serde_json::json!({
+        "type": "openFile",
+        "file": open_file_request.file,
+        "line": open_file_request.line,
+        "character": open_file_request.character,
+        "viewColumn": open_file_request.view_column
     });
     
     // Serialize and send

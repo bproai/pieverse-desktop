@@ -193,6 +193,27 @@ export class WebSocketService {
         // Handle as diff suggestion
         console.log('Handling as diff suggestion with original file:', jsonData.originalFile);
         handleSuggestedUpdate(jsonData, globals, context);
+      } else if (jsonData.type === 'openFile') {
+        // Handle opening a file
+        if (jsonData.file) {
+          // Create a URI from the file path
+          const fileUri = vscode.Uri.file(jsonData.file);
+          
+          // Position to move the cursor to
+          const position = new vscode.Position(
+            jsonData.line || 0, 
+            jsonData.character || 0
+          );
+          
+          // Open the document in the specified view column (1 = left, 2 = right)
+          vscode.workspace.openTextDocument(fileUri).then(document => {
+            vscode.window.showTextDocument(document, {
+              selection: new vscode.Range(position, position),
+              viewColumn: jsonData.viewColumn || vscode.ViewColumn.Active,
+              preserveFocus: false
+            });
+          });
+        }
       } else {
         console.log('Unknown message format:', jsonData);
       }

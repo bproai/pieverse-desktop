@@ -60,6 +60,13 @@ A Visual Studio Code extension to help you view and merge code differences inspi
    code --uninstall-extension reason-one-ai.pieverse-diff-extension
    ```
 
+   To open the debug window for VS Code extensions, follow these steps:
+
+Launch VS Code with your extension in development mode
+Open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P on Mac)
+Type "Developer: Toggle Developer Tools" and select it
+This will open Chrome DevTools for VS Code
+
 ## Usage
 
 1. Install the extension in VS Code.

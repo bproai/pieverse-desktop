@@ -118,7 +118,8 @@ use services::vscode_ws::{
     stop_vscode_ws_server,
     get_vscode_ws_status,
     send_code_diff_to_vscode,
-    send_chat_to_vscode
+    send_chat_to_vscode,
+    send_open_file_to_vscode
 };
 
 use services::file_service::{
@@ -282,6 +283,7 @@ pub fn run() {
             get_vscode_ws_status,
             send_code_diff_to_vscode,
             send_chat_to_vscode,
+            send_open_file_to_vscode,
             get_file_info,
             search_files,
             copy_directory,

@@ -14,7 +14,7 @@ import {
   Select,
   Code
 } from '@mantine/core';
-import { AlertCircle, Search, RefreshCw, FileText, X } from 'lucide-react';
+import { AlertCircle, Search, RefreshCw, FileText, X, ExternalLink } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 
 // Tauri API imports
@@ -47,6 +47,8 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
   const [severityFilter, setSeverityFilter] = useState<number>(-1); // -1 = all, 0 = error, 1 = warning, etc.
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track which position in the cyclical queue we're at
+  const [openFileIndex, setOpenFileIndex] = useState(0);
 
   // Listen for diagnostics messages on component mount
   useEffect(() => {
@@ -117,6 +119,52 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to open a file in VS Code with position information
+  const openFileInVSCode = async (filePath: string, line: number, character: number) => {
+    if (!isServerRunning) {
+      notifications.show({
+        title: 'Error',
+        message: 'WebSocket server is not running. Please start the server first.',
+        color: 'red'
+      });
+      return;
+    }
+    
+    try {
+      // Determine the view column (first, second, etc.) based on the cyclical queue
+      // viewColumn: 1 = first column, 2 = second column, etc.
+      const viewColumn = (openFileIndex % 2) + 1; // Alternates between 1 and 2
+      
+      // Increment the open file index for the next file
+      setOpenFileIndex(prevIndex => prevIndex + 1);
+      
+      // Send message to VS Code to open the file
+      // The VS Code extension will receive this message and open the file in the appropriate column
+      await core.invoke('send_open_file_to_vscode', { 
+        openFileRequest: {
+          type: 'openFile',
+          file: filePath,
+          line: line,
+          character: character,
+          view_column: viewColumn
+        }
+      });
+      
+      notifications.show({
+        title: 'File Opened',
+        message: `Opened ${getFileName(filePath)} in VS Code (${viewColumn === 1 ? 'left' : 'right'} pane)`,
+        color: 'blue'
+      });
+    } catch (error: any) {
+      console.error('Error opening file:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to open file: ${error.toString()}`,
+        color: 'red'
+      });
     }
   };
 
@@ -288,13 +336,22 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                               diag.severity === 0 ? 'red' :
                               diag.severity === 1 ? 'orange' :
                               diag.severity === 2 ? 'blue' : 'gray'
-                            }`
+                            }`,
+                            cursor: 'pointer'
                           }}
+                          onClick={() => openFileInVSCode(
+                            fileDiag.file, 
+                            diag.range.start.line, 
+                            diag.range.start.character
+                          )}
                         >
                           <Group justify="apart">
-                            <Badge color={getSeverityColor(diag.severity)}>
-                              {getSeverityText(diag.severity)}
-                            </Badge>
+                            <Group>
+                              <Badge color={getSeverityColor(diag.severity)}>
+                                {getSeverityText(diag.severity)}
+                              </Badge>
+                              <ExternalLink size={14} />
+                            </Group>
                             <Text size="xs" color="dimmed">
                               Line {diag.range.start.line + 1}, Col {diag.range.start.character + 1}
                             </Text>
