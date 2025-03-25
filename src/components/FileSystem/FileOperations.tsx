@@ -411,7 +411,7 @@ const FileOperations: React.FC = () => {
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>
       <Card.Section p="md" withBorder>
-        <Group position="apart">
+        <Group justify="space-between">
           <Text size="xl" weight={700}>File System Operations</Text>
         </Group>
       </Card.Section>
@@ -469,7 +469,7 @@ const FileOperations: React.FC = () => {
               autosize
             />
             
-            <Group position="apart">
+            <Group justify="space-between">
               <Button
                 leftSection={<Save size={16} />}
                 onClick={handleSaveFile}
@@ -510,7 +510,7 @@ const FileOperations: React.FC = () => {
               </Button>
             </Group>
             
-            <Group position="apart">
+            <Group justify="space-between">
               <Text weight={600}>Directory Contents</Text>
               <Button
                 variant="subtle"

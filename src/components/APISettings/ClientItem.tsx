@@ -31,7 +31,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
       }}
       onClick={onClick}
     >
-      <Group position="apart">
+      <Group justify="space-between">
         <Stack spacing={4} style={{ maxWidth: '70%' }}>
           <Group spacing={4} nowrap='true'>
             {isRecent && (

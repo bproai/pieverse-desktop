@@ -110,7 +110,7 @@ const VSCodeChat: React.FC<VSCodeChatProps> = ({ isServerRunning }) => {
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>
       <Card.Section p="md" className="border-b">
-        <Group position="apart">
+        <Group justify="space-between">
           <Group>
             <MessageSquare size={20} />
             <Text size="xl" fw={700}>VS Code Chat</Text>

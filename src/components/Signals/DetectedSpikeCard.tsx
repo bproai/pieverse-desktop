@@ -16,7 +16,7 @@ interface DetectedSpikeCardProps {
 const DetectedSpikeCard: React.FC<DetectedSpikeCardProps> = ({ prediction, getProbabilityColor }) => {
   return (
     <Card shadow="sm" p="md" withBorder mb="md">
-      <Group position="apart">
+      <Group justify="space-between">
         <Text weight={600}>Spike Detected: {prediction.keyword}</Text>
         <Badge color={getProbabilityColor(prediction.probability)} variant="filled">
           {(prediction.probability * 100).toFixed(1)}%

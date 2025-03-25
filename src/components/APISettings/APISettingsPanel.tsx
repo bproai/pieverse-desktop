@@ -425,7 +425,7 @@ export function APISettingsPanel() {
     <Stack spacing="lg">
       <Card className="w-full" shadow="sm" padding="lg">
         <Stack>
-          <Group position="apart">
+          <Group justify="space-between">
             <Group>
               <Settings size={24} />
               <Text size="xl" weight={500}>HTTP API Server</Text>
@@ -488,7 +488,7 @@ export function APISettingsPanel() {
 
       <Card className="w-full" shadow="sm" padding="lg">
         <Stack>
-          <Group position="apart">
+          <Group justify="space-between">
             <Group>
               <Radio size={24} />
               <Text size="xl" weight={500}>WebSocket Server</Text>
@@ -682,7 +682,7 @@ export function APISettingsPanel() {
       {wsStatus === 'running' && (
         <Card className="w-full" shadow="sm" padding="lg">
           <Stack>
-            <Group position="apart">
+            <Group justify="space-between">
               <Text size="lg" weight={500}>New AI Chat</Text>
               <Badge color="violet" variant="filled">ChatGPT & Claude</Badge>
             </Group>
@@ -764,7 +764,7 @@ export function APISettingsPanel() {
             {newChatStatus.result && (
               <Card withBorder p="xs" radius="md" bg={newChatStatus.result.success ? 'rgba(0, 200, 0, 0.05)' : 'rgba(255, 0, 0, 0.05)'}>
                 <Stack spacing="xs">
-                  <Group position="apart">
+                  <Group justify="space-between">
                     <Group>
                       <Badge 
                         color={newChatStatus.result.success ? 'green' : 'red'}

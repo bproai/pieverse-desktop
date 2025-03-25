@@ -486,7 +486,7 @@ const SignalsPanel = () => {
     <div>
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Card.Section className="p-4 border-b">
-          <Group position="apart">
+          <Group justify="space-between">
             <Group>
               <TrendingUp size={20} />
               <Text weight={500} size="lg">Google Trends Signals</Text>
@@ -686,7 +686,7 @@ const SignalsPanel = () => {
                             }}
                             onClick={() => setSelectedPrediction(prediction)}
                           >
-                            <Group position="apart">
+                            <Group justify="space-between">
                               <Text weight={500}>{prediction.keyword}</Text>
                               <Badge 
                                 color={getProbabilityColor(prediction.probability)}
@@ -881,7 +881,7 @@ const SignalsPanel = () => {
                   <Text weight={500} mb="lg">Monitoring Settings</Text>
                   
                   <Stack spacing="md">
-                    <Group position="apart">
+                    <Group justify="space-between">
                       <Text>Monitoring Status</Text>
                       <Switch 
                         checked={isMonitoring}

@@ -189,7 +189,7 @@ example();`);
               }}
             />
           </div>
-          <Group position="apart">
+          <Group justify="space-between">
             <Group>
               <Button
                 onClick={runCode}

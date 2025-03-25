@@ -60,7 +60,7 @@ const ContextBuilderPanel: React.FC = () => {
     <div className="context-builder-panel">
       <Card shadow="sm" p="lg" radius="md" withBorder>
         <Card.Section p="md" className="border-b">
-          <Group position="apart">
+          <Group justify="space-between">
             <Text size="xl" fw={700}>Context Builder</Text>
             <Button 
               variant="light" 

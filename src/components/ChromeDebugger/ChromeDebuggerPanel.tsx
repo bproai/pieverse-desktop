@@ -847,7 +847,7 @@ const ChromeDebuggerPanel: React.FC = () => {
     <div className="chrome-debugger-panel">
       <Card shadow="sm" p="lg" radius="md" withBorder>
       <Card.Section p="md" className="border-b">
-        <Group position="apart">
+        <Group justify="space-between">
             <Group>
             <TerminalSquare size={20} />
             <Text size="xl" fw={700}>Chrome DevTools Protocol Debugger</Text>
@@ -1015,7 +1015,7 @@ const ChromeDebuggerPanel: React.FC = () => {
             
             <Card shadow="xs" mt="md" withBorder>
               <Card.Section p="md" className="border-b">
-                <Group position="apart">
+                <Group justify="space-between">
                   <Text weight={600}>Console Logs</Text>
                   <Group>
                     <TextInput
@@ -1061,7 +1061,7 @@ const ChromeDebuggerPanel: React.FC = () => {
                         key={msg.id} 
                         className={`py-1 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 relative ${copiedId === msg.id ? 'bg-blue-50' : ''}`}
                         >
-                        <Group position="apart">
+                        <Group justify="space-between">
                             <Group spacing="xs">
                             <Badge 
                                 size="xs" 

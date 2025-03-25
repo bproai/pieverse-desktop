@@ -29,7 +29,7 @@ const FileSystemPanel: React.FC = () => {
   return (
     <Card shadow="sm" p={0} radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Card.Section p="md" withBorder>
-        <Group position="apart">
+        <Group justify="space-between">
           <Text size="xl" weight={700}>File System</Text>
         </Group>
       </Card.Section>

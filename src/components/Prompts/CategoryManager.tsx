@@ -136,7 +136,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
         {/* Add New Category */}
         <Card withBorder p="md">
           <Text weight={600} mb="md">Add New Category</Text>
-          <Group position="apart">
+          <Group justify="space-between">
             <TextInput
               placeholder="New category name"
               value={newCategoryName}
@@ -215,7 +215,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
         {editingCategory && (
           <Card withBorder p="md">
             <Text weight={600} mb="md">Edit Category</Text>
-            <Group position="apart">
+            <Group justify="space-between">
               <TextInput
                 placeholder="Category name"
                 value={editingCategory.name}

@@ -64,7 +64,7 @@ export function ChromeClientsList() {
   return (
     <Card className="w-full" shadow="sm" padding="lg">
       <Stack>
-        <Group position="apart">
+        <Group justify="space-between">
           <Text size="lg" weight={500}>Connected Chrome Clients</Text>
           <Group>
             <Badge color={clients.length > 0 ? 'green' : 'gray'} variant="filled">
@@ -82,7 +82,7 @@ export function ChromeClientsList() {
           ) : (
             clients.map(client => (
               <Card key={client.id} withBorder p="sm">
-                <Group position="apart">
+                <Group justify="space-between">
                   <Stack spacing={4} style={{ maxWidth: '70%' }}>
                     {/* Display tab title if available, fallback to ID and platform */}
                     <Text weight={500} style={{ 

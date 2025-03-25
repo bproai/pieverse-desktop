@@ -699,7 +699,7 @@ const MCPClientPanel: React.FC = () => {
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Card.Section p="md" className="border-b">
-        <Group position="apart">
+        <Group justify="space-between">
           <Group>
             <Bot size={20} />
             <Text size="xl" fw={700}>MCP Server</Text>
@@ -779,7 +779,7 @@ const MCPClientPanel: React.FC = () => {
           </Card>
         ) : (
           <>
-            <Group position="apart">
+            <Group justify="space-between">
               <Select
                 label="MCP Server Type"
                 description="Select the MCP server to run"

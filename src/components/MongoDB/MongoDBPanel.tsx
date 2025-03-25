@@ -34,7 +34,7 @@ const MongoDBPanel = () => {
   return (
     <Card className="w-full" shadow="sm" padding="lg">
       <Stack>
-        <Group position="apart">
+        <Group justify="space-between">
           <Group>
             <Database size={24} />
             <Text size="xl" weight={500}>MongoDB Service</Text>

@@ -609,7 +609,7 @@ Use variables like this:
       {/* Sidebar with list of rules */}
       <div className="w-1/4 pr-4 border-r" style={{ minWidth: '250px' }}>
         <div className="mb-4">
-          <Group position="apart">
+          <Group justify="space-between">
             <Text size="xl" weight={700}>LLM Rules</Text>
             <Button 
               leftSection={<Plus size={16} />} 
@@ -716,7 +716,7 @@ Use variables like this:
           /* Form for adding/editing rule */
           <Card shadow="sm" p="lg" radius="md" withBorder className="h-full overflow-y-auto">
             <Card.Section withBorder p="md">
-              <Group position="apart">
+              <Group justify="space-between">
                 <Text weight={500}>
                   {editingId ? 'Edit Rule' : 'Add New Rule'}
                 </Text>
@@ -866,7 +866,7 @@ Use variables like this:
                     <div className="space-y-3">
                       {newRule.variables.map((variable, index) => (
                         <Paper key={index} withBorder p="md">
-                          <Group position="apart">
+                          <Group justify="space-between">
                             <div>
                               <Group spacing={8}>
                                 <Text weight={500}>{`{${variable.name}}`}</Text>
@@ -960,7 +960,7 @@ Use variables like this:
           selectedRule ? (
             <div className="h-full flex flex-col">
               <Card shadow="sm" p="lg" radius="md" withBorder mb={4}>
-                <Group position="apart">
+                <Group justify="space-between">
                   <div>
                     <Group align="center">
                       <ColorSwatch color={selectedRule.color} size={16} />
