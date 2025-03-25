@@ -73,11 +73,35 @@ export class WebSocketService {
   }
   
   /**
+   * Handle circular references for safe JSON stringification
+   */
+  private safeStringify(obj: any): string {
+    // Set to track objects that have been visited
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      // Skip command arguments which often contain circular references
+      if (key === 'arguments') {
+        return '[Arguments omitted]';
+      }
+      
+      // Handle circular references for other properties
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular reference]';
+        }
+        seen.add(value);
+      }
+      return value;
+    });
+  }
+  
+  /**
    * Send arbitrary data to the WebSocket server
    */
   public sendData(data: any): boolean {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(data));
+      // Use safeStringify instead of JSON.stringify to handle circular references
+      this.ws.send(this.safeStringify(data));
       return true;
     }
     return false;
