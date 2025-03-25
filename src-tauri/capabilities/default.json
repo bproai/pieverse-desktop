@@ -34,7 +34,6 @@
     "fs:allow-create",
     "fs:allow-mkdir",
     "fs:allow-write-text-file",
-    "dialog:allow-confirm",
-    "clipboard-manager:default"
+    "dialog:allow-confirm"
   ]
 }
