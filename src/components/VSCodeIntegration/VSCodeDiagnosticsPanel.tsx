@@ -12,15 +12,19 @@ import {
   Stack,
   Alert,
   Select,
-  Code
+  Code,
+  List,
+  ThemeIcon,
+  Tooltip
 } from '@mantine/core';
-import { AlertCircle, Search, RefreshCw, FileText, X, ExternalLink } from 'lucide-react';
+import { AlertCircle, Search, RefreshCw, FileText, X, ExternalLink, Link as LinkIcon, Tag, Info, Code2 } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 
 // Tauri API imports
 import { core } from '@tauri-apps/api';
 import { listen } from '@tauri-apps/api/event';
 
+// Enhanced DiagnosticItem interface with additional VS Code fields
 interface DiagnosticItem {
   severity: number;
   message: string;
@@ -30,6 +34,33 @@ interface DiagnosticItem {
   };
   code?: string | { value: string; target: string };
   source?: string;
+  // Additional fields from VS Code DiagnosticItem
+  tags?: number[];  // DiagnosticTag values (1 = Unnecessary, 2 = Deprecated)
+  relatedInformation?: {
+    message: string;
+    location: {
+      uri: string;
+      range: {
+        start: { line: number; character: number };
+        end: { line: number; character: number };
+      };
+    };
+  }[];
+  codeActions?: {
+    title: string;
+    kind?: string;
+    isPreferred?: boolean;
+    command?: {
+      title: string;
+      command: string;
+      arguments?: any[];
+    };
+  }[];
+  documentation?: string | {
+    value: string;
+    isTrusted: boolean;
+    supportHtml?: boolean;
+  };
 }
 
 interface FileDiagnostics {
@@ -45,6 +76,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
   const [diagnostics, setDiagnostics] = useState<FileDiagnostics[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [severityFilter, setSeverityFilter] = useState<number>(-1); // -1 = all, 0 = error, 1 = warning, etc.
+  const [tagFilter, setTagFilter] = useState<number>(-1); // -1 = all, 1 = Unnecessary, 2 = Deprecated
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Track which position in the cyclical queue we're at
@@ -121,6 +153,39 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
       setLoading(false);
     }
   };
+  
+  // Function to apply a code action if available
+  const applyCodeAction = async (filePath: string, codeAction: any) => {
+    if (!isServerRunning || !codeAction) {
+      return;
+    }
+    
+    try {
+      await core.invoke('send_chat_to_vscode', { 
+        message: JSON.stringify({ 
+          type: 'applyCodeAction',
+          file: filePath,
+          codeAction: codeAction 
+        })
+      });
+      
+      notifications.show({
+        title: 'Code Action',
+        message: `Applying: ${codeAction.title}`,
+        color: 'blue'
+      });
+      
+      // Request fresh diagnostics after applying fix
+      setTimeout(() => requestDiagnostics(), 1000);
+    } catch (error: any) {
+      console.error('Error applying code action:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to apply code action: ${error.toString()}`,
+        color: 'red'
+      });
+    }
+  };
 
   // Function to open a file in VS Code with position information
   const openFileInVSCode = async (filePath: string, line: number, character: number) => {
@@ -168,6 +233,37 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
     }
   };
 
+  // Function to open related information file
+  const openRelatedFile = async (uri: string, line: number, character: number) => {
+    if (!isServerRunning) {
+      return;
+    }
+    
+    try {
+      // For related info, always open in the other column
+      const viewColumn = ((openFileIndex + 1) % 2) + 1;
+      
+      // Fix URI format - if it's already a file:// URI, convert it to a proper path
+      let filePath = uri;
+      if (uri.startsWith('file:')) {
+        // Remove file:// prefix and convert to filesystem path
+        filePath = decodeURIComponent(uri.replace(/^file:\/\//, ''));
+      }
+      
+      await core.invoke('send_open_file_to_vscode', { 
+        openFileRequest: {
+          type: 'openFile',
+          file: filePath,
+          line: line,
+          character: character,
+          view_column: viewColumn
+        }
+      });
+    } catch (error: any) {
+      console.error('Error opening related file:', error);
+    }
+  };
+
   // Filter diagnostics based on user input
   const filteredDiagnostics = diagnostics.filter(fileDiag => {
     // Filter by filename
@@ -178,6 +274,13 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
     // Filter by severity
     if (severityFilter !== -1) {
       return fileDiag.diagnostics.some(diag => diag.severity === severityFilter);
+    }
+    
+    // Filter by tag
+    if (tagFilter !== -1) {
+      return fileDiag.diagnostics.some(diag => 
+        diag.tags && diag.tags.includes(tagFilter)
+      );
     }
     
     return true;
@@ -204,6 +307,15 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
       default: return 'gray';
     }
   };
+  
+  // Get tag text representation
+  const getTagText = (tag: number): string => {
+    switch (tag) {
+      case 1: return 'Unnecessary';
+      case 2: return 'Deprecated';
+      default: return `Tag ${tag}`;
+    }
+  };
 
   // Clear diagnostics
   const clearDiagnostics = () => {
@@ -214,6 +326,15 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
   // Get file name from full path
   const getFileName = (filePath: string): string => {
     return filePath.split(/[\/\\]/).pop() || filePath;
+  };
+
+  // Render the documentation content
+  const renderDocumentation = (doc: string | { value: string; isTrusted: boolean; supportHtml?: boolean }) => {
+    if (typeof doc === 'string') {
+      return <Text style={{ whiteSpace: 'pre-wrap' }}>{doc}</Text>;
+    } else {
+      return <Text style={{ whiteSpace: 'pre-wrap' }}>{doc.value}</Text>;
+    }
   };
 
   return (
@@ -250,7 +371,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
           </Alert>
         )}
         
-        <Group justify="apart">
+        <Group align="flex-end">
           <TextInput
             placeholder="Filter by filename..."
             value={filter}
@@ -269,6 +390,18 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
               { value: '1', label: 'Warnings Only' },
               { value: '2', label: 'Info Only' },
               { value: '3', label: 'Hints Only' }
+            ]}
+            style={{ width: 150 }}
+          />
+          
+          <Select
+            placeholder="Filter by tag"
+            value={tagFilter.toString()}
+            onChange={(value) => setTagFilter(parseInt(value || '-1'))}
+            data={[
+              { value: '-1', label: 'All Tags' },
+              { value: '1', label: 'Unnecessary' },
+              { value: '2', label: 'Deprecated' }
             ]}
             style={{ width: 150 }}
           />
@@ -336,34 +469,125 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                               diag.severity === 0 ? 'red' :
                               diag.severity === 1 ? 'orange' :
                               diag.severity === 2 ? 'blue' : 'gray'
-                            }`,
-                            cursor: 'pointer'
+                            }`
                           }}
-                          onClick={() => openFileInVSCode(
-                            fileDiag.file, 
-                            diag.range.start.line, 
-                            diag.range.start.character
-                          )}
                         >
                           <Group justify="apart">
                             <Group>
                               <Badge color={getSeverityColor(diag.severity)}>
                                 {getSeverityText(diag.severity)}
                               </Badge>
-                              <ExternalLink size={14} />
+                              {diag.tags && diag.tags.map((tag, tagIndex) => (
+                                <Badge key={tagIndex} color="violet" leftSection={<Tag size={12} />}>
+                                  {getTagText(tag)}
+                                </Badge>
+                              ))}
                             </Group>
-                            <Text size="xs" color="dimmed">
-                              Line {diag.range.start.line + 1}, Col {diag.range.start.character + 1}
-                            </Text>
+                            <Group>
+                              <Text size="xs" color="dimmed">
+                                Line {diag.range.start.line + 1}, Col {diag.range.start.character + 1}
+                              </Text>
+                              <Tooltip label="Open file at location">
+                                <Button 
+                                  variant="subtle" 
+                                  size="xs" 
+                                  p={4} 
+                                  onClick={() => openFileInVSCode(
+                                    fileDiag.file, 
+                                    diag.range.start.line, 
+                                    diag.range.start.character
+                                  )}
+                                >
+                                  <ExternalLink size={14} />
+                                </Button>
+                              </Tooltip>
+                            </Group>
                           </Group>
+                          
                           <Text mt="xs">{diag.message}</Text>
+                          
                           {diag.source && (
-                            <Text size="xs" color="dimmed" mt="xs">Source: {diag.source}</Text>
+                            <Group mt="xs">
+                              <Badge color="gray" variant="light">Source: {diag.source}</Badge>
+                            </Group>
                           )}
+                          
                           {diag.code && (
-                            <Text size="xs" color="dimmed">
-                              Code: {typeof diag.code === 'string' ? diag.code : diag.code.value}
-                            </Text>
+                            <Group mt="xs">
+                              <Badge leftSection={<Code2 size={12} />} color="gray" variant="light">
+                                Code: {typeof diag.code === 'string' ? diag.code : diag.code.value}
+                              </Badge>
+                            </Group>
+                          )}
+                          
+                          {/* Documentation section */}
+                          {diag.documentation && (
+                            <Card mt="xs" withBorder p="xs" bg="gray.0">
+                              <Group mb="xs">
+                                <Info size={14} />
+                                <Text fw={500} size="sm">Documentation</Text>
+                              </Group>
+                              {renderDocumentation(diag.documentation)}
+                            </Card>
+                          )}
+                          
+                          {/* Related information section */}
+                          {diag.relatedInformation && diag.relatedInformation.length > 0 && (
+                            <Card mt="xs" withBorder p="xs" bg="gray.0">
+                              <Group mb="xs">
+                                <LinkIcon size={14} />
+                                <Text fw={500} size="sm">Related Information</Text>
+                              </Group>
+                              <List spacing="xs" size="sm">
+                                {diag.relatedInformation.map((info, infoIndex) => (
+                                  <List.Item 
+                                    key={infoIndex}
+                                    icon={
+                                      <ThemeIcon color="blue" size={20} radius="xl">
+                                        <FileText size={12} />
+                                      </ThemeIcon>
+                                    }
+                                  >
+                                    <Group>
+                                      <Text size="sm">{info.message}</Text>
+                                      <Button 
+                                        variant="subtle" 
+                                        size="xs"
+                                        onClick={() => openRelatedFile(
+                                          info.location.uri,
+                                          info.location.range.start.line,
+                                          info.location.range.start.character
+                                        )}
+                                      >
+                                        {getFileName(info.location.uri)}:{info.location.range.start.line + 1}
+                                      </Button>
+                                    </Group>
+                                  </List.Item>
+                                ))}
+                              </List>
+                            </Card>
+                          )}
+                          
+                          {/* Code actions section */}
+                          {diag.codeActions && diag.codeActions.length > 0 && (
+                            <Card mt="xs" withBorder p="xs" bg="gray.0">
+                              <Group mb="xs">
+                                <Code2 size={14} />
+                                <Text fw={500} size="sm">Quick Fixes</Text>
+                              </Group>
+                              <Group gap="xs">
+                                {diag.codeActions.map((action, actionIndex) => (
+                                  <Button 
+                                    key={actionIndex}
+                                    size="xs"
+                                    variant={action.isPreferred ? "filled" : "light"}
+                                    onClick={() => applyCodeAction(fileDiag.file, action)}
+                                  >
+                                    {action.title}
+                                  </Button>
+                                ))}
+                              </Group>
+                            </Card>
                           )}
                         </Card>
                       ))}

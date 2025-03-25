@@ -174,6 +174,16 @@ export class WebSocketService {
             }
             return;
           }
+          else if (contentJson.type === 'applyCodeAction') {
+            console.log('Received code action request via chat');
+            this.handleCodeAction(contentJson, globals);
+            return;
+          }
+          else if (contentJson.type === 'openDiagnosticLink') {
+            console.log('Received diagnostic link request via chat');
+            this.handleDiagnosticLink(contentJson.target);
+            return;
+          }
         } catch (e) {
           // Not valid JSON, treat as normal chat message
         }
@@ -189,6 +199,14 @@ export class WebSocketService {
         if (globals.terminalService) {
           globals.terminalService.handleWebSocketMessage(jsonData);
         }
+      } else if (jsonData.type === 'applyCodeAction') {
+        // Handle code action request
+        console.log('Received code action request');
+        this.handleCodeAction(jsonData, globals);
+      } else if (jsonData.type === 'openDiagnosticLink') {
+        // Handle diagnostic link click
+        console.log('Received diagnostic link request');
+        this.handleDiagnosticLink(jsonData.target);
       } else if (jsonData.originalFile && jsonData.suggestedContent) {
         // Handle as diff suggestion
         console.log('Handling as diff suggestion with original file:', jsonData.originalFile);
@@ -231,6 +249,131 @@ export class WebSocketService {
       }
     }
   }
+
+  /**
+   * Handle code action application
+   */
+  private async handleCodeAction(data: any, globals: ExtensionGlobals): Promise<void> {
+    try {
+      if (!data.file || !data.codeAction) {
+        console.error('Invalid code action request data:', data);
+        this.sendCodeActionResult(false, 'Invalid code action request data');
+        return;
+      }
+
+      const file = data.file;
+      const codeAction = data.codeAction;
+      
+      console.log(`Applying code action "${codeAction.title}" to ${file}`);
+      
+      // Get the document and its URI
+      const uri = vscode.Uri.file(file);
+      
+      // Make sure document is open
+      let document;
+      try {
+        document = await vscode.workspace.openTextDocument(uri);
+      } catch (e) {
+        console.error('Failed to open document:', e);
+        this.sendCodeActionResult(false, `Failed to open document: ${e}`);
+        return;
+      }
+      
+      // Find the matching code action in VS Code
+      const diagnostics = vscode.languages.getDiagnostics(uri);
+      
+      // For each diagnostic, try to find and apply the matching code action
+      let applied = false;
+      
+      for (const diagnostic of diagnostics) {
+        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+          'vscode.executeCodeActionProvider',
+          uri,
+          diagnostic.range
+        ) || [];
+        
+        // Find the matching action by title
+        const matchingAction = actions.find(action => action.title === codeAction.title);
+        
+        if (matchingAction) {
+          // Apply the code action
+          if (matchingAction.edit) {
+            const editResult = await vscode.workspace.applyEdit(matchingAction.edit);
+            if (!editResult) {
+              console.error('Failed to apply workspace edit');
+              this.sendCodeActionResult(false, 'Failed to apply workspace edit');
+              return;
+            }
+          }
+          
+          if (matchingAction.command) {
+            await vscode.commands.executeCommand(
+              matchingAction.command.command,
+              ...(matchingAction.command.arguments || [])
+            );
+          }
+          
+          applied = true;
+          break;
+        }
+      }
+      
+      if (applied) {
+        console.log('Successfully applied code action');
+        this.sendCodeActionResult(true, `Applied: ${codeAction.title}`);
+        
+        // Refresh diagnostics after applying a code action
+        setTimeout(() => {
+          if (globals.diagnosticsService) {
+            globals.diagnosticsService.sendAllDiagnostics();
+          }
+        }, 500);
+      } else {
+        console.log('No matching code action found');
+        this.sendCodeActionResult(false, `Could not find code action: ${codeAction.title}`);
+      }
+    } catch (error) {
+      console.error('Error applying code action:', error);
+      this.sendCodeActionResult(false, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  /**
+   * Send code action result back to client
+   */
+  private sendCodeActionResult(success: boolean, message: string): void {
+    this.sendData({
+      type: 'codeActionResult',
+      success,
+      message
+    });
+  }
+  
+  /**
+   * Handle diagnostic link clicks
+   */
+  private async handleDiagnosticLink(target: string): Promise<void> {
+    try {
+      if (!target) {
+        console.error('No target provided for diagnostic link');
+        return;
+      }
+      
+      console.log(`Opening diagnostic link: ${target}`);
+      
+      // For diagnostic links that are URIs, try to open them
+      if (target.startsWith('file:') || target.startsWith('vscode:')) {
+        // For file URIs, convert to a path that VSCode can open
+        if (target.startsWith('file:')) {
+          const filePath = decodeURIComponent(target.replace(/^file:\/\//, ''));
+          const uri = vscode.Uri.file(filePath);
+          await vscode.commands.executeCommand('vscode.open', uri);
+        } else {
+          const uri = vscode.Uri.parse(target);
+          await vscode.commands.executeCommand('vscode.open', uri);
+        }
+      }
+      // Rest of the function is unchanged...
 
   /**
    * Handle WebSocket close event

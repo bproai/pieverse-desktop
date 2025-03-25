@@ -39,6 +39,94 @@ pub struct OpenFileRequest {
     pub view_column: u32,      // Editor column (1 = left, 2 = right)
 }
 
+// Enhanced structures for VS Code diagnostics with additional fields
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiagnosticRange {
+    pub start: Position,
+    pub end: Position,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Position {
+    pub line: u32,
+    pub character: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiagnosticCodeValue {
+    pub value: String,
+    pub target: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiagnosticDocumentation {
+    pub value: String,
+    pub is_trusted: bool,
+    pub support_html: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RelatedInformation {
+    pub message: String,
+    pub location: DiagnosticLocation,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiagnosticLocation {
+    pub uri: String,
+    pub range: DiagnosticRange,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CodeAction {
+    pub title: String,
+    pub kind: Option<String>,
+    pub is_preferred: Option<bool>,
+    pub command: Option<CodeActionCommand>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CodeActionCommand {
+    pub title: String,
+    pub command: String,
+    pub arguments: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiagnosticItem {
+    pub severity: u32,
+    pub message: String,
+    pub range: DiagnosticRange,
+    pub code: Option<DiagnosticCode>,
+    pub source: Option<String>,
+    // Additional VS Code diagnostic fields
+    pub tags: Option<Vec<u32>>,
+    pub related_information: Option<Vec<RelatedInformation>>,
+    pub code_actions: Option<Vec<CodeAction>>,
+    pub documentation: Option<DiagnosticDocumentation>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum DiagnosticCode {
+    String(String),
+    Object(DiagnosticCodeValue),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileDiagnostics {
+    pub file: String,
+    pub diagnostics: Vec<DiagnosticItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApplyCodeActionRequest {
+    #[serde(rename = "type")]
+    pub request_type: String,  // "applyCodeAction"
+    pub file: String,          // File where code action should be applied
+    pub code_action: CodeAction, // The code action to apply
+}
+
 impl VSCodeWebSocketState {
     pub fn new() -> Self {
         Self {
@@ -214,6 +302,40 @@ pub fn stop_vscode_ws_server(state: tauri::State<'_, VSCodeWebSocketState>) -> R
 }
 
 #[tauri::command]
+pub fn apply_code_action(
+    state: tauri::State<'_, VSCodeWebSocketState>,
+    file: String,
+    code_action: CodeAction,
+) -> Result<(), String> {
+    // Get broadcast sender
+    let tx = match state.broadcast_tx.lock() {
+        Ok(lock) => match lock.clone() {
+            Some(tx) => tx,
+            None => return Err("WebSocket server is not running".to_string()),
+        },
+        Err(_) => return Err("Failed to lock broadcast sender".to_string()),
+    };
+    
+    // Create the code action request
+    let action_request = ApplyCodeActionRequest {
+        request_type: "applyCodeAction".to_string(),
+        file,
+        code_action,
+    };
+    
+    // Serialize and send
+    match serde_json::to_string(&action_request) {
+        Ok(payload) => {
+            match tx.send(payload) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("Failed to send code action request: {}", e)),
+            }
+        },
+        Err(e) => Err(format!("Failed to serialize code action request: {}", e)),
+    }
+}
+
+#[tauri::command]
 pub fn get_vscode_ws_status(state: tauri::State<'_, VSCodeWebSocketState>) -> Result<(bool, u16), String> {
     let running = match state.server_running.lock() {
         Ok(lock) => *lock,
@@ -378,10 +500,29 @@ async fn process_messages(
                                         }));
                                     }
                                 } else if msg_type == "diagnostics" {
-                                    // Handle diagnostics messages
+                                    // Enhanced handling of diagnostics messages with all fields
                                     if let Some(data) = json.get("data") {
                                         println!("Received diagnostics data from VS Code");
-                                        // Forward the diagnostics data to the frontend
+                                        
+                                        // Try to parse into our enhanced diagnostics structure
+                                        if let Ok(diagnostics_data) = serde_json::from_value::<Vec<FileDiagnostics>>(data.clone()) {
+                                            println!("Successfully parsed {} files with diagnostics", diagnostics_data.len());
+                                            
+                                            // Calculate stats for logging
+                                            let total_diagnostics: usize = diagnostics_data.iter()
+                                                .map(|file| file.diagnostics.len())
+                                                .sum();
+                                                
+                                            let error_count: usize = diagnostics_data.iter()
+                                                .flat_map(|file| file.diagnostics.iter())
+                                                .filter(|diag| diag.severity == 0)
+                                                .count();
+                                                
+                                            println!("Total of {} diagnostics with {} errors", 
+                                                total_diagnostics, error_count);
+                                        }
+                                        
+                                        // Forward the complete diagnostics data to the frontend
                                         let _ = app.emit("vscode-diagnostics", serde_json::json!({
                                             "data": data
                                         }));
@@ -392,6 +533,16 @@ async fn process_messages(
                                     println!("Received terminal event from VS Code");
                                     // Forward the terminal event to the frontend
                                     let _ = app.emit("vscode-terminal-event", json);
+                                }
+                                else if msg_type == "codeActionResult" {
+                                    // Handle code action results
+                                    if let Some(success) = json.get("success").and_then(|s| s.as_bool()) {
+                                        let status = if success { "succeeded" } else { "failed" };
+                                        println!("Code action application {}", status);
+                                        
+                                        // Forward result to frontend
+                                        let _ = app.emit("vscode-code-action-result", json);
+                                    }
                                 }
                             }
                         }

@@ -321,4 +321,98 @@ export function registerCommands(context: vscode.ExtensionContext, globals: Exte
       vscode.window.showInformationMessage('PieVerse Terminal opened');
     })
   );
+  
+  // NEW: Register command to handle code action application
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.applyCodeAction', async (filePath: string, codeAction: any) => {
+      try {
+        console.log(`Applying code action "${codeAction.title}" to ${filePath}`);
+        
+        // Get the document URI
+        const uri = vscode.Uri.file(filePath);
+        
+        // Open the document first if needed
+        try {
+          await vscode.workspace.openTextDocument(uri);
+        } catch (e) {
+          console.error('Failed to open document:', e);
+          return false;
+        }
+        
+        // Find matching code actions for all diagnostics in the file
+        const diagnostics = vscode.languages.getDiagnostics(uri);
+        
+        for (const diagnostic of diagnostics) {
+          const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+            'vscode.executeCodeActionProvider',
+            uri,
+            diagnostic.range
+          ) || [];
+          
+          // Find the matching action by title
+          const matchingAction = actions.find(action => action.title === codeAction.title);
+          
+          if (matchingAction) {
+            // Apply the code action
+            if (matchingAction.edit) {
+              await vscode.workspace.applyEdit(matchingAction.edit);
+            }
+            
+            if (matchingAction.command) {
+              await vscode.commands.executeCommand(
+                matchingAction.command.command,
+                ...(matchingAction.command.arguments || [])
+              );
+            }
+            
+            return true;
+          }
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error applying code action:', error);
+        return false;
+      }
+    })
+  );
+  
+  // NEW: Register command to handle diagnostic link clicks
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pieverse-diff.openDiagnosticLink', async (target: string) => {
+      try {
+        if (!target) {
+          return false;
+        }
+        
+        console.log(`Opening diagnostic link: ${target}`);
+        
+        // For diagnostic links that are URIs, try to open them
+        if (target.startsWith('file:') || target.startsWith('vscode:')) {
+          const uri = vscode.Uri.parse(target);
+          await vscode.commands.executeCommand('vscode.open', uri);
+        } 
+        // For Rust compiler diagnostics, show them in the problems panel
+        else if (target.includes('rustc')) {
+          await vscode.commands.executeCommand('workbench.actions.view.problems');
+          
+          // Try to expand the diagnostic (rust-analyzer specific)
+          try {
+            await vscode.commands.executeCommand('rust-analyzer.expandMacro');
+          } catch (e) {
+            // Command may not exist, ignore errors
+          }
+        }
+        // For other links, try to open in browser
+        else {
+          await vscode.env.openExternal(vscode.Uri.parse(target));
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error handling diagnostic link:', error);
+        return false;
+      }
+    })
+  );
 }
