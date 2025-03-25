@@ -243,10 +243,10 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
       // For related info, always open in the other column
       const viewColumn = ((openFileIndex + 1) % 2) + 1;
       
-      // Fix URI format - if it's already a file:// URI, convert it to a proper path
+      // Convert URI to file path if needed
       let filePath = uri;
       if (uri.startsWith('file:')) {
-        // Remove file:// prefix and convert to filesystem path
+        // Remove the file:// prefix to get a proper path
         filePath = decodeURIComponent(uri.replace(/^file:\/\//, ''));
       }
       

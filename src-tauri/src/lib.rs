@@ -1,5 +1,4 @@
 // src-tauri/src/lib.rs
-#[macro_use]
 extern crate objc;
 
 mod services;
@@ -166,7 +165,6 @@ use services::chrome_extension_ws::{
     send_targeted_message_to_chrome
 };
 
-use async_stream::stream;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

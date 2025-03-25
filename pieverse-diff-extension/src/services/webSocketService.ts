@@ -372,8 +372,27 @@ export class WebSocketService {
           const uri = vscode.Uri.parse(target);
           await vscode.commands.executeCommand('vscode.open', uri);
         }
+      } 
+      // For Rust compiler diagnostics, show them in the problems panel
+      else if (target.includes('rustc')) {
+        await vscode.commands.executeCommand('workbench.actions.view.problems');
+        
+        // Try to expand the diagnostic (rust-analyzer specific)
+        try {
+          await vscode.commands.executeCommand('rust-analyzer.expandMacro');
+        } catch (e) {
+          // Command may not exist, ignore errors
+          console.log('rust-analyzer.expandMacro command not available');
+        }
       }
-      // Rest of the function is unchanged...
+      // For other links, try to open in browser
+      else {
+        await vscode.env.openExternal(vscode.Uri.parse(target));
+      }
+    } catch (error) {
+      console.error('Error handling diagnostic link:', error);
+    }
+  }
 
   /**
    * Handle WebSocket close event

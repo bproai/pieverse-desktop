@@ -141,6 +141,9 @@ export class DiagnosticsService {
   /**
    * Collect diagnostics and queue them for sending, including code actions
    */
+/**
+ * Collect diagnostics and queue them for sending, including code actions
+ */
   private async collectAndQueueDiagnostics(): Promise<void> {
     // Prevent multiple concurrent collections
     if (this.collectingDiagnostics) {
@@ -175,25 +178,60 @@ export class DiagnosticsService {
           // Try to get code actions for this diagnostic
           let codeActions: any[] = [];
           try {
-            // Get code actions for this specific diagnostic
-            const vsCodeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-              'vscode.executeCodeActionProvider',
-              uri,
-              diag.range,
-              vscode.CodeActionKind.QuickFix
-            ) || [];
+            // Add extensive logging to understand what's happening
+            console.log(`Getting code actions for ${uri.toString()}`);
+            console.log(`Range: ${JSON.stringify({
+              start: { line: diag.range.start.line, character: diag.range.start.character },
+              end: { line: diag.range.end.line, character: diag.range.end.character }
+            })}`);
+            console.log(`Diagnostic: ${diag.message.substring(0, 50)}...`);
             
-            // Transform code actions to our format
-            codeActions = vsCodeActions.map(action => ({
-              title: action.title,
-              kind: action.kind?.value,
-              isPreferred: action.isPreferred,
-              command: action.command ? {
-                title: action.command.title,
-                command: action.command.command,
-                arguments: action.command.arguments
-              } : undefined
-            }));
+            // First check if the range is valid
+            if (diag.range.start.line < 0 || diag.range.start.character < 0 || 
+                diag.range.end.line < 0 || diag.range.end.character < 0) {
+              console.log('Invalid range detected, skipping code action collection');
+            } else {
+              // Try without third parameter first
+              const vsCodeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                'vscode.executeCodeActionProvider',
+                uri,
+                new vscode.Range(
+                  diag.range.start.line,
+                  diag.range.start.character,
+                  diag.range.end.line,
+                  diag.range.end.character
+                )
+              ) || [];
+              
+              console.log(`Found ${vsCodeActions.length} code actions`);
+              
+              // Transform code actions to our format
+              codeActions = vsCodeActions.filter(action => {
+                // Filter out actions from "Roo Code" based on title or command
+                const isRooCode = 
+                  action.title.includes('Roo Code') || 
+                  (action.command && action.command.title && action.command.title.includes('Roo Code')) ||
+                  (action.command && action.command.command && action.command.command.includes('roo'));
+                
+                if (isRooCode) {
+                  console.log(`Filtered out Roo Code action: ${action.title}`);
+                  return false;
+                }
+                return true;
+              }).map(action => {
+                console.log(`Action: ${action.title}`);
+                return {
+                  title: action.title,
+                  kind: action.kind?.value,
+                  isPreferred: action.isPreferred,
+                  command: action.command ? {
+                    title: action.command.title,
+                    command: action.command.command,
+                    arguments: action.command.arguments
+                  } : undefined
+                };
+              });
+            }
           } catch (error) {
             console.error('Error getting code actions:', error);
           }
@@ -281,7 +319,6 @@ export class DiagnosticsService {
       this.collectingDiagnostics = false;
     }
   }
-
   /**
    * Try to send queued diagnostics if WebSocket is connected
    */
