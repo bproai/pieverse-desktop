@@ -178,63 +178,82 @@ export class DiagnosticsService {
           // Try to get code actions for this diagnostic
           let codeActions: any[] = [];
           try {
-            // Add extensive logging to understand what's happening
-            console.log(`Getting code actions for ${uri.toString()}`);
-            console.log(`Range: ${JSON.stringify({
-              start: { line: diag.range.start.line, character: diag.range.start.character },
-              end: { line: diag.range.end.line, character: diag.range.end.character }
-            })}`);
-            console.log(`Diagnostic: ${diag.message.substring(0, 50)}...`);
+            // Get the document to check its language
+            let document: vscode.TextDocument | undefined = undefined;
+            try {
+              document = await vscode.workspace.openTextDocument(uri);
+            } catch (e) {
+              console.log(`Could not open document: ${uri.toString()}`);
+            }
             
-            // First check if the range is valid
-            if (diag.range.start.line < 0 || diag.range.start.character < 0 || 
-                diag.range.end.line < 0 || diag.range.end.character < 0) {
-              console.log('Invalid range detected, skipping code action collection');
-            } else {
-              // Try without third parameter first
-              const vsCodeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                'vscode.executeCodeActionProvider',
-                uri,
-                new vscode.Range(
-                  diag.range.start.line,
-                  diag.range.start.character,
-                  diag.range.end.line,
-                  diag.range.end.character
-                )
-              ) || [];
+            // Only get code actions for supported languages
+            const supportedLanguages = [
+              'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 
+              'python', 'rust', 'go', 'java', 'csharp', 'cpp', 'c'
+            ];
+            
+            if (document && supportedLanguages.includes(document.languageId)) {
+              console.log(`Getting code actions for ${uri.toString()} (${document.languageId})`);
+              console.log(`Range: ${JSON.stringify({
+                start: { line: diag.range.start.line, character: diag.range.start.character },
+                end: { line: diag.range.end.line, character: diag.range.end.character }
+              })}`);
               
-              console.log(`Found ${vsCodeActions.length} code actions`);
-              
-              // Transform code actions to our format
-              codeActions = vsCodeActions.filter(action => {
-                // Filter out actions from "Roo Code" based on title or command
-                const isRooCode = 
-                  action.title.includes('Roo Code') || 
-                  (action.command && action.command.title && action.command.title.includes('Roo Code')) ||
-                  (action.command && action.command.command && action.command.command.includes('roo'));
+              // First check if the range is valid
+              if (diag.range.start.line < 0 || diag.range.start.character < 0 || 
+                  diag.range.end.line < 0 || diag.range.end.character < 0) {
+                console.log('Invalid range detected, skipping code action collection');
+              } else {
+                // Try without third parameter first
+                const vsCodeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                  'vscode.executeCodeActionProvider',
+                  uri,
+                  new vscode.Range(
+                    diag.range.start.line,
+                    diag.range.start.character,
+                    diag.range.end.line,
+                    diag.range.end.character
+                  )
+                ) || [];
                 
-                if (isRooCode) {
-                  console.log(`Filtered out Roo Code action: ${action.title}`);
-                  return false;
-                }
-                return true;
-              }).map(action => {
-                console.log(`Action: ${action.title}`);
-                return {
-                  title: action.title,
-                  kind: action.kind?.value,
-                  isPreferred: action.isPreferred,
-                  command: action.command ? {
-                    title: action.command.title,
-                    command: action.command.command,
-                    arguments: action.command.arguments
-                  } : undefined
-                };
-              });
+                console.log(`Found ${vsCodeActions.length} code actions`);
+                
+                // Transform code actions to our format, filtering out Roo Code actions
+                codeActions = vsCodeActions
+                  .filter(action => {
+                    // Filter out actions from "Roo Code" based on title or command
+                    const isRooCode = 
+                      action.title.includes('Roo Code') || 
+                      (action.command && action.command.title && action.command.title.includes('Roo Code')) ||
+                      (action.command && action.command.command && action.command.command.includes('roo'));
+                    
+                    if (isRooCode) {
+                      console.log(`Filtered out Roo Code action: ${action.title}`);
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map(action => {
+                    console.log(`Including action: ${action.title}`);
+                    return {
+                      title: action.title,
+                      kind: action.kind?.value,
+                      isPreferred: action.isPreferred,
+                      command: action.command ? {
+                        title: action.command.title,
+                        command: action.command.command,
+                        arguments: action.command.arguments
+                      } : undefined
+                    };
+                  });
+              }
+            } else {
+              console.log(`Skipping code actions for unsupported language: ${document?.languageId || 'unknown'}`);
             }
           } catch (error) {
             console.error('Error getting code actions:', error);
           }
+
           
           // Create a simplified diagnostic with code actions
           const diagnosticItem: SimplifiedDiagnosticItem = {
