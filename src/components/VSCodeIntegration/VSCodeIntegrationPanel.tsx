@@ -403,7 +403,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', height:  isConnectionOpen ? 'calc(100%)' : 'calc(100% + 20px)'}}
       >
         <Card.Section p="md" className="border-b">
-          <Group position="apart">
+          <Group justify="space-between">
             <Group>
               <CodeIcon size={20} />
               <Text size="xl" fw={700}>VS Code Integration</Text>
@@ -417,8 +417,8 @@ const VSCodeIntegrationPanel: React.FC = () => {
           </Group>
         </Card.Section>
         
-        <Stack spacing="md" mt="md">
-          <Group position="apart" style={{ cursor: 'pointer' }} onClick={() => setIsConnectionOpen(!isConnectionOpen)}>
+        <Stack gap="md" mt="md">
+          <Group justify="space-between" style={{ cursor: 'pointer' }} onClick={() => setIsConnectionOpen(!isConnectionOpen)}>
             <Text size="sm" fw={600}>VS Code Extension Connection</Text>
             <ActionIcon variant="transparent">
               {isConnectionOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -663,7 +663,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
               <Tabs.Panel value="debug" p="md">
                 <Card withBorder p="md" mt="md">
                   <Text weight={600} mb="md">Debug Information</Text>
-                  <Stack spacing="md">
+                  <Stack gap="md">
                     <Alert 
                       icon={<AlertCircle size={16} />} 
                       color="blue" 

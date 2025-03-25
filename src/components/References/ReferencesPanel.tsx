@@ -11,9 +11,7 @@ import {
   Select, 
   Textarea,
   Tabs,
-  Image,
-  Box,
-  Paper
+  Image
 } from '@mantine/core';
 import { Search, Plus, Trash, ExternalLink, Edit, Save, X, FileText, Image as ImageIcon, Link, Code, FileQuestion } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
@@ -254,26 +252,32 @@ const ReferencesPanel: React.FC = () => {
     return matchesSearch && matchesType;
   });
   
-  // Helper to get icon based on type
+  // Use the existing dark mode class from the document body
   const getTypeIcon = (type: ReferenceType) => {
+    // Check if dark mode is active using the existing class on the body
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    
+    // If in dark mode, use a brighter color
+    const iconColor = isDarkMode ? "#ffffff" : undefined;
+    
     switch (type) {
       case 'documentation':
-        return <FileText size={16} />;
+        return <FileText size={16} color={iconColor} />;
       case 'image':
-        return <ImageIcon size={16} />;
+        return <ImageIcon size={16} color={iconColor} />;
       case 'url':
-        return <Link size={16} />;
+        return <Link size={16} color={iconColor} />;
       case 'code':
-        return <Code size={16} />;
+        return <Code size={16} color={iconColor} />;
       default:
-        return <FileQuestion size={16} />;
+        return <FileQuestion size={16} color={iconColor} />;
     }
   };
   
   return (
     <div className="space-y-4">
-      <Group position="apart">
-        <Text size="xl" weight={700}>Knowledge Base References</Text>
+      <Group justify="space-between">
+        <Text size="xl" fw={700}>Knowledge Base References</Text>
         <Button 
           leftSection={<Plus size={16} />} 
           onClick={() => {
@@ -288,7 +292,7 @@ const ReferencesPanel: React.FC = () => {
       <Group>
         <TextInput
           placeholder="Search references..."
-          icon={<Search size={16} />}
+          leftSection={<Search size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ flexGrow: 1 }}
@@ -312,8 +316,8 @@ const ReferencesPanel: React.FC = () => {
       {(isAddingNew || editingId) && (
         <Card shadow="sm" p="lg" radius="md" withBorder>
           <Card.Section withBorder p="md">
-            <Group position="apart">
-              <Text weight={500}>
+            <Group justify="space-between">
+              <Text fw={500}>
                 {editingId ? 'Edit Reference' : 'Add New Reference'}
               </Text>
               <ActionIcon onClick={() => {
@@ -367,7 +371,7 @@ const ReferencesPanel: React.FC = () => {
             />
             
             <div>
-              <Text size="sm" weight={500} mb={5}>Tags</Text>
+              <Text size="sm" fw={500} mb={5}>Tags</Text>
               <Group>
                 <TextInput
                   placeholder="Add tag"
@@ -380,9 +384,9 @@ const ReferencesPanel: React.FC = () => {
                       addTag();
                     }
                   }}
-                  autoComplete="off"  // Add this line
-                  autoCorrect="off"   // Add this line
-                  spellCheck={false}  // Add this line
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
                 <Button onClick={addTag}>Add</Button>
               </Group>
@@ -403,7 +407,7 @@ const ReferencesPanel: React.FC = () => {
               </Group>
             </div>
             
-            <Group position="right" mt={20}>
+            <Group justify="flex-end" mt={20}>
               <Button 
                 variant="default" 
                 onClick={() => {
@@ -433,19 +437,19 @@ const ReferencesPanel: React.FC = () => {
         
         <Tabs.Panel value="list" pt="md">
           {filteredReferences.length === 0 ? (
-            <Text color="dimmed" align="center" mt={20}>
+            <Text c="dimmed" ta="center" mt={20}>
               No references found. Add some or change your search criteria.
             </Text>
           ) : (
             <div className="space-y-3">
               {filteredReferences.map(reference => (
                 <Card key={reference.id} shadow="sm" p="lg" radius="md" withBorder>
-                  <Group position="apart" mb="xs">
+                  <Group justify="space-between" mb="xs">
                     <Group>
                       {getTypeIcon(reference.type)}
-                      <Text weight={500}>{reference.title}</Text>
+                      <Text fw={500}>{reference.title}</Text>
                     </Group>
-                    <Group spacing={8}>
+                    <Group gap={8}>
                       {reference.url && (
                         <ActionIcon title="Open URL" onClick={() => handleOpenUrl(reference.url || '')}>
                           <ExternalLink size={18} />
@@ -461,18 +465,18 @@ const ReferencesPanel: React.FC = () => {
                   </Group>
                   
                   {reference.content && (
-                    <Text size="sm" color="dimmed" mb="md">
+                    <Text size="sm" c="dimmed" mb="md">
                       {reference.content}
                     </Text>
                   )}
                   
-                  <Group position="apart">
-                    <Group spacing={5}>
+                  <Group justify="space-between">
+                    <Group gap={5}>
                       {reference.tags.map(tag => (
                         <Badge key={tag} size="sm">{tag}</Badge>
                       ))}
                     </Group>
-                    <Text size="xs" color="dimmed">
+                    <Text size="xs" c="dimmed">
                       {new Date(reference.dateAdded).toLocaleDateString()}
                     </Text>
                   </Group>
@@ -490,26 +494,18 @@ const ReferencesPanel: React.FC = () => {
                   {reference.type === 'image' && reference.imageData ? (
                     <Image src={reference.imageData} height={160} alt={reference.title} />
                   ) : (
-                    <Box 
-                      sx={(theme) => ({
-                        height: 100,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[1],
-                      })}
-                    >
+                    <div className="h-[100px] flex items-center justify-center bg-gray-100">
                       {getTypeIcon(reference.type)}
-                    </Box>
+                    </div>
                   )}
                 </Card.Section>
                 
-                <Text weight={500} mt="md" mb="xs">
+                <Text fw={500} mt="md" mb="xs">
                   {reference.title}
                 </Text>
                 
-                <Group position="apart" mt="md">
-                  <Group spacing={5}>
+                <Group justify="space-between" mt="md">
+                  <Group gap={5}>
                     {reference.tags.slice(0, 2).map(tag => (
                       <Badge key={tag} size="sm">{tag}</Badge>
                     ))}
@@ -517,7 +513,7 @@ const ReferencesPanel: React.FC = () => {
                       <Badge size="sm">+{reference.tags.length - 2}</Badge>
                     )}
                   </Group>
-                  <Group spacing={8}>
+                  <Group gap={8}>
                     {reference.url && (
                       <ActionIcon size="sm" onClick={() => openUrl(reference.url || '')}>
                         <ExternalLink size={16} />

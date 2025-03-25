@@ -385,7 +385,7 @@ pub fn send_chat_to_vscode(
 #[tauri::command]
 pub fn send_code_diff_to_vscode(
     state: tauri::State<'_, VSCodeWebSocketState>,
-    diffRequest: CodeDiffRequest,
+    diff_request: CodeDiffRequest,
 ) -> Result<(), String> {
     // Get broadcast sender
     let tx = match state.broadcast_tx.lock() {
@@ -399,9 +399,9 @@ pub fn send_code_diff_to_vscode(
     // Create a JSON object with type field to identify message type
     let message = serde_json::json!({
         "type": "diff",
-        "originalFile": diffRequest.original_file,
-        "suggestedContent": diffRequest.suggested_content,
-        "description": diffRequest.description
+        "originalFile": diff_request.original_file,
+        "suggestedContent": diff_request.suggested_content,
+        "description": diff_request.description
     });
     
     // Serialize and send
