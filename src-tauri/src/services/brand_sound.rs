@@ -1,7 +1,6 @@
 // src-tauri/src/services/brand_sound.rs
 
 use anyhow::Result;
-use std::path::{Path, PathBuf};
 
 // Function to get the path to the brand sound file
 // This will be exposed to the frontend via Tauri commands
