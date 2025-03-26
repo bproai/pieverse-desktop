@@ -74,7 +74,10 @@ function App() {
             <Tabs defaultValue="prompts">
               <Tabs.List>
                 <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
-                  AI Prompts
+                  AI Prompt Builder
+                </Tabs.Tab>
+                <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
+                  AI Prompt Builder Connect
                 </Tabs.Tab>
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB
@@ -87,9 +90,6 @@ function App() {
                 </Tabs.Tab>
                 <Tabs.Tab value="jssandbox" leftSection={<CodeIcon size={16} />}>
                   JavaScript Sandbox
-                </Tabs.Tab>
-                <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
-                  API Settings
                 </Tabs.Tab>
                 <Tabs.Tab value="signals" leftSection={<TrendingUp size={16} />}>
                   Signals
@@ -132,6 +132,10 @@ function App() {
                 <PromptsManager backend={promptsBackend} onBackendChange={setPromptsBackend} />
               </Tabs.Panel>
 
+              <Tabs.Panel value="api" className="p-4">
+                <APISettings />
+              </Tabs.Panel>
+
               <Tabs.Panel value="mongodb" className="p-4">
                 <MongoDBPanel />
               </Tabs.Panel>
@@ -146,10 +150,6 @@ function App() {
               
               <Tabs.Panel value="jssandbox" className="p-4">
                 <JsSandboxPanel isDark={isDark} />
-              </Tabs.Panel>
-
-              <Tabs.Panel value="api" className="p-4">
-                <APISettings />
               </Tabs.Panel>
               
               <Tabs.Panel value="signals" className="p-4">

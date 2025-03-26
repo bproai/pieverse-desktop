@@ -130,16 +130,13 @@ export function APISettingsPanel() {
 
   useEffect(() => {
     checkHttpServerStatus();
+    checkWebSocketServerStatus();
     
-    // Check initial WebSocket status
-    setWsStatus(wsService.getStatus());
-    setWsPort(wsService.getPort());
-
     // Set up a periodic check for WebSocket status
     const intervalId = setInterval(() => {
       setWsStatus(wsService.getStatus());
     }, 2000);
-
+  
     return () => {
       clearInterval(intervalId);
     };
@@ -263,9 +260,41 @@ export function APISettingsPanel() {
       } else {
         await handleStartHttpService();
       }
-    } catch (error) {
+    } catch (error: any) {
       // If fetch fails, server is probably not running, so try to start it
       await handleStartHttpService();
+    }
+  };
+
+  const checkWebSocketServerStatus = async () => {
+    try {
+      // Get current status from service
+      const status = wsService.getStatus();
+      setWsStatus(status);
+      setWsPort(wsService.getPort());
+      
+      // If not running, try to start it
+      if (status !== 'running') {
+        try {
+          // Start directly using the service instead of using handleStartWsService
+          // to avoid showing the error notification
+          setWsIsLoading(true);
+          await wsService.start(wsPort);
+          setWsStatus('running');
+          // No notification for auto-start
+        } catch (error: any) {
+          // Only log the error without showing notification or setting error state
+          // if it contains "already running"
+          if (!error.toString().includes('already running')) {
+            setWsError(error.toString());
+          }
+        } finally {
+          setWsIsLoading(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to check WebSocket server status:', error);
+      setWsError(error.toString());
     }
   };
 
@@ -606,8 +635,8 @@ export function APISettingsPanel() {
                 onChange={(value) => setTargetType(value as 'broadcast' | 'platform' | 'client')}
                 data={[
                   { value: 'broadcast', label: 'Broadcast to All' },
-                  { value: 'platform', label: 'Target Platform' },
-                  { value: 'client', label: 'Target Specific Client' }
+                  { value: 'platform', label: 'Specific Platform' },
+                  { value: 'client', label: 'Specific Client' }
                 ]}
               />
               
@@ -701,7 +730,7 @@ export function APISettingsPanel() {
                   setNewChatStatus({ loading: false, result: null });
                 }}
                 data={[
-                  { value: 'broadcast', label: 'All AI Assistants' },
+                  { value: 'broadcast', label: 'Broadcast to All' },
                   { value: 'platform', label: 'Specific Platform' },
                   { value: 'client', label: 'Specific Client' }
                 ]}
