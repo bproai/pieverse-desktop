@@ -703,7 +703,7 @@ export function APISettingsPanel() {
                               height: 8, 
                               borderRadius: '50%', 
                               backgroundColor: '#2ECC40',
-                              marginRight: '4px'
+                              marginRight: '0px'
                             }} 
                           />
                         )}
@@ -800,7 +800,7 @@ export function APISettingsPanel() {
                               height: 8, 
                               borderRadius: '50%', 
                               backgroundColor: '#2ECC40',
-                              marginRight: '4px'
+                              marginRight: '0px'
                             }} 
                           />
                         )}

@@ -257,7 +257,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
           color: 'green'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to export prompts:', error);
       setError('Failed to export prompts. Please try again.');
       

@@ -64,7 +64,8 @@
         {
           "id": "pieverseDiffView",
           "name": "PieVerse",
-          "type": "webview"
+          "type": "webview",
+          "icon": "resources/pieverse-icon.svg"
         }
       ]
     },
