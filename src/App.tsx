@@ -74,10 +74,10 @@ function App() {
             <Tabs defaultValue="prompts">
               <Tabs.List>
                 <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
-                  AI Prompt Builder
+                  Prompt Builder
                 </Tabs.Tab>
                 <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
-                  AI Prompt Builder Connect
+                  Prompt Builder Connect
                 </Tabs.Tab>
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB

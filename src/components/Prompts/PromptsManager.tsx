@@ -455,7 +455,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       
       <Group position="apart" className="mb-6">
         <Group>
-          <Title order={3}>AI Prompt Builder</Title>
+          <Title order={3}>Prompt Builder</Title>
           
           {/* Custom SegmentedControl that works in both light and dark mode */}
           <div className="flex p-1 bg-gray-200 dark:bg-gray-800 rounded-md shadow-sm">
