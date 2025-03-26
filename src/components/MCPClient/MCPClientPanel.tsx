@@ -914,7 +914,7 @@ const MCPClientPanel: React.FC = () => {
               </Accordion.Control>
               <Accordion.Panel>
                 <Stack spacing="xs">
-                  <Text size="xs" color="dimmed">
+                  <Text size="xs" c="dimmed">
                     These directories will be accessible to the MCP client:
                   </Text>
                   

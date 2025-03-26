@@ -255,7 +255,7 @@ example();`);
           >
             <ScrollArea style={{ flex: 1 }} ref={outputRef} offsetScrollbars scrollbarSize={8}>
               {output.length === 0 && !error ? (
-                <Text color="dimmed" size="sm" align="center" style={{ marginTop: '2rem' }}>
+                <Text c="dimmed" size="sm" align="center" style={{ marginTop: '2rem' }}>
                   Run your code to see output here
                 </Text>
               ) : (

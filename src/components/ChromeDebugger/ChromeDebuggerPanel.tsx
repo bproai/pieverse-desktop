@@ -227,18 +227,18 @@ const ChromeTargetItem = ({
           
           {/* URL row */}
           <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
-            <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>URL:</Text>
-            <Text size="xs" color="dimmed" lineClamp={1} style={{ flex: 1 }}>
+            <Text size="xs" c="dimmed" style={{ minWidth: 30 }}>URL:</Text>
+            <Text size="xs" c="dimmed" lineClamp={1} style={{ flex: 1 }}>
               {truncatedUrl}
             </Text>
           </div>
           
           {/* WebSocket URL row */}
           <div style={{ display: 'flex', fontSize: '12px', color: '#666', marginLeft: 24 }}>
-            <Text size="xs" color="dimmed" style={{ minWidth: 30 }}>WS:</Text>
+            <Text size="xs" c="dimmed" style={{ minWidth: 30 }}>WS:</Text>
             <Text 
               size="xs" 
-              color="dimmed" 
+              c="dimmed" 
               lineClamp={1} 
               style={{ flex: 1, fontFamily: 'monospace', fontSize: '10px' }}
             >
@@ -1049,7 +1049,7 @@ const ChromeDebuggerPanel: React.FC = () => {
               
               <ScrollArea h={400} type="auto" p="md">
                 {filteredMessages.length === 0 ? (
-                    <Text color="dimmed" align="center" mt="md">
+                    <Text c="dimmed" align="center" mt="md">
                     {Object.keys(connected).length > 0 
                         ? "Waiting for console messages..." 
                         : "Connect to Chrome targets to view console logs"}
@@ -1073,7 +1073,7 @@ const ChromeDebuggerPanel: React.FC = () => {
                             >
                                 {msg.level}
                             </Badge>
-                            <Text size="xs" color="dimmed">
+                            <Text size="xs" c="dimmed">
                                 {new Date(msg.timestamp).toLocaleTimeString()}
                             </Text>
                             </Group>

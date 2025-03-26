@@ -1,7 +1,7 @@
 // src/components/APISettings/APISettingsPanel.tsx
 import { useState, useEffect } from 'react';
 import { Card, Text, Group, TextInput, Button, Badge, Stack, Select, ActionIcon } from '@mantine/core';
-import { Settings, Power, PowerOff, Radio, RefreshCw, Globe } from 'lucide-react';
+import { Settings, Power, PowerOff, Radio, RefreshCw } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
@@ -9,6 +9,40 @@ import { notifications } from '@mantine/notifications';
 import { ChromeClientsList } from './ChromeClientsList';
 import { forwardRef } from 'react';
 import { SafeFavicon } from '../common/SafeFavicon';
+
+// Define types for the state and payloads
+interface NewChatStatus {
+  loading: boolean;
+  result: NewChatResult | null;
+}
+
+interface NewChatResult {
+  type?: string;
+  success: boolean;
+  message: string;
+  platform?: string;
+  tabId?: string;
+  initialArticleCount?: number;
+  finalArticleCount?: number;
+  attempts?: number;
+  initialMessageCount?: number;
+  finalMessageCount?: number;
+  method?: string;
+}
+
+interface SelectItemProps {
+  label: string;
+  description?: string;
+  active?: boolean;
+  platform?: string;
+  [key: string]: any;
+}
+
+interface PlatformSelectItemProps {
+  label: string;
+  favicon?: string;
+  [key: string]: any;
+}
 
 
 export function APISettingsPanel() {
@@ -31,19 +65,17 @@ export function APISettingsPanel() {
   const [targetType, setTargetType] = useState<'broadcast' | 'platform' | 'client'>('broadcast');
   const [targetId, setTargetId] = useState<string | null>(null);
 
-
-  const [newChatStatus, setNewChatStatus] = useState({ loading: false, result: null });
+  const [newChatStatus, setNewChatStatus] = useState<NewChatStatus>({ loading: false, result: null });
 
   // Get WebSocket service instance
   const wsService = WebSocketService.getInstance();
 
-
   useEffect(() => {
     const setupNewChatListener = async () => {
       const unlisten = await listen('chrome-extension-message', (event) => {
-        const payload = event.payload;
-        if (payload.type === 'newChatResult') {
-          setNewChatStatus(prev => ({ ...prev, loading: false, result: payload }));
+        const payload = event.payload as NewChatResult;
+        if (payload && typeof payload === 'object' && 'type' in payload && payload.type === 'newChatResult') {
+          setNewChatStatus({ loading: false, result: payload });
           
           // Show notification based on result
           notifications.show({
@@ -78,11 +110,12 @@ export function APISettingsPanel() {
     // Listen for client updates
     const setupClientListener = async () => {
       const unlisten = await listen('chrome-extension-clients-updated', (event) => {
-        setClients(event.payload as ClientInfo[]);
+        const clients = event.payload as ClientInfo[];
+        setClients(clients);
         
         // Check if the currently selected client is still available
         if (targetType === 'client' && targetId) {
-          const clientStillExists = event.payload.some((client: ClientInfo) => client.id === targetId);
+          const clientStillExists = clients.some(client => client.id === targetId);
           if (!clientStillExists) {
             // Reset selection if the client is no longer available
             setTargetId(null);
@@ -109,11 +142,13 @@ export function APISettingsPanel() {
     // Listen for chrome extension connection events
     const unlisten = listen('chrome-extension-connection', (event) => {
       const payload = event.payload as { connected: boolean, clientInfo: string };
-      setChromeConnected(payload.connected);
-      if (payload.connected) {
-        setConnectedClient(payload.clientInfo);
-      } else {
-        setConnectedClient('');
+      if (payload && typeof payload === 'object') {
+        setChromeConnected(payload.connected);
+        if (payload.connected) {
+          setConnectedClient(payload.clientInfo);
+        } else {
+          setConnectedClient('');
+        }
       }
     });
     
@@ -142,7 +177,7 @@ export function APISettingsPanel() {
     };
   }, []);
 
-  const SelectItem = forwardRef(
+  const SelectItem = forwardRef<HTMLDivElement, SelectItemProps>(
     ({ label, description, active, platform, ...others }, ref) => (
       <div ref={ref} {...others}>
         <div>
@@ -158,10 +193,11 @@ export function APISettingsPanel() {
       </div>
     )
   );
-  const PlatformSelectItem = forwardRef(
+  
+  const PlatformSelectItem = forwardRef<HTMLDivElement, PlatformSelectItemProps>(
     ({ label, favicon, ...others }, ref) => (
       <div ref={ref} {...others}>
-        <Group spacing={4} nowrap='true'>
+        <Group>
           <SafeFavicon url={favicon} size={12} />
           <span>{label}</span>
         </Group>
@@ -200,7 +236,7 @@ export function APISettingsPanel() {
       console.error('Error sending test prompt:', error);
       notifications.show({
         title: 'Error',
-        message: `Failed to send test prompt: ${error}`,
+        message: `Failed to send test prompt: ${String(error)}`,
         color: 'red'
       });
     } finally {
@@ -243,7 +279,7 @@ export function APISettingsPanel() {
       console.error('Error sending test prompt:', error);
       notifications.show({
         title: 'Error',
-        message: `Failed to send test prompt: ${error}`,
+        message: `Failed to send test prompt: ${String(error)}`,
         color: 'red'
       });
     } finally {
@@ -260,7 +296,7 @@ export function APISettingsPanel() {
       } else {
         await handleStartHttpService();
       }
-    } catch (error: any) {
+    } catch (error) {
       // If fetch fails, server is probably not running, so try to start it
       await handleStartHttpService();
     }
@@ -282,19 +318,20 @@ export function APISettingsPanel() {
           await wsService.start(wsPort);
           setWsStatus('running');
           // No notification for auto-start
-        } catch (error: any) {
+        } catch (error) {
           // Only log the error without showing notification or setting error state
           // if it contains "already running"
-          if (!error.toString().includes('already running')) {
-            setWsError(error.toString());
+          const errorStr = String(error);
+          if (!errorStr.includes('already running')) {
+            setWsError(errorStr);
           }
         } finally {
           setWsIsLoading(false);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to check WebSocket server status:', error);
-      setWsError(error.toString());
+      setWsError(String(error));
     }
   };
 
@@ -307,11 +344,12 @@ export function APISettingsPanel() {
     } catch (error) {
       console.error('Failed to start API server:', error);
       // If error contains "already running", just set status to running
-      if (error.toString().includes('already running')) {
+      const errorStr = String(error);
+      if (errorStr.includes('already running')) {
         setHttpStatus('running');
       } else {
         setHttpStatus('stopped');
-        setHttpError(error.toString());
+        setHttpError(errorStr);
       }
     } finally {
       setHttpIsLoading(false);
@@ -326,7 +364,7 @@ export function APISettingsPanel() {
       setHttpStatus('stopped');
     } catch (error) {
       console.error('Failed to stop API server:', error);
-      setHttpError(error.toString());
+      setHttpError(String(error));
     } finally {
       setHttpIsLoading(false);
     }
@@ -356,7 +394,7 @@ export function APISettingsPanel() {
     } catch (error) {
       console.error('Failed to start WebSocket server:', error);
       setWsStatus('stopped');
-      setWsError(error.toString());
+      setWsError(String(error));
     } finally {
       setWsIsLoading(false);
     }
@@ -370,7 +408,7 @@ export function APISettingsPanel() {
       setWsStatus('stopped');
     } catch (error) {
       console.error('Failed to stop WebSocket server:', error);
-      setWsError(error.toString());
+      setWsError(String(error));
     } finally {
       setWsIsLoading(false);
     }
@@ -402,7 +440,7 @@ export function APISettingsPanel() {
   // Helper functions for targeting options
   const getPlatformOptions = () => {
     // Get unique platforms from clients with their favicons
-    const platformData = {};
+    const platformData: Record<string, { platform: string, favicon?: string }> = {};
     
     clients.forEach(c => {
       if (c.platform) {
@@ -451,20 +489,20 @@ export function APISettingsPanel() {
   };
 
   return (
-    <Stack spacing="lg">
+    <Stack>
       <Card className="w-full" shadow="sm" padding="lg">
         <Stack>
           <Group justify="space-between">
             <Group>
               <Settings size={24} />
-              <Text size="xl" weight={500}>HTTP API Server</Text>
+              <Text size="xl">HTTP API Server</Text>
             </Group>
             <Badge color={httpStatus === 'running' ? 'green' : 'red'} variant="filled">
               {httpStatus}
             </Badge>
           </Group>
 
-          <Stack spacing="xs">
+          <Stack>
             <TextInput
               label="Port"
               placeholder="Enter port number"
@@ -473,12 +511,12 @@ export function APISettingsPanel() {
               disabled={httpIsLoading}
             />
 
-            <Text size="sm" color="gray">
+            <Text size="sm" c="dimmed">
               Server URL: http://localhost:{httpPort}
             </Text>
 
             {httpError && (
-              <Text size="sm" color="red">
+              <Text size="sm" c="red">
                 {httpError}
               </Text>
             )}
@@ -520,9 +558,9 @@ export function APISettingsPanel() {
           <Group justify="space-between">
             <Group>
               <Radio size={24} />
-              <Text size="xl" weight={500}>WebSocket Server</Text>
+              <Text size="xl">WebSocket Server</Text>
             </Group>
-            <Group spacing={8}>
+            <Group>
               {chromeConnected && (
                 <Badge color="green" variant="filled">
                   Extension Connected
@@ -534,7 +572,7 @@ export function APISettingsPanel() {
             </Group>
           </Group>
 
-          <Stack spacing="xs">
+          <Stack>
             <TextInput
               label="Port"
               placeholder="Enter port number"
@@ -543,16 +581,16 @@ export function APISettingsPanel() {
               disabled={wsIsLoading}
             />
 
-            <Text size="sm" color="gray">
+            <Text size="sm" c="dimmed">
               Server URL: ws://localhost:{wsPort}
             </Text>
 
-            <Text size="xs" color="dimmed">
+            <Text size="xs" c="dimmed">
               This WebSocket server enables real-time communication with Chrome extensions.
             </Text>
 
             {wsError && (
-              <Text size="sm" color="red">
+              <Text size="sm" c="red">
                 {wsError}
               </Text>
             )}
@@ -587,7 +625,7 @@ export function APISettingsPanel() {
             </Button>
           </Group>
           {chromeConnected && (
-            <Text size="xs" color="dimmed">
+            <Text size="xs" c="dimmed">
               Chrome extension connected from: {connectedClient}
             </Text>
           )}          
@@ -619,7 +657,7 @@ export function APISettingsPanel() {
       {wsStatus === 'running' && (
         <Card className="w-full" shadow="sm" padding="lg">
           <Stack>
-            <Text size="lg" weight={500}>Targeted Message</Text>
+            <Text size="lg">Targeted Message</Text>
             
             <TextInput
               label="Test Prompt"
@@ -632,7 +670,11 @@ export function APISettingsPanel() {
               <Select
                 label="Target Type"
                 value={targetType}
-                onChange={(value) => setTargetType(value as 'broadcast' | 'platform' | 'client')}
+                onChange={(value) => {
+                  if (value) {
+                    setTargetType(value as 'broadcast' | 'platform' | 'client');
+                  }
+                }}
                 data={[
                   { value: 'broadcast', label: 'Broadcast to All' },
                   { value: 'platform', label: 'Specific Platform' },
@@ -649,16 +691,16 @@ export function APISettingsPanel() {
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
-                    <Group spacing={4} nowrap='true'>
+                    <Group spacing={4} noWrap>
                       <SafeFavicon url={option.favicon} size={12} />
-                      <span>{option.label}</span>
+                      <Text>{option.label}</Text>
                     </Group>
                   )}
                 />
               )}
               
               {targetType === 'client' && (
-                <Group position="apart" mt="md">
+                <Group justify="space-between" mt="md">
                   <Select
                     label="Select Client"
                     value={targetId}
@@ -668,9 +710,8 @@ export function APISettingsPanel() {
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
-                      <Group nowrap='true' spacing="xs">
+                      <Group spacing={4} noWrap>
                         <SafeFavicon url={option.favicon} size={12} />
-                        
                         {option.active && (
                           <div 
                             style={{ 
@@ -681,7 +722,6 @@ export function APISettingsPanel() {
                             }} 
                           />
                         )}
-                        
                         <Text>{option.label}</Text>
                       </Group>
                     )}
@@ -712,11 +752,11 @@ export function APISettingsPanel() {
         <Card className="w-full" shadow="sm" padding="lg">
           <Stack>
             <Group justify="space-between">
-              <Text size="lg" weight={500}>New AI Chat</Text>
+              <Text size="lg">New AI Chat</Text>
               <Badge color="violet" variant="filled">ChatGPT & Claude</Badge>
             </Group>
             
-            <Text size="xs" color="dimmed">
+            <Text size="xs" c="dimmed">
               Creates a new conversation by triggering the New Chat functionality in ChatGPT or Claude.
             </Text>
             
@@ -725,9 +765,11 @@ export function APISettingsPanel() {
                 label="Target Type"
                 value={targetType}
                 onChange={(value) => {
-                  setTargetType(value as 'broadcast' | 'platform' | 'client');
-                  // Reset result when changing targeting
-                  setNewChatStatus({ loading: false, result: null });
+                  if (value) {
+                    setTargetType(value as 'broadcast' | 'platform' | 'client');
+                    // Reset result when changing targeting
+                    setNewChatStatus({ loading: false, result: null });
+                  }
                 }}
                 data={[
                   { value: 'broadcast', label: 'Broadcast to All' },
@@ -745,16 +787,16 @@ export function APISettingsPanel() {
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
-                    <Group spacing={4} nowrap='true'>
+                    <Group spacing={4} noWrap>
                       <SafeFavicon url={option.favicon} size={12} />
-                      <span>{option.label}</span>
+                      <Text>{option.label}</Text>
                     </Group>
                   )}
                 />
               )}
               
               {targetType === 'client' && (
-                <Group position="apart" mt="md">
+                <Group justify="space-between" mt="md">
                   <Select
                     label="Select Client"
                     value={targetId}
@@ -764,9 +806,8 @@ export function APISettingsPanel() {
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
-                      <Group nowrap='true' spacing="xs">
+                      <Group spacing={4} noWrap>
                         <SafeFavicon url={option.favicon} size={12} />
-                        
                         {option.active && (
                           <div 
                             style={{ 
@@ -777,7 +818,6 @@ export function APISettingsPanel() {
                             }} 
                           />
                         )}
-                        
                         <Text>{option.label}</Text>
                       </Group>
                     )}
@@ -792,7 +832,7 @@ export function APISettingsPanel() {
             {/* Enhanced result display section */}
             {newChatStatus.result && (
               <Card withBorder p="xs" radius="md" bg={newChatStatus.result.success ? 'rgba(0, 200, 0, 0.05)' : 'rgba(255, 0, 0, 0.05)'}>
-                <Stack spacing="xs">
+                <Stack>
                   <Group justify="space-between">
                     <Group>
                       <Badge 
@@ -811,11 +851,11 @@ export function APISettingsPanel() {
                       )}
                     </Group>
                     {newChatStatus.result.tabId && (
-                      <Text size="xs" color="dimmed">Tab ID: {newChatStatus.result.tabId}</Text>
+                      <Text size="xs" c="dimmed">Tab ID: {newChatStatus.result.tabId}</Text>
                     )}
                   </Group>
                   
-                  <Text size="sm" weight={500}>
+                  <Text size="sm">
                     {newChatStatus.result.message}
                   </Text>
                   
@@ -824,12 +864,12 @@ export function APISettingsPanel() {
                     <>
                       {/* ChatGPT specific details */}
                       {newChatStatus.result.initialArticleCount !== undefined && (
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           Article count: {newChatStatus.result.initialArticleCount} → {newChatStatus.result.finalArticleCount || 0}
                         </Text>
                       )}
                       {newChatStatus.result.attempts && (
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           Attempts: {newChatStatus.result.attempts}
                         </Text>
                       )}
@@ -840,12 +880,12 @@ export function APISettingsPanel() {
                     <>
                       {/* Claude specific details */}
                       {newChatStatus.result.initialMessageCount !== undefined && (
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           Message count: {newChatStatus.result.initialMessageCount} → {newChatStatus.result.finalMessageCount || 0}
                         </Text>
                       )}
                       {newChatStatus.result.method && (
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           Method: {newChatStatus.result.method.replace(/-/g, ' ')}
                         </Text>
                       )}
@@ -853,7 +893,7 @@ export function APISettingsPanel() {
                   )}
                   
                   {/* Timestamp */}
-                  <Text size="xs" color="dimmed" align="right">
+                  <Text size="xs" c="dimmed" ta="right">
                     {new Date().toLocaleTimeString()}
                   </Text>
                 </Stack>
@@ -880,13 +920,13 @@ export function APISettingsPanel() {
                     loading: false, 
                     result: { 
                       success: false, 
-                      message: `Failed to send command: ${error}` 
+                      message: `Failed to send command: ${String(error)}` 
                     } 
                   });
                   
                   notifications.show({
                     title: 'Error',
-                    message: `Failed to send new chat command: ${error}`,
+                    message: `Failed to send new chat command: ${String(error)}`,
                     color: 'red'
                   });
                 });

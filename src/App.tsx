@@ -27,7 +27,6 @@ import { ContextBuilderPanel } from './components/ContextBuilder';
 function App() {
   const [isDark, setIsDark] = React.useState(false);
   const [promptsBackend, setPromptsBackend] = React.useState<'mysql' | 'sqlite'>('sqlite');
-  const theme = useMantineTheme();
 
   const isDevMode = import.meta.env.DEV === true;
 

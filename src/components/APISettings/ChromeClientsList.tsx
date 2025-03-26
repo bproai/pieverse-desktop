@@ -78,7 +78,7 @@ export function ChromeClientsList() {
         
         <Stack spacing="xs">
           {clients.length === 0 ? (
-            <Text color="dimmed" size="sm" style={{ fontStyle: 'italic' }}>No connected clients</Text>
+            <Text c="dimmed" size="sm" style={{ fontStyle: 'italic' }}>No connected clients</Text>
           ) : (
             clients.map(client => (
               <Card key={client.id} withBorder p="sm">
@@ -99,7 +99,7 @@ export function ChromeClientsList() {
                         <SafeFavicon url={client.favicon} size={16} />
                         
                         <Tooltip label={client.tab_url} position="top">
-                          <Text size="xs" color="dimmed" style={{ 
+                          <Text size="xs" c="dimmed" style={{ 
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
@@ -129,7 +129,7 @@ export function ChromeClientsList() {
                       <Badge size="xs" variant="outline">
                         {client.platform || 'Unknown'}
                       </Badge>
-                      <Text size="xs" color="dimmed">{client.addr}</Text>
+                      <Text size="xs" c="dimmed">{client.addr}</Text>
                     </Group>
                   </Stack>
                   

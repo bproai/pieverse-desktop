@@ -369,7 +369,7 @@ const FileOperations: React.FC = () => {
   const renderDirectoryContents = () => {
     if (!directoryContents.length) {
       return (
-        <Text color="dimmed" align="center" mt="md">
+        <Text c="dimmed" align="center" mt="md">
           No files or directories found
         </Text>
       );

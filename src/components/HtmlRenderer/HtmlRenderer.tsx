@@ -259,7 +259,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   const renderContent = () => {
     try {
       if (!htmlInput || !htmlInput.trim()) {
-        return <Text color="dimmed">No content to display</Text>;
+        return <Text c="dimmed">No content to display</Text>;
       }
       
       if (showSource) {
