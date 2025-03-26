@@ -177,22 +177,6 @@ export function APISettingsPanel() {
     };
   }, []);
 
-  const SelectItem = forwardRef<HTMLDivElement, SelectItemProps>(
-    ({ label, description, active, platform, ...others }, ref) => (
-      <div ref={ref} {...others}>
-        <div>
-          <span>{label}</span>
-          {active && <span style={{ marginLeft: 5, color: 'green' }}>●</span>}
-        </div>
-        {(platform || description) && (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            {platform && <span style={{ marginRight: 5 }}>{platform}</span>}
-            {description && <span>{description}</span>}
-          </div>
-        )}
-      </div>
-    )
-  );
   
   const PlatformSelectItem = forwardRef<HTMLDivElement, PlatformSelectItemProps>(
     ({ label, favicon, ...others }, ref) => (
@@ -691,16 +675,16 @@ export function APISettingsPanel() {
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
-                    <Group spacing={4} noWrap>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <SafeFavicon url={option.favicon} size={12} />
                       <Text>{option.label}</Text>
-                    </Group>
+                    </div>
                   )}
                 />
               )}
               
               {targetType === 'client' && (
-                <Group justify="space-between" mt="md">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                   <Select
                     label="Select Client"
                     value={targetId}
@@ -710,7 +694,7 @@ export function APISettingsPanel() {
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
-                      <Group spacing={4} noWrap>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <SafeFavicon url={option.favicon} size={12} />
                         {option.active && (
                           <div 
@@ -718,18 +702,19 @@ export function APISettingsPanel() {
                               width: 8, 
                               height: 8, 
                               borderRadius: '50%', 
-                              backgroundColor: '#2ECC40'
+                              backgroundColor: '#2ECC40',
+                              marginRight: '4px'
                             }} 
                           />
                         )}
                         <Text>{option.label}</Text>
-                      </Group>
+                      </div>
                     )}
                   />
-                  <ActionIcon onClick={refreshClients} mt={30}>
+                  <ActionIcon onClick={refreshClients} style={{ marginTop: '30px' }}>
                     <RefreshCw size={16} />
                   </ActionIcon>
-                </Group>
+                </div>
               )}
             </Group>
             
@@ -787,16 +772,16 @@ export function APISettingsPanel() {
                   placeholder="Select platform"
                   disabled={getPlatformOptions().length === 0}
                   renderOption={({ option }) => (
-                    <Group spacing={4} noWrap>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <SafeFavicon url={option.favicon} size={12} />
                       <Text>{option.label}</Text>
-                    </Group>
+                    </div>
                   )}
                 />
               )}
               
               {targetType === 'client' && (
-                <Group justify="space-between" mt="md">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                   <Select
                     label="Select Client"
                     value={targetId}
@@ -806,7 +791,7 @@ export function APISettingsPanel() {
                     disabled={clients.length === 0}
                     style={{ flexGrow: 1 }}
                     renderOption={({ option }) => (
-                      <Group spacing={4} noWrap>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <SafeFavicon url={option.favicon} size={12} />
                         {option.active && (
                           <div 
@@ -814,18 +799,19 @@ export function APISettingsPanel() {
                               width: 8, 
                               height: 8, 
                               borderRadius: '50%', 
-                              backgroundColor: '#2ECC40'
+                              backgroundColor: '#2ECC40',
+                              marginRight: '4px'
                             }} 
                           />
                         )}
                         <Text>{option.label}</Text>
-                      </Group>
+                      </div>
                     )}
                   />
-                  <ActionIcon onClick={refreshClients} mt={30}>
+                  <ActionIcon onClick={refreshClients} style={{ marginTop: '30px' }}>
                     <RefreshCw size={16} />
                   </ActionIcon>
-                </Group>
+                </div>
               )}
             </Group>
             
