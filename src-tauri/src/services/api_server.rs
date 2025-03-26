@@ -240,9 +240,9 @@ impl ApiServer {
         // Log inbound data in development mode
         #[cfg(debug_assertions)]
         println!("Dev Log: Inbound QA upload received: {:?}", data);
-
+    
         let sqlite_guard = sqlite.lock().await;
-
+    
         // Create QA tables if they don't exist
         let create_questions = "CREATE TABLE IF NOT EXISTS qa_questions (
                     id TEXT PRIMARY KEY,
@@ -268,12 +268,12 @@ impl ApiServer {
         sqlite_guard
             .execute_query(create_answers)
             .map_err(|e| ApiError(e.to_string()))?;
-
+    
         // Process each question
         for question in &data.questions {
             #[cfg(debug_assertions)]
             println!("Dev Log: Processing question: {:?}", question);
-
+    
             sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_questions (id, platform, question, timestamp, answered)
                 VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -286,23 +286,23 @@ impl ApiServer {
                 ],
             ).map_err(|e| ApiError(e.to_string()))?;
         }
-
+    
         // Process each answer
         for answer in &data.answers {
             #[cfg(debug_assertions)]
             println!("Dev Log: Processing answer: {:?}", answer);
-
+    
             let answer_id = answer
                 .id
                 .clone()
                 .unwrap_or_else(|| format!("a_{}", chrono::Utc::now().timestamp_millis()));
-
+    
             #[cfg(debug_assertions)]
             println!(
                 "Dev Log: Executing parameterized query for answer_id: {}",
                 answer_id
             );
-
+    
             // Execute the parameterized query
             match sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_answers 
@@ -330,14 +330,14 @@ impl ApiServer {
                     return Err(ApiError(e.to_string()));
                 }
             }
-
+    
             // More debug info for update
             #[cfg(debug_assertions)]
             println!(
                 "Dev Log: Updating question answered status for question_id: {}",
                 answer.question_id
             );
-
+    
             // Update the question's answered status
             match sqlite_guard.execute_parameterized(
                 "UPDATE qa_questions SET answered = 1 WHERE id = ?",
@@ -354,30 +354,29 @@ impl ApiServer {
                 }
             }
         }
-
+    
         #[cfg(debug_assertions)]
         println!(
             "Dev Log: Finished processing QA data. Stored {} questions and {} answers",
             data.questions.len(),
             data.answers.len()
         );
-
+    
         // Clean up older unanswered questions
         sqlite_guard
             .execute_parameterized(
                 "DELETE FROM qa_questions 
-            WHERE answered = 0
-            AND timestamp < (
-                SELECT MAX(timestamp) FROM qa_questions
-            )",
+                WHERE answered = 0
+                AND timestamp < (
+                    SELECT MAX(timestamp) FROM qa_questions
+                )",
                 params![],
             )
             .map_err(|e| ApiError(e.to_string()))?;
-
+    
         #[cfg(debug_assertions)]
         println!("Dev Log: Older unanswered questions cleaned up");
-
-        // After storing all the answers, add this clean-up code:
+    
         // Clean up duplicate answers keeping only the most recent for each question_id
         sqlite_guard.execute_parameterized(
             "DELETE FROM qa_answers 
@@ -391,10 +390,54 @@ impl ApiServer {
             )",
             params![],
         ).map_err(|e| ApiError(e.to_string()))?;
-
+    
         #[cfg(debug_assertions)]
         println!("Dev Log: Duplicate answers cleaned up - keeping only the latest per question");
-
+    
+        // NEW CODE: Clean up duplicate qa_questions records
+        #[cfg(debug_assertions)]
+        println!("Dev Log: Starting qa_questions deduplication...");
+    
+        // Optional: Create a backup (commented out to keep changes minimal)
+        /*
+        sqlite_guard.execute_query("DROP TABLE IF EXISTS qa_questions_backup")
+            .map_err(|e| ApiError(e.to_string()))?;
+        sqlite_guard.execute_query("CREATE TABLE qa_questions_backup AS SELECT * FROM qa_questions")
+            .map_err(|e| ApiError(e.to_string()))?;
+        */
+    
+        // Delete duplicates using ROW_NUMBER() window function
+        let dedup_query = r#"
+        DELETE FROM qa_questions 
+        WHERE id IN (
+          WITH ordered_questions AS (
+            SELECT 
+              id,
+              platform, 
+              question,
+              answered,
+              timestamp,
+              ROW_NUMBER() OVER (
+                PARTITION BY platform, question 
+                ORDER BY 
+                  answered DESC, -- Keep answered=1 records first
+                  timestamp DESC  -- For same answered status, keep newest
+              ) as row_num
+            FROM qa_questions
+          )
+          SELECT id FROM ordered_questions
+          WHERE row_num > 1
+        )
+        "#;
+        
+        sqlite_guard.execute_query(dedup_query)
+            .map_err(|e| ApiError(e.to_string()))?;
+    
+        #[cfg(debug_assertions)]
+        println!("Dev Log: qa_questions deduplication completed");
+    
+        // Already have orphaned answer cleanup code in original function
+    
         Ok(Json(serde_json::json!({
             "status": "success",
             "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
