@@ -1,6 +1,6 @@
 // src/App.tsx
 import React from 'react';
-import { Tabs, ActionIcon, useMantineTheme, MantineProvider } from '@mantine/core';
+import { Tabs, ActionIcon, MantineProvider } from '@mantine/core';
 import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
