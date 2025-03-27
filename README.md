@@ -176,6 +176,23 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
   - **Context-aware help:** Get targeted coding assistance based on your active files
 - Custom terminal implementation provides a full shell experience while maintaining output capture capability
 
+### 🧠 AI/Human Collaborative Learning
+
+PieVerse Desktop embraces a philosophy of collaborative learning between humans and AI. As we venture together into uncharted territories of AI development and "vibe coding," our platform is designed to make the most of these valuable learning moments:
+
+- **Active Learning Framework:** Rather than positioning the Digital Twin as merely a solution provider, PieVerse fosters an environment where both human and AI engage in mutual inquiry, exploration, and growth.
+
+- **Question-Driven Development:** We've designed interaction models that encourage users to ask questions frequently, challenging assumptions and exploring possibilities together with their Digital Twin.
+
+- **Learnable Moments Capture:** The system identifies and archives key insights discovered during human-AI collaboration, creating a personalized knowledge repository that grows with each interaction.
+
+- **Disambiguation Workflows:** When encountering unfamiliar concepts or terminology (like "vibe coding"), the Digital Twin guides users through collaborative clarification processes instead of making assumptions.
+
+- **Documented Growth Patterns:** Users can visualize their learning journey alongside their Digital Twin, seeing how both entities evolve through their collaborative relationship.
+
+This approach transforms PieVerse from a static tool into a dynamic learning partner, where the boundaries between teaching and learning blur as both human and AI contribute their unique perspectives.
+
+
 ## Chrome Extension Debugging Setup
 
 To use the Chrome Extension debugging feature:
