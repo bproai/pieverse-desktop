@@ -405,39 +405,7 @@ impl ApiServer {
         sqlite_guard.execute_query("CREATE TABLE qa_questions_backup AS SELECT * FROM qa_questions")
             .map_err(|e| ApiError(e.to_string()))?;
         */
-    
-        // Delete duplicates using ROW_NUMBER() window function
-        let dedup_query = r#"
-        DELETE FROM qa_questions 
-        WHERE id IN (
-          WITH ordered_questions AS (
-            SELECT 
-              id,
-              platform, 
-              question,
-              answered,
-              timestamp,
-              ROW_NUMBER() OVER (
-                PARTITION BY platform, question 
-                ORDER BY 
-                  answered DESC, -- Keep answered=1 records first
-                  timestamp DESC  -- For same answered status, keep newest
-              ) as row_num
-            FROM qa_questions
-          )
-          SELECT id FROM ordered_questions
-          WHERE row_num > 1
-        )
-        "#;
         
-        sqlite_guard.execute_query(dedup_query)
-            .map_err(|e| ApiError(e.to_string()))?;
-    
-        #[cfg(debug_assertions)]
-        println!("Dev Log: qa_questions deduplication completed");
-    
-        // Already have orphaned answer cleanup code in original function
-    
         Ok(Json(serde_json::json!({
             "status": "success",
             "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
