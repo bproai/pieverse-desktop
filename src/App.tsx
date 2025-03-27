@@ -76,7 +76,7 @@ function App() {
                   Prompt Builder
                 </Tabs.Tab>
                 <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
-                  Prompt Builder Connect
+                  Connect Settings
                 </Tabs.Tab>
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB

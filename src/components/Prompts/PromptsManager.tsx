@@ -523,6 +523,47 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
     }
   };
 
+  const startNewChat = async () => {
+    if (!selectedClientId) {
+      setClientErrorMessage('Please select a client first');
+      return;
+    }
+    
+    if (wsStatus !== 'running') {
+      setClientErrorMessage('WebSocket server is not running. Please go to API Settings tab and start the server.');
+      return;
+    }
+    
+    setSendingToClient(true);
+    setClientErrorMessage(null);
+    
+    try {
+      // Send the newChat message to the selected client
+      await wsService.sendTargetedMessage(
+        { type: 'newChat' },
+        'client', 
+        selectedClientId
+      );
+      
+      notifications.show({
+        title: 'Success',
+        message: `New conversation started successfully`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error starting new chat:', error);
+      setClientErrorMessage(`Failed to start new chat: ${String(error)}`);
+      
+      notifications.show({
+        title: 'Error',
+        message: `Failed to start new conversation. Please check if the client is still connected.`,
+        color: 'red'
+      });
+    } finally {
+      setSendingToClient(false);
+    }
+  };
+
   const handleDelete = async (prompt: Prompt) => {
     try {
       setLoading(true);
@@ -722,6 +763,19 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
               >
                 <RefreshCw size={16} />
               </ActionIcon>
+
+              <Tooltip label="Start new conversation in selected client" withArrow>
+                <ActionIcon
+                  onClick={startNewChat}
+                  disabled={!selectedClientId || wsStatus !== 'running'}
+                  color="teal"
+                  variant="subtle"
+                  title=""
+                >
+                  <Plus size={16} />
+                </ActionIcon>
+            </Tooltip>
+
             </Group>
           </Group>
         </Group>
