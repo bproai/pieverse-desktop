@@ -16,7 +16,9 @@ import {
   Alert,
   Select,
   Badge,
-  ThemeIcon
+  ThemeIcon,
+  Tooltip,
+  ActionIcon
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
@@ -33,14 +35,20 @@ import {
   Upload,
   ArrowLeftRight,
   Download,
-  Settings
+  Settings,
+  Send,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
+import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { MySQLService } from '../MySQL/MySQLService';
 import promptService from '../../services/MySQLPromptService';
 import SQLitePromptService from '../../services/SQLitePromptService';
 import type { Prompt } from '../../services/MySQLPromptService';
 import CategoryManager from './CategoryManager';
 import { useCategories } from './categoryHooks';
+import { listen } from '@tauri-apps/api/event';
+import { ClientSelectItem } from '../APISettings/ClientSelectItem';
 
 interface PromptsManagerProps {
   backend: 'mysql' | 'sqlite';
@@ -60,6 +68,13 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
   const [lastHoveredPromptId, setLastHoveredPromptId] = useState<number | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   
+  // Client targeting state
+  const [clients, setClients] = useState<ClientInfo[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [sendingToClient, setSendingToClient] = useState(false);
+  const [wsStatus, setWsStatus] = useState('stopped');
+  const [clientErrorMessage, setClientErrorMessage] = useState<string | null>(null);
+  
   const [deleteConfirmation, setDeleteConfirmation] = useState<{prompt: Prompt, opened: boolean}>({
     prompt: null as any,
     opened: false
@@ -78,6 +93,9 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
 
   // Get the active service based on backend selection
   const activeService = backend === 'sqlite' ? SQLitePromptService : promptService;
+  
+  // Get WebSocket service instance
+  const wsService = WebSocketService.getInstance();
 
   useEffect(() => {
     if (backend === 'sqlite') {
@@ -104,6 +122,63 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       return () => removeListener();
     }
   }, [backend]);
+  
+  // Check WebSocket status and load clients
+  useEffect(() => {
+    // Check the status of the WebSocket server
+    setWsStatus(wsService.getStatus());
+    
+    // Load clients if the WebSocket server is running
+    if (wsService.getStatus() === 'running') {
+      loadClients();
+    }
+    
+    // Set up a periodic check for WebSocket status and clients
+    const intervalId = setInterval(() => {
+      const status = wsService.getStatus();
+      setWsStatus(status);
+      
+      if (status === 'running') {
+        loadClients();
+      } else {
+        setClients([]);
+        setSelectedClientId(null);
+      }
+    }, 5000);
+  
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+  
+  // Listen for client updates
+  useEffect(() => {
+    // Listen for client updates
+    const setupClientListener = async () => {
+      const unlisten = await listen('chrome-extension-clients-updated', (event) => {
+        const clientsList = event.payload as ClientInfo[];
+        setClients(clientsList);
+        
+        // Check if the currently selected client is still available
+        if (selectedClientId) {
+          const clientStillExists = clientsList.some(client => client.id === selectedClientId);
+          if (!clientStillExists) {
+            // Reset selection if the client is no longer available
+            setSelectedClientId(null);
+            setClientErrorMessage('The selected client has disconnected. Please select another client.');
+          }
+        }
+      });
+      
+      return unlisten;
+    };
+    
+    const unlistenPromise = setupClientListener();
+    
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, [selectedClientId]);
 
   const initialize = async () => {
     try {
@@ -116,6 +191,20 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       setError('Failed to initialize SQLite database. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const loadClients = async () => {
+    try {
+      const clientsList = await wsService.getConnectedClients();
+      // Filter out any clients with "Chrome Extension" in the title
+      const filteredClients = clientsList.filter(client => 
+        !client.tab_title?.includes('Chrome Extension')
+      );
+      setClients(filteredClients);
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+      setClientErrorMessage('Failed to load clients. Please check WebSocket server status.');
     }
   };
 
@@ -386,6 +475,53 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
       setLoading(false);
     }
   };
+  
+  // Function to send a prompt to the selected client
+  const sendPromptToClient = async (prompt: Prompt) => {
+    if (!selectedClientId) {
+      setClientErrorMessage('Please select a client first');
+      return;
+    }
+    
+    if (wsStatus !== 'running') {
+      setClientErrorMessage('WebSocket server is not running. Please go to API Settings tab and start the server.');
+      return;
+    }
+    
+    setClientErrorMessage(null);
+    setSendingToClient(true);
+    
+    try {
+      const message = {
+        type: 'insertPrompt',
+        prompt: prompt.description,
+        autoSubmit: true // Automatically submit the prompt
+      };
+      
+      await wsService.sendTargetedMessage(
+        message,
+        'client', 
+        selectedClientId
+      );
+      
+      notifications.show({
+        title: 'Success',
+        message: `Prompt sent to client successfully`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error sending prompt to client:', error);
+      setClientErrorMessage(`Failed to send prompt: ${String(error)}`);
+      
+      notifications.show({
+        title: 'Error',
+        message: `Failed to send prompt to client. Please check if the client is still connected.`,
+        color: 'red'
+      });
+    } finally {
+      setSendingToClient(false);
+    }
+  };
 
   const handleDelete = async (prompt: Prompt) => {
     try {
@@ -408,6 +544,34 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
     };
     setEditingPrompt(convertedPrompt);
     setIsModalOpen(true);
+  };
+
+  const getClientOptions = () => {
+    return clients
+      .filter(client => client.platform && ['chatgpt', 'claude'].includes(client.platform.toLowerCase()))
+      .map(c => {
+        // Format text for the label
+        let title = c.tab_title || `${c.platform || 'Unknown'}`;
+        // Truncate title if it's too long
+        if (title.length > 25) {
+          title = title.substring(0, 22) + '...';
+        }
+        
+        const hostname = c.tab_url ? new URL(c.tab_url).hostname : '';
+        // Compact format: just show the hostname without protocol
+        const url = hostname ? ` (${hostname})` : '';
+        const active = Date.now() - c.last_active * 1000 < 30000; // Last active within 30 seconds
+        
+        return {
+          value: c.id,
+          label: `${title}${url}`,
+          description: c.platform,
+          active: active,
+          platform: c.platform,
+          url: c.tab_url,
+          favicon: c.favicon
+        };
+      });
   };
 
   if (error && backend === 'mysql') {
@@ -481,56 +645,103 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             </button>
           </div>
         </Group>
-        <Group>
-          <Button
-            variant="outline"
-            leftSection={<Settings size={16} />}
-            onClick={() => setIsCategoryModalOpen(true)}
-          >
-            Manage Categories
-          </Button>
-          <Button
-            variant="outline"
-            leftSection={<ArrowLeftRight size={16} />}
-            onClick={handleTransferPrompts}
-          >
-            Transfer to {backend === 'sqlite' ? 'MySQL' : 'SQLite'}
-          </Button>
-          <Button
-            variant="outline"
-            leftSection={<Upload size={16} />}
-            onClick={() => setIsBulkImportOpen(true)}
-          >
-            Bulk Import
-          </Button>
-          <Button
-            variant="outline"
-            leftSection={<Download size={16} />}
-            onClick={handleExportPrompts}
-            disabled={prompts.length === 0}
-          >
-            Export JSON
-          </Button>
-          <Button
-            leftSection={<Plus size={16} />}
-            onClick={() => {
-              setEditingPrompt({
-                id: 0,
-                title: '',
-                description: '',
-                category: categories[0] || '',
-                display_order: 0,
-                is_active: true,
-                created_at: '',
-                updated_at: ''
-              });
-              setIsModalOpen(true);
-            }}
-          >
-            Add Prompt
-          </Button>
+        <Group align="flex-end">
+          <Group>
+            <Button
+              variant="outline"
+              leftSection={<Settings size={16} />}
+              onClick={() => setIsCategoryModalOpen(true)}
+            >
+              Manage Categories
+            </Button>
+            <Button
+              variant="outline"
+              leftSection={<ArrowLeftRight size={16} />}
+              onClick={handleTransferPrompts}
+            >
+              Transfer to {backend === 'sqlite' ? 'MySQL' : 'SQLite'}
+            </Button>
+            <Button
+              variant="outline"
+              leftSection={<Upload size={16} />}
+              onClick={() => setIsBulkImportOpen(true)}
+            >
+              Bulk Import
+            </Button>
+            <Button
+              variant="outline"
+              leftSection={<Download size={16} />}
+              onClick={handleExportPrompts}
+              disabled={prompts.length === 0}
+            >
+              Export JSON
+            </Button>
+          </Group>
+
+          <Group spacing="xs">
+            {/* Client selection dropdown */}
+            <div style={{ width: '240px' }}>
+              <Group spacing="xs" noWrap>
+                <Select
+                  placeholder="Select client..."
+                  value={selectedClientId}
+                  onChange={setSelectedClientId}
+                  data={getClientOptions()}
+                  disabled={wsStatus !== 'running' || clients.length === 0}
+                  itemComponent={ClientSelectItem}
+                  searchable
+                  clearable
+                  maxDropdownHeight={280}
+                  style={{ minWidth: '180px' }}
+                />
+                <ActionIcon 
+                  onClick={loadClients} 
+                  disabled={wsStatus !== 'running'}
+                  color={wsStatus === 'running' ? 'blue' : 'gray'}
+                  variant="subtle"
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
+                <Badge 
+                  size="sm"
+                  color={wsStatus === 'running' ? 'green' : 'red'} 
+                >
+                  {wsStatus === 'running' ? 'WS' : 'WS Off'}
+                </Badge>
+              </Group>
+            </div>
+            
+            <Button
+              leftSection={<Plus size={16} />}
+              onClick={() => {
+                setEditingPrompt({
+                  id: 0,
+                  title: '',
+                  description: '',
+                  category: categories[0] || '',
+                  display_order: 0,
+                  is_active: true,
+                  created_at: '',
+                  updated_at: ''
+                });
+                setIsModalOpen(true);
+              }}
+            >
+              Add Prompt
+            </Button>
+          </Group>
         </Group>
       </Group>
+      
+      {/* Show error message if there's a client error */}
+      {clientErrorMessage && (
+        <Alert color="yellow" className="mb-4" icon={<AlertTriangle size={16} />} withCloseButton onClose={() => setClientErrorMessage(null)}>
+          <Text size="sm">{clientErrorMessage}</Text>
+          {wsStatus !== 'running' && (
+            <Text size="sm" mt="xs">Please go to the API Settings tab and start the WebSocket server to send prompts to clients.</Text>
+          )}
+        </Alert>
+      )}
 
       {/* Display categories and prompts */}
       {categories.map(category => (
@@ -576,6 +787,21 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                     </div>
                   </Group>
                   <Group spacing="xs" style={{ flexShrink: 0 }}>
+                    <Tooltip label="Send to selected client">
+                      <Button
+                        variant="subtle"
+                        color="teal"
+                        size="sm"
+                        disabled={!selectedClientId || wsStatus !== 'running' || !prompt.is_active}
+                        loading={sendingToClient}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendPromptToClient(prompt);
+                        }}
+                      >
+                        <Send size={16} />
+                      </Button>
+                    </Tooltip>
                     <Button
                       variant="subtle"
                       size="sm"
@@ -635,7 +861,6 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             <Textarea
               label="Prompt"
               required
-              autoCorrect="off"
               autoComplete="off"
               value={editingPrompt?.description || ''}
               onChange={(e) => setEditingPrompt(prev => 
