@@ -678,39 +678,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             </Button>
           </Group>
 
-          <Group spacing="xs">
-            {/* Client selection dropdown */}
-            <div style={{ width: '240px' }}>
-              <Group spacing="xs" noWrap>
-                <Select
-                  placeholder="Select client..."
-                  value={selectedClientId}
-                  onChange={setSelectedClientId}
-                  data={getClientOptions()}
-                  disabled={wsStatus !== 'running' || clients.length === 0}
-                  itemComponent={ClientSelectItem}
-                  searchable
-                  clearable
-                  maxDropdownHeight={280}
-                  style={{ minWidth: '180px' }}
-                />
-                <ActionIcon 
-                  onClick={loadClients} 
-                  disabled={wsStatus !== 'running'}
-                  color={wsStatus === 'running' ? 'blue' : 'gray'}
-                  variant="subtle"
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-                <Badge 
-                  size="sm"
-                  color={wsStatus === 'running' ? 'green' : 'red'} 
-                >
-                  {wsStatus === 'running' ? 'WS' : 'WS Off'}
-                </Badge>
-              </Group>
-            </div>
-            
+          <Group spacing="md">
             <Button
               leftSection={<Plus size={16} />}
               onClick={() => {
@@ -729,6 +697,32 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             >
               Add Prompt
             </Button>
+            
+            {/* Client selection dropdown */}
+            <Group spacing="xs" noWrap>
+              <Tooltip label="Click to select an AI client" withArrow>
+                <Select
+                  placeholder="Select AI client..."
+                  value={selectedClientId}
+                  onChange={setSelectedClientId}
+                  data={getClientOptions()}
+                  disabled={wsStatus !== 'running' || clients.length === 0}
+                  itemComponent={ClientSelectItem}
+                  searchable
+                  clearable
+                  maxDropdownHeight={280}
+                  style={{ width: '200px' }}
+                />
+              </Tooltip>  
+              <ActionIcon 
+                onClick={loadClients} 
+                disabled={wsStatus !== 'running'}
+                color={wsStatus === 'running' ? 'blue' : 'red'}
+                variant="subtle"
+              >
+                <RefreshCw size={16} />
+              </ActionIcon>
+            </Group>
           </Group>
         </Group>
       </Group>
