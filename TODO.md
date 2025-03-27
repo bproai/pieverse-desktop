@@ -180,6 +180,19 @@ This initiative will not only improve PieVerse development efficiency but can al
 - [ ] **Design Twin-User Communication Dashboard:**  
   Create interfaces to facilitate deep, reflective interactions between users and their digital twin.
 
+### Multimodal Conversation Persistence
+- [ ] **Develop HTML Capture & Processing:**
+  - [ ] Enhance Chrome extension to capture full conversation HTML
+  - [ ] Build HTML parser to extract images and conversation structure
+  - [ ] Implement image downloading and storage system
+- [ ] **Create Conversation Archive UI:**
+  - [ ] Design conversation browser with image thumbnails
+  - [ ] Build conversation viewer with proper message threading
+  - [ ] Implement export functionality (PDF, Markdown)
+- [ ] **Add Session Continuity:**
+  - [ ] Develop mechanisms to resume conversations with proper context
+  - [ ] Create image re-upload functionality for continuing sessions
+
 ---
 
 ## Testing & Documentation

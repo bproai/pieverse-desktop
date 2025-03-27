@@ -84,6 +84,15 @@ Beyond a digital assistant, the Complete Digital Twin serves as:
   - **Platform detection:** Automatically identifies whether you're using ChatGPT or Claude
 - Seamlessly works with the Chrome Extension Debugging feature for monitoring and troubleshooting
 
+### 🖼️ Multimodal Conversation Persistence
+- Automatically save and organize multimodal conversations from AI platforms
+- Features include:
+  - **Image persistence:** Captures and stores both uploaded and AI-generated images before they expire
+  - **Conversation reconstruction:** Reload past conversations with all images intact
+  - **Seamless integration:** Works with the Chrome extension to capture full HTML content
+  - **Export options:** Share conversations as PDF or Markdown with embedded images
+  - **Session continuity:** Resume conversations where you left off, even after browser restarts
+
 ### 📊 Trend Analysis & Signal Detection
 - Real-time financial data visualization with Google Trends integration.
 - Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
