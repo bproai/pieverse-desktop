@@ -393,19 +393,7 @@ impl ApiServer {
     
         #[cfg(debug_assertions)]
         println!("Dev Log: Duplicate answers cleaned up - keeping only the latest per question");
-    
-        // NEW CODE: Clean up duplicate qa_questions records
-        #[cfg(debug_assertions)]
-        println!("Dev Log: Starting qa_questions deduplication...");
-    
-        // Optional: Create a backup (commented out to keep changes minimal)
-        /*
-        sqlite_guard.execute_query("DROP TABLE IF EXISTS qa_questions_backup")
-            .map_err(|e| ApiError(e.to_string()))?;
-        sqlite_guard.execute_query("CREATE TABLE qa_questions_backup AS SELECT * FROM qa_questions")
-            .map_err(|e| ApiError(e.to_string()))?;
-        */
-        
+            
         Ok(Json(serde_json::json!({
             "status": "success",
             "message": format!("Stored {} questions and {} answers", data.questions.len(), data.answers.len())
