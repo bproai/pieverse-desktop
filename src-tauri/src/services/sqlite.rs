@@ -71,35 +71,37 @@ impl SqliteService {
     }
 
     fn row_to_json(row: &Row) -> Result<Value, SqliteError> {
+        let column_count = row.as_ref().column_count();
         let mut map = serde_json::Map::new();
-
-        let stmt = row.as_ref();
-        let column_count = stmt.column_count();
-
+    
         for i in 0..column_count {
-            let name = stmt
+            let name = row
+                .as_ref()
                 .column_name(i)
-                .map_err(|e| SqliteError::DatabaseError(e.to_string()))?;
-
-            let value = match name {
-                "id" => Value::Number(row.get::<_, i64>(i).unwrap().into()),
-                "title" | "description" | "category" => {
-                    let val: String = row.get(i).unwrap_or_default();
-                    Value::String(val)
+                .map_err(|e| SqliteError::DatabaseError(e.to_string()))?
+                .to_string();
+    
+            let value: rusqlite::types::Value = row.get(i).unwrap_or(rusqlite::types::Value::Null);
+    
+            let json_value = match value {
+                rusqlite::types::Value::Null => Value::Null,
+                rusqlite::types::Value::Integer(i) => Value::Number(i.into()),
+                rusqlite::types::Value::Real(f) => {
+                    serde_json::Number::from_f64(f)
+                        .map(Value::Number)
+                        .unwrap_or(Value::Null)
                 }
-                "display_order" => Value::Number(row.get::<_, i64>(i).unwrap().into()),
-                "is_active" => Value::Number(row.get::<_, i64>(i).unwrap().into()),
-                "created_at" | "updated_at" => {
-                    let val: String = row.get(i).unwrap_or_default();
-                    Value::String(val)
-                }
-                _ => Value::Null,
+                rusqlite::types::Value::Text(t) => Value::String(t),
+                rusqlite::types::Value::Blob(b) => Value::String(base64::encode(b)),
             };
-            map.insert(name.to_string(), value);
+    
+            map.insert(name, json_value);
         }
-
+    
         Ok(Value::Object(map))
     }
+    
+    
 
     pub fn execute_query(&self, query: &str) -> Result<Vec<Value>, SqliteError> {
         let conn_guard = self.connection.lock().unwrap();
