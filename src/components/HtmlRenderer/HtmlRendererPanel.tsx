@@ -26,17 +26,41 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     // Use a timeout to ensure UI isn't blocked
     setTimeout(() => {
       core.invoke('sqlite_execute_query', {
-        query: `SELECT id as answer_id, answer FROM qa_answers LIMIT 50;`
+        query: `
+          SELECT 
+            a.id as answer_id,
+            a.answer,
+            q.question,
+            q.id as question_id,
+            q.platform
+          FROM qa_answers a
+          LEFT JOIN qa_questions q ON a.question_id = q.id
+          ORDER BY q.timestamp DESC
+          LIMIT 50;
+        `
       })
       .then(result => {
         if (Array.isArray(result) && result.length > 0) {
           // Process the results to ensure IDs are strings and filter out nulls
           const processedData = result
             .filter(item => item && item.answer_id !== null && item.answer !== null)
-            .map(item => ({
-              ...item,
-              answer_id: String(item.answer_id) // Ensure ID is a string
-            }));
+            .map(item => {
+              // Truncate question and answer if too long (more than 70 chars)
+              const truncatedQuestion = item.question && item.question.length > 70 
+                ? item.question.substring(0, 70) + '...' 
+                : item.question || '';
+              
+              const truncatedAnswer = item.answer && item.answer.length > 70
+                ? item.answer.substring(0, 70) + '...'
+                : item.answer;
+              
+              return {
+                ...item,
+                answer_id: String(item.answer_id), // Ensure ID is a string
+                truncatedQuestion,
+                truncatedAnswer
+              };
+            });
           
           // Add index to answer_id to ensure uniqueness
           const uniqueData = processedData.map((item, index) => ({
@@ -106,13 +130,35 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const getSelectOptions = () => {
     if (!qaData || qaData.length === 0) return [];
     
-    // Create options with guaranteed unique string values
+    // Create options with guaranteed unique string values and display both truncated question and answer
     return qaData
       .filter(item => item && item.answer_id)
-      .map((item, index) => ({
-        value: item.answer_id,
-        label: `Answer ${index + 1}`
-      }));
+      .map((item, index) => {
+        // Try to parse the answer and extract plain_text if available
+        let displayAnswer = item.truncatedAnswer;
+        try {
+          // Check if the answer string looks like JSON
+          if (item.answer && item.answer.trim().startsWith('{') && item.answer.includes('plain_text')) {
+            const parsedAnswer = JSON.parse(item.answer);
+            if (parsedAnswer && parsedAnswer.plain_text) {
+              // Create a new truncated answer from the plain_text
+              const plainText = parsedAnswer.plain_text;
+              displayAnswer = plainText.length > 70 
+                ? plainText.substring(0, 70) + '...' 
+                : plainText;
+            }
+          }
+        } catch (e) {
+          // Not valid JSON or no plain_text property, use the original truncated answer
+        }
+        
+        return {
+          value: item.answer_id,
+          label: item.truncatedQuestion 
+            ? `Q: ${item.truncatedQuestion} - A: ${displayAnswer}`
+            : `Answer ${index + 1}: ${displayAnswer}`
+        };
+      });
   };
 
   return (
@@ -163,7 +209,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               size="sm"
               loading={isLoadingQa}
             >
-              Load QA Answers
+              Load Prompt & Answer Databasse
             </Button>
           )}
         </Group>
@@ -172,8 +218,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         {qaData.length > 0 && (
           <Group mb="md">
             <Select
-              label="Load QA Answer"
-              placeholder="Select an answer"
+              label="Load Prompt & Answer Database"
+              placeholder="Select a Q&A pair"
               icon={<MessageSquare size={16} />}
               data={getSelectOptions()}
               onChange={handleQaSelect}
@@ -254,7 +300,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                     Click "Load File" to open HTML, text, or JSON files
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
-                    Click "Load QA Answers" to access answers from database
+                    Click "Load Prompt & Answer Database" to access answers from database
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Select an answer from the dropdown to load it
