@@ -278,3 +278,87 @@ fn create_screenshots_directory() -> Result<PathBuf, String> {
 
     Ok(screenshots_dir)
 }
+
+
+// Add this at the bottom of your screenshot.rs file
+use tauri_plugin_dialog::DialogExt;
+use std::path::Path;
+
+// Simple function to download images from the HTML renderer
+#[tauri::command]
+pub async fn download_image(app_handle: tauri::AppHandle, image_data: String, filename: Option<String>) -> Result<String, String> {
+    // Determine image type and get base64 data
+    let (mime_type, base64_data) = if image_data.starts_with("data:image/") {
+        // Extract MIME type from data URL
+        let parts: Vec<&str> = image_data.split(',').collect();
+        if parts.len() != 2 {
+            return Err("Invalid data URL format".to_string());
+        }
+        
+        // Get MIME type (e.g., "image/png;base64")
+        let mime_info = parts[0].replace("data:", "");
+        let mime_parts: Vec<&str> = mime_info.split(';').collect();
+        if mime_parts.is_empty() {
+            return Err("Invalid MIME type in data URL".to_string());
+        }
+        
+        // Extract clean MIME type (e.g., "image/png")
+        let mime = mime_parts[0];
+        (mime.to_string(), parts[1].to_string())
+    } else {
+        // Assume it's already base64 encoded and default to PNG
+        ("image/png".to_string(), image_data)
+    };
+    
+    // Determine file extension and filter name from MIME type
+    let (extension, filter_name) = match mime_type.as_str() {
+        "image/jpeg" | "image/jpg" => ("jpg", "JPEG Image (*.jpg)"),
+        "image/png" => ("png", "PNG Image (*.png)"),
+        "image/gif" => ("gif", "GIF Image (*.gif)"),
+        "image/webp" => ("webp", "WebP Image (*.webp)"),
+        "image/svg+xml" => ("svg", "SVG Image (*.svg)"),
+        _ => ("png", "PNG Image (*.png)"), // Default to PNG for unknown types
+    };
+    
+    // Generate default filename if none provided
+    let default_filename = if let Some(name) = filename {
+        // If filename doesn't have an extension, add the correct one
+        if !name.contains('.') {
+            format!("{}.{}", name, extension)
+        } else {
+            name
+        }
+    } else {
+        // Create a timestamped filename with the correct extension
+        let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
+        format!("pieverse_image_{}.{}", timestamp, extension)
+    };
+    
+    // Use Tauri 2 dialog API with the correct extension filter
+    let save_path = app_handle
+        .dialog()
+        .file()
+        .add_filter(filter_name, &[extension]) // Use descriptive filter name
+        .set_file_name(&default_filename)
+        .blocking_save_file();
+    
+    if let Some(path) = save_path {
+        // Convert FilePath to a regular String path
+        let path_str = path.to_string();
+        
+        // Decode the base64 data
+        let image_bytes = match general_purpose::STANDARD.decode(&base64_data) {
+            Ok(data) => data,
+            Err(e) => return Err(format!("Failed to decode image data: {}", e))
+        };
+        
+        // Save the file using the string path
+        match fs::write(&path_str, &image_bytes) {
+            Ok(_) => Ok(path_str),
+            Err(e) => Err(format!("Failed to save image: {}", e))
+        }
+    } else {
+        // User cancelled the save dialog
+        Err("Save operation cancelled".to_string())
+    }
+}

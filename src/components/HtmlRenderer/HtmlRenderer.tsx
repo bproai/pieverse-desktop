@@ -7,6 +7,8 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './HtmlRenderer.css';
+import { core } from '@tauri-apps/api'; // Using core.invoke for commands
+
 
 interface HtmlRendererProps {
   content: string;
@@ -35,6 +37,13 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
 
+  const [imageMenu, setImageMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    image: null as HTMLImageElement | null
+  });
+
   // Update internal state when content prop changes
   useEffect(() => {
     setHtmlInput(content);
@@ -54,6 +63,76 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       setShowInstructions(true);
     }
   }, [htmlInput]);
+
+  // Add this function to handle right-clicks on images
+  const handleImageContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    
+    // Check if the click was on an image
+    if (target.tagName === 'IMG') {
+      // Prevent default browser context menu
+      event.preventDefault();
+      
+      // Show our custom menu
+      setImageMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        image: target as HTMLImageElement
+      });
+    }
+  };
+
+  // Function to handle downloading the image
+  const handleDownloadImage = async () => {
+    if (!imageMenu.image) return;
+    
+    try {
+      // Get image source
+      let imageSrc = imageMenu.image.src;
+      
+      // If it's a remote URL, fetch and convert to data URL
+      if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
+        try {
+          const response = await fetch(imageSrc);
+          const blob = await response.blob();
+          
+          // Convert to base64
+          const reader = new FileReader();
+          imageSrc = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error("Failed to fetch remote image:", error);
+        }
+      }
+      
+      // Generate filename from alt text or path
+      const altText = imageMenu.image.alt || '';
+      const pathParts = imageMenu.image.src.split('/');
+      const filename = altText 
+        ? `${altText.replace(/\s+/g, '_').toLowerCase()}.png`
+        : (pathParts[pathParts.length - 1] || 'image.png');
+      
+      // Call Tauri command to download the image using core.invoke
+      await core.invoke('download_image', {
+        imageData: imageSrc,
+        filename
+      });
+    } catch (error) {
+      console.error("Error downloading image:", error);
+    }
+    
+    // Close the menu
+    setImageMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  // Add this to close the menu when clicking outside
+  const handleCloseMenu = () => {
+    setImageMenu(prev => ({ ...prev, visible: false }));
+  };
+
 
   // Handle clearing content
   const handleClear = () => {
@@ -302,7 +381,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
           return (
             <div 
               className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
-              dangerouslySetInnerHTML={{ __html: processHtml(sanitizeHtml(htmlInput)) }} 
+              dangerouslySetInnerHTML={{ __html: processHtml(sanitizeHtml(htmlInput)) }}
+              onContextMenu={handleImageContextMenu}
             />
           );
         
@@ -319,6 +399,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
             <div 
               className={`html-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
               dangerouslySetInnerHTML={{ __html: processJsonContent() }} 
+              onContextMenu={handleImageContextMenu}
             />
           );
           
@@ -327,7 +408,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
           const processedHtml = processUserStyleTags(htmlInput);
           
           return (
-            <div className={`markdown-preview ${className} ${darkMode ? 'dark-mode' : ''}`}>
+            <div className={`markdown-preview ${className} ${darkMode ? 'dark-mode' : ''}`}
+              onContextMenu={handleImageContextMenu}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -659,6 +741,45 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
           </Tabs.Panel>
         </Tabs>
       </div>
+
+      {imageMenu.visible && (
+      <>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 998
+          }}
+          onClick={handleCloseMenu}
+        />
+        <div
+          style={{
+            position: 'fixed',
+            zIndex: 999,
+            left: imageMenu.x,
+            top: imageMenu.y,
+            backgroundColor: darkMode ? '#1A1B1E' : 'white',
+            borderRadius: '4px',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{ padding: '8px' }}>
+            <Button 
+              size="xs" 
+              variant="light" 
+              leftIcon={<span>💾</span>}
+              onClick={handleDownloadImage}
+            >
+              Download Image
+            </Button>
+          </div>
+        </div>
+      </>
+    )}
     </Card>
   );
 };

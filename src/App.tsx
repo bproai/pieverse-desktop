@@ -78,6 +78,10 @@ function App() {
                 <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
                   Connect Settings
                 </Tabs.Tab>
+                <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
+                  Document Renderer
+                </Tabs.Tab>
+
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB
                 </Tabs.Tab>
@@ -92,9 +96,6 @@ function App() {
                 </Tabs.Tab>
                 <Tabs.Tab value="signals" leftSection={<TrendingUp size={16} />}>
                   Signals
-                </Tabs.Tab>
-                <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
-                  Document Renderer
                 </Tabs.Tab>
                 {isDevMode && (
                   <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
@@ -135,6 +136,10 @@ function App() {
                 <APISettings />
               </Tabs.Panel>
 
+              <Tabs.Panel value="htmlrenderer" className="p-4">
+                <HtmlRendererPanel isDark={isDark} />
+              </Tabs.Panel>
+
               <Tabs.Panel value="mongodb" className="p-4">
                 <MongoDBPanel />
               </Tabs.Panel>
@@ -155,9 +160,6 @@ function App() {
                 <SignalsPanel />
               </Tabs.Panel>
 
-              <Tabs.Panel value="htmlrenderer" className="p-4">
-                <HtmlRendererPanel isDark={isDark} />
-              </Tabs.Panel>
 
               {isDevMode && (
                 <Tabs.Panel value="chrome-debugger" className="p-4">

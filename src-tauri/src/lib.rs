@@ -49,6 +49,7 @@ use services::screenshot::{
     save_clipboard_image, // Add this line
     take_screenshot,
     take_screenshot_to_clipboard,
+    download_image,
 };
 
 use services::chrome_debugger::fetch_chrome_targets;
@@ -191,6 +192,7 @@ pub fn run() {
             take_screenshot,
             take_screenshot_to_clipboard,
             save_clipboard_image,
+            download_image,
             // update_system_appearance,
             fetch_chrome_targets,
             open_chrome_in_terminal,
