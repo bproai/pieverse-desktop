@@ -1,9 +1,10 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
-import React from 'react';
-import { Card, Text, Button, Group, Tabs, Divider, Badge } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader } from '@mantine/core';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
+import { core } from '@tauri-apps/api';
 import HtmlRenderer from './HtmlRenderer';
 
 interface HtmlRendererPanelProps {
@@ -11,8 +12,53 @@ interface HtmlRendererPanelProps {
 }
 
 export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) => {
-  const [htmlContent, setHtmlContent] = React.useState<string>('');
-  const [fileName, setFileName] = React.useState<string | null>(null);
+  const [htmlContent, setHtmlContent] = useState<string>('');
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [qaData, setQaData] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('preview');
+  const [isLoadingQa, setIsLoadingQa] = useState(false);
+  const [qaAnswersLoaded, setQaAnswersLoaded] = useState(false);
+
+  // Function to load QA answers only when button is clicked
+  const loadQaAnswers = () => {
+    setIsLoadingQa(true);
+    
+    // Use a timeout to ensure UI isn't blocked
+    setTimeout(() => {
+      core.invoke('sqlite_execute_query', {
+        query: `SELECT id as answer_id, answer FROM qa_answers LIMIT 50;`
+      })
+      .then(result => {
+        if (Array.isArray(result) && result.length > 0) {
+          // Process the results to ensure IDs are strings and filter out nulls
+          const processedData = result
+            .filter(item => item && item.answer_id !== null && item.answer !== null)
+            .map(item => ({
+              ...item,
+              answer_id: String(item.answer_id) // Ensure ID is a string
+            }));
+          
+          // Add index to answer_id to ensure uniqueness
+          const uniqueData = processedData.map((item, index) => ({
+            ...item,
+            answer_id: `${item.answer_id}_${index}`
+          }));
+          
+          setQaData(uniqueData);
+          setQaAnswersLoaded(true);
+          console.log("Loaded QA answers successfully:", uniqueData);
+        } else {
+          console.log("No QA answers found in database");
+        }
+      })
+      .catch(error => {
+        console.log("Error loading QA answers:", error);
+      })
+      .finally(() => {
+        setIsLoadingQa(false);
+      });
+    }, 100);
+  };
 
   // Load file from disk using Tauri's dialog API
   const handleLoadFile = async () => {
@@ -45,6 +91,28 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   // Handle content changes from the renderer
   const handleContentChange = (newContent: string) => {
     setHtmlContent(newContent);
+  };
+  
+  // Handle selecting an answer
+  const handleQaSelect = (id: string) => {
+    const selectedItem = qaData.find(item => item.answer_id === id);
+    if (selectedItem) {
+      setHtmlContent(selectedItem.answer);
+      setActiveTab('preview');
+    }
+  };
+
+  // Create select options from the QA data
+  const getSelectOptions = () => {
+    if (!qaData || qaData.length === 0) return [];
+    
+    // Create options with guaranteed unique string values
+    return qaData
+      .filter(item => item && item.answer_id)
+      .map((item, index) => ({
+        value: item.answer_id,
+        label: `Answer ${index + 1}`
+      }));
   };
 
   return (
@@ -84,7 +152,45 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             <MousePointer2 size={14} style={{ color: isDark ? '#909296' : '#6c757d' }} />
             <Text size="sm" style={{ color: isDark ? '#909296' : '#6c757d' }}>Right-click to paste from clipboard</Text>
           </Group>
+          
+          {/* Button to load QA answers on demand */}
+          {!qaAnswersLoaded && (
+            <Button
+              leftIcon={<Database size={16} />}
+              onClick={loadQaAnswers}
+              variant="light"
+              color="teal"
+              size="sm"
+              loading={isLoadingQa}
+            >
+              Load QA Answers
+            </Button>
+          )}
         </Group>
+        
+        {/* QA Answers dropdown - only shown if loaded */}
+        {qaData.length > 0 && (
+          <Group mb="md">
+            <Select
+              label="Load QA Answer"
+              placeholder="Select an answer"
+              icon={<MessageSquare size={16} />}
+              data={getSelectOptions()}
+              onChange={handleQaSelect}
+              style={{ width: '100%' }}
+              styles={{
+                input: {
+                  backgroundColor: isDark ? '#25262b' : '#ffffff',
+                  color: isDark ? '#c1c2c5' : '#212529',
+                  borderColor: isDark ? '#373A40' : '#ced4da'
+                },
+                label: {
+                  color: isDark ? '#c1c2c5' : '#212529'
+                }
+              }}
+            />
+          </Group>
+        )}
         
         {fileName && (
           <Group>
@@ -96,7 +202,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         )}
       </Card>
       
-      <Tabs defaultValue="preview">
+      <Tabs value={activeTab} onTabChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="preview" icon={<FileText size={16} />}>
             Preview
@@ -146,6 +252,12 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                 <ul className="list-disc pl-5 mt-1">
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Click "Load File" to open HTML, text, or JSON files
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Click "Load QA Answers" to access answers from database
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Select an answer from the dropdown to load it
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Right-click in the input area and select "Paste" to paste from clipboard
