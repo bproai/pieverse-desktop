@@ -7,7 +7,7 @@ mod tray;
 use tauri::Manager; // Add this import for the state() method
 
 use services::{
-    api_server::{start_api_server, stop_api_server, ApiServerState},
+    api_server::{start_api_server, stop_api_server, delete_qa_pair, ApiServerState},
     mongodb::{
         list_mongodb_collections, list_mongodb_databases, start_mongodb, stop_mongodb,
         test_mongodb_connection, MongoDBState,
@@ -163,6 +163,7 @@ pub fn run() {
             // API Server commands
             start_api_server,
             stop_api_server,
+            delete_qa_pair,
             // Whisper commands
             transcribe_audio,
             play_last_recording,

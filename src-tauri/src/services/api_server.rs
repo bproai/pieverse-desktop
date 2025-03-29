@@ -78,6 +78,7 @@ impl ApiServer {
             .route("/api/health", get(Self::health_check))
             .route("/api/qa", post(Self::store_qa_data))
             .route("/api/qa", get(Self::get_qa_data))
+            .route("/api/qa/:question_id", delete(Self::delete_qa_pair))
             .with_state(self.sqlite.clone())
             .layer(cors);
 
@@ -511,6 +512,32 @@ impl ApiServer {
             }
         })))
     }
+
+    // Add this function inside the ApiServer impl block
+    async fn delete_qa_pair(
+        State(sqlite): State<Arc<Mutex<SqliteService>>>,
+        Path(question_id): Path<String>,
+    ) -> Result<Json<Value>, ApiError> {
+        let sqlite_guard = sqlite.lock().await;
+        
+        // First delete associated answers
+        let delete_answers_query = "DELETE FROM qa_answers WHERE question_id = ?";
+        match sqlite_guard.execute_parameterized(delete_answers_query, params![question_id]) {
+            Ok(_) => {},
+            Err(e) => return Err(ApiError(format!("Failed to delete answers: {}", e)))
+        }
+        
+        // Then delete the question
+        let delete_question_query = "DELETE FROM qa_questions WHERE id = ?";
+        match sqlite_guard.execute_parameterized(delete_question_query, params![question_id]) {
+            Ok(_) => Ok(Json(serde_json::json!({
+                "status": "success",
+                "message": "Q&A pair deleted successfully"
+            }))),
+            Err(e) => Err(ApiError(format!("Failed to delete question: {}", e)))
+        }
+    }
+    
 }
 
 #[tauri::command]
@@ -579,4 +606,31 @@ pub struct AnswerData {
 pub struct QAData {
     pub questions: Vec<QuestionData>,
     pub answers: Vec<AnswerData>,
+}
+
+#[tauri::command]
+pub async fn delete_qa_pair(
+    api_state: tauri::State<'_, ApiServerState>,
+    question_id: String
+) -> Result<(), String> {
+    // Check if server is running
+    let guard = api_state.server.lock().await;
+    if guard.is_none() {
+        return Err("API server is not running".to_string());
+    }
+    
+    // Make HTTP request to our local API server
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!("http://localhost:3030/api/qa/{}", question_id))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to API server: {}", e))?;
+        
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Failed to delete Q&A pair: {}", error_text))
+    }
 }

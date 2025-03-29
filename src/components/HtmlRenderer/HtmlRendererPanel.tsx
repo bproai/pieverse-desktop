@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw } from 'lucide-react';
+import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput, ActionIcon, Popover } from '@mantine/core';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw, Trash } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
@@ -26,6 +26,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [isFiltering, setIsFiltering] = useState<boolean>(false);
   const [hasNewRecords, setHasNewRecords] = useState<boolean>(false);
   const pageSize = 50; // Records per page
+  const [selectedQaId, setSelectedQaId] = useState<string | null>(null);
 
   // Check for new records periodically
   useEffect(() => {
@@ -276,6 +277,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   
   // Handle selecting an answer
   const handleQaSelect = (id: string) => {
+    setSelectedQaId(id); // Track the selected ID
     const selectedItem = qaData.find(item => item.answer_id === id);
     if (selectedItem) {
       setHtmlContent(selectedItem.answer);
@@ -320,6 +322,40 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             : `${formattedDate}Answer ${index + 1}: ${displayAnswer}`
         };
       });
+  };
+
+  // First add a new delete function to HtmlRendererPanel.tsx
+  const deleteQAPair = async (questionId: string) => {
+    if (!questionId) return;
+    
+    try {
+      await core.invoke('delete_qa_pair', { questionId });
+      
+      // Remove the deleted item from the state
+      setQaData(prev => prev.filter(item => item.question_id !== questionId));
+      
+      // Clear the selected item if it was deleted
+      if (selectedQaId) {
+        const selectedItem = qaData.find(item => item.answer_id === selectedQaId);
+        if (selectedItem && selectedItem.question_id === questionId) {
+          setSelectedQaId(null);
+          setHtmlContent('');
+        }
+      }
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Q&A pair deleted successfully',
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error deleting Q&A pair:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to delete Q&A pair: ${error}`,
+        color: 'red'
+      });
+    }
   };
 
   return (
@@ -379,24 +415,45 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         {qaData.length > 0 && (
           <div style={{ width: '100%' }}>
             <Group mb="md" position="apart">
-              <Select
-                label="Load Prompt & Answer Database"
-                placeholder="Select a Q&A pair"
-                icon={<MessageSquare size={16} />}
-                data={getSelectOptions()}
-                onChange={handleQaSelect}
-                style={{ width: '90%' }}
-                styles={{
-                  input: {
-                    backgroundColor: isDark ? '#25262b' : '#ffffff',
-                    color: isDark ? '#c1c2c5' : '#212529',
-                    borderColor: isDark ? '#373A40' : '#ced4da'
-                  },
-                  label: {
-                    color: isDark ? '#c1c2c5' : '#212529'
-                  }
-                }}
-              />
+              <div style={{ position: 'relative', width: '90%' }}>
+                <Select
+                  label="Load Prompt & Answer Database"
+                  placeholder="Select a Q&A pair"
+                  icon={<MessageSquare size={16} />}
+                  data={getSelectOptions()}
+                  onChange={handleQaSelect}
+                  style={{ width: '100%' }}
+                  styles={{
+                    input: {
+                      backgroundColor: isDark ? '#25262b' : '#ffffff',
+                      color: isDark ? '#c1c2c5' : '#212529',
+                      borderColor: isDark ? '#373A40' : '#ced4da'
+                    },
+                    label: {
+                      color: isDark ? '#c1c2c5' : '#212529'
+                    }
+                  }}
+                />
+                {selectedQaId && (
+                  <ActionIcon
+                    color="red"
+                    variant="subtle"
+                    style={{ position: 'absolute', right: '5px', top: '30px', zIndex: 10 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Are you sure you want to delete this Q&A pair?')) {
+                        const item = qaData.find(item => item.answer_id === selectedQaId);
+                        if (item) {
+                          deleteQAPair(item.question_id);
+                        }
+                      }
+                    }}
+                    title="Delete selected Q&A pair"
+                  >
+                    <Trash size={16} />
+                  </ActionIcon>
+                )}
+              </div>
               
               <Button
                 variant="subtle"
@@ -503,6 +560,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           </div>
         )}
         
+        
+        
         {qaAnswersLoaded && qaData.length === 0 && isFiltering && (
           <Text color="dimmed" align="center" size="sm" mt="md" mb="md">
             No results found for "{filterText}". Try a different search term.
@@ -520,11 +579,11 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       </Card>
       
       <Tabs 
-  defaultValue="preview" // Add a default value
-  value={activeTab} 
-  onChange={setActiveTab}
-  style={{ flex: 1, display: 'flex', flexDirection: 'column' }} // Add proper styling
->
+        defaultValue="preview" // Add a default value
+        value={activeTab} 
+        onChange={setActiveTab}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column' }} // Add proper styling
+      >
   <Tabs.List>
     <Tabs.Tab value="preview" icon={<FileText size={16} />}>
       Preview
