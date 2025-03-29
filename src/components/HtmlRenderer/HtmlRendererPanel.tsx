@@ -276,8 +276,13 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   };
   
   // Handle selecting an answer
-  const handleQaSelect = (id: string) => {
+  const handleQaSelect = (id: string | null) => {
     setSelectedQaId(id); // Track the selected ID
+    if (!id) {
+      setHtmlContent('');
+      return;
+    }
+    
     const selectedItem = qaData.find(item => item.answer_id === id);
     if (selectedItem) {
       setHtmlContent(selectedItem.answer);
@@ -324,20 +329,39 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       });
   };
 
-  // First add a new delete function to HtmlRendererPanel.tsx
+  // Delete function for QA pairs with auto-selection of next/previous item
+  // Delete function for QA pairs with auto-selection of next/previous item
   const deleteQAPair = async (questionId: string) => {
     if (!questionId) return;
     
     try {
       await core.invoke('delete_qa_pair', { questionId });
       
+      // Find the deleted item's index and information before removing it
+      const deletedItemIndex = qaData.findIndex(item => item.question_id === questionId);
+      const wasSelected = selectedQaId && qaData.find(item => 
+        item.answer_id === selectedQaId && item.question_id === questionId
+      );
+      
+      // Get next and previous items before filtering
+      const nextItem = deletedItemIndex < qaData.length - 1 ? qaData[deletedItemIndex + 1] : null;
+      const prevItem = deletedItemIndex > 0 ? qaData[deletedItemIndex - 1] : null;
+      
       // Remove the deleted item from the state
       setQaData(prev => prev.filter(item => item.question_id !== questionId));
       
-      // Clear the selected item if it was deleted
-      if (selectedQaId) {
-        const selectedItem = qaData.find(item => item.answer_id === selectedQaId);
-        if (selectedItem && selectedItem.question_id === questionId) {
+      // If the deleted item was selected, select the next available item
+      if (wasSelected) {
+        if (nextItem) {
+          // Select the next item
+          setSelectedQaId(nextItem.answer_id);
+          setHtmlContent(nextItem.answer);
+        } else if (prevItem) {
+          // If no next item, select the previous item
+          setSelectedQaId(prevItem.answer_id);
+          setHtmlContent(prevItem.answer);
+        } else {
+          // If no items left, clear selection
           setSelectedQaId(null);
           setHtmlContent('');
         }
@@ -357,6 +381,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       });
     }
   };
+  
+  
 
   return (
     <div className="html-renderer-panel">
@@ -412,15 +438,16 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         </Group>
         
         {/* QA Answers dropdown - only shown if loaded */}
-        {qaData.length > 0 && (
+        {qaAnswersLoaded && (
           <div style={{ width: '100%' }}>
             <Group mb="md" position="apart">
               <div style={{ position: 'relative', width: '90%' }}>
-                <Select
+               <Select
                   label="Load Prompt & Answer Database"
                   placeholder="Select a Q&A pair"
                   icon={<MessageSquare size={16} />}
                   data={getSelectOptions()}
+                  value={selectedQaId}
                   onChange={handleQaSelect}
                   style={{ width: '100%' }}
                   styles={{
@@ -541,7 +568,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             )}
             
             {/* Load More button */}
-            {hasMoreRecords && (
+            {hasMoreRecords && qaData.length > 0 && (
               <Group position="center" mb="md">
                 <Button
                   variant="outline"
