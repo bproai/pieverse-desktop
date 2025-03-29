@@ -27,6 +27,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [hasNewRecords, setHasNewRecords] = useState<boolean>(false);
   const pageSize = 50; // Records per page
   const [selectedQaId, setSelectedQaId] = useState<string | null>(null);
+  const [rendererActiveTab, setRendererActiveTab] = useState("input");
 
   // Check for new records periodically
   useEffect(() => {
@@ -171,9 +172,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               const firstItem = uniqueData[0];
               setSelectedQaId(firstItem.answer_id);
               setHtmlContent(firstItem.answer);
-              setActiveTab('preview'); // Optionally switch to preview tab
-            }            
-            // Set newest timestamp from the first result
+              setRendererActiveTab("output"); // Switch inner HtmlRenderer tab to "output"
+            }
+            
             if (resultNewestTimestamp) {
               setNewestTimestamp(resultNewestTimestamp);
             }
@@ -285,7 +286,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   
   // Handle selecting an answer
   const handleQaSelect = (id: string | null) => {
-    setSelectedQaId(id); // Track the selected ID
+    setSelectedQaId(id);
     if (!id) {
       setHtmlContent('');
       return;
@@ -294,9 +295,13 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     const selectedItem = qaData.find(item => item.answer_id === id);
     if (selectedItem) {
       setHtmlContent(selectedItem.answer);
-      setActiveTab('preview');
+      // Switch inner tab to "output" if it’s currently "input"
+      if (rendererActiveTab === "input") {
+        setRendererActiveTab("output");
+      }
     }
   };
+  
 
   // Create select options from the QA data
   const getSelectOptions = () => {
@@ -633,6 +638,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       content={htmlContent} 
       darkMode={isDark}
       onContentChange={handleContentChange}
+      activeTab={rendererActiveTab}
+      setActiveTab={setRendererActiveTab}
     />
   </Tabs.Panel>
   

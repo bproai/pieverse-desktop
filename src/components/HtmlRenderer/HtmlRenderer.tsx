@@ -15,6 +15,8 @@ interface HtmlRendererProps {
   className?: string;
   darkMode?: boolean;
   onContentChange?: (content: string) => void;
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
 }
 
 /**
@@ -25,7 +27,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   content = '', 
   className = '',
   darkMode = false,
-  onContentChange
+  onContentChange,
+  activeTab,
+  setActiveTab
 }) => {
   const [htmlInput, setHtmlInput] = useState<string>(content);
   const [showDataAttributes, setShowDataAttributes] = useState<boolean>(false);
@@ -36,6 +40,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   const [normalizeNewlines, setNormalizeNewlines] = useState<boolean>(true);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
+  const [internalTab, setInternalTab] = useState("input");
+  const currentTab = activeTab || internalTab;
+
 
   const [imageMenu, setImageMenu] = useState({
     visible: false,
@@ -596,7 +603,15 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder className="mb-4">
       <div className="space-y-4">
-        <Tabs defaultValue="input">
+      <Tabs 
+        value={currentTab}
+        onChange={(value) => {
+          setInternalTab(value);
+          if (setActiveTab) {
+            setActiveTab(value);
+          }
+        }}
+      >
           <Tabs.List>
             <Tabs.Tab value="input">Input</Tabs.Tab>
             <Tabs.Tab value="output">Output</Tabs.Tab>
