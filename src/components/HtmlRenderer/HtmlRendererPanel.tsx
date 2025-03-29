@@ -6,6 +6,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
 import HtmlRenderer from './HtmlRenderer';
+import { notifications } from '@mantine/notifications';
 
 interface HtmlRendererPanelProps {
   isDark: boolean;
@@ -61,6 +62,16 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         if (newCount > 0) {
           setHasNewRecords(true);
           console.log(`${newCount} new records available`);
+          notifications.show({
+            title: 'New Records Available',
+            message: `${newCount} new records have been added. Click to load.`,
+            color: 'blue',
+            onClick: () => {
+              loadNewerQaAnswers();
+              setHasNewRecords(false);
+            }
+          });
+
         }
       }
     }).catch(error => {
