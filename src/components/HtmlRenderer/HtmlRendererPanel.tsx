@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput, ActionIcon, Popover } from '@mantine/core';
 import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw, Trash } from 'lucide-react';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, confirm } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
 import HtmlRenderer from './HtmlRenderer';
@@ -479,12 +479,13 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                     color="red"
                     variant="subtle"
                     style={{ position: 'absolute', right: '5px', top: '30px', zIndex: 10 }}
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      if (window.confirm('Are you sure you want to delete this Q&A pair?')) {
+                      const userConfirmed = await confirm("Are you sure you want to delete this Q&A pair?");
+                      if (userConfirmed) {
                         const item = qaData.find(item => item.answer_id === selectedQaId);
                         if (item) {
-                          deleteQAPair(item.question_id);
+                          await deleteQAPair(item.question_id);
                         }
                       }
                     }}
