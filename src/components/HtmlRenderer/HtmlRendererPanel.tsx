@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
 import React, { useState } from 'react';
 import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database } from 'lucide-react';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
@@ -18,10 +18,16 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoadingQa, setIsLoadingQa] = useState(false);
   const [qaAnswersLoaded, setQaAnswersLoaded] = useState(false);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [hasMoreRecords, setHasMoreRecords] = useState<boolean>(true);
+  const pageSize = 50; // Records per page
 
-  // Function to load QA answers only when button is clicked
-  const loadQaAnswers = () => {
+  // Function to load QA answers with pagination
+  const loadQaAnswers = (page = 1) => {
     setIsLoadingQa(true);
+    
+    // Calculate offset based on page number
+    const offset = (page - 1) * pageSize;
     
     // Use a timeout to ensure UI isn't blocked
     setTimeout(() => {
@@ -32,15 +38,23 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             a.answer,
             q.question,
             q.id as question_id,
-            q.platform
+            q.platform,
+            q.timestamp,
+            (SELECT COUNT(*) FROM qa_answers) as total_count
           FROM qa_answers a
           LEFT JOIN qa_questions q ON a.question_id = q.id
           ORDER BY q.timestamp DESC
-          LIMIT 50;
+          LIMIT ${pageSize} OFFSET ${offset};
         `
       })
       .then(result => {
         if (Array.isArray(result) && result.length > 0) {
+          // Get total count from first record
+          const totalCount = result[0]?.total_count || 0;
+          
+          // Check if we have more records to load
+          setHasMoreRecords(totalCount > offset + result.length);
+          
           // Process the results to ensure IDs are strings and filter out nulls
           const processedData = result
             .filter(item => item && item.answer_id !== null && item.answer !== null)
@@ -65,14 +79,22 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           // Add index to answer_id to ensure uniqueness
           const uniqueData = processedData.map((item, index) => ({
             ...item,
-            answer_id: `${item.answer_id}_${index}`
+            answer_id: `${item.answer_id}_${page}_${index}`
           }));
           
-          setQaData(uniqueData);
+          // If this is page 1, replace data, otherwise append
+          if (page === 1) {
+            setQaData(uniqueData);
+          } else {
+            setQaData(prev => [...prev, ...uniqueData]);
+          }
+          
           setQaAnswersLoaded(true);
-          console.log("Loaded QA answers successfully:", uniqueData);
+          setPageNumber(page);
+          console.log(`Loaded QA answers page ${page} successfully:`, uniqueData);
         } else {
-          console.log("No QA answers found in database");
+          console.log("No QA answers found in database or end of results reached");
+          setHasMoreRecords(false);
         }
       })
       .catch(error => {
@@ -82,6 +104,11 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         setIsLoadingQa(false);
       });
     }, 100);
+  };
+
+  // Function to load more records
+  const loadMoreQaAnswers = () => {
+    loadQaAnswers(pageNumber + 1);
   };
 
   // Load file from disk using Tauri's dialog API
@@ -152,11 +179,15 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           // Not valid JSON or no plain_text property, use the original truncated answer
         }
         
+        // Format the timestamp (assuming it's in the format from your screenshot)
+        const timestamp = item.timestamp || "";
+        const formattedDate = timestamp ? `[${timestamp.substring(0, 16)}] ` : "";
+        
         return {
           value: item.answer_id,
           label: item.truncatedQuestion 
-            ? `Q: ${item.truncatedQuestion} - A: ${displayAnswer}`
-            : `Answer ${index + 1}: ${displayAnswer}`
+            ? `${formattedDate}Q: ${item.truncatedQuestion} - A: ${displayAnswer}`
+            : `${formattedDate}Answer ${index + 1}: ${displayAnswer}`
         };
       });
   };
@@ -203,39 +234,59 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           {!qaAnswersLoaded && (
             <Button
               leftIcon={<Database size={16} />}
-              onClick={loadQaAnswers}
+              onClick={() => loadQaAnswers(1)}
               variant="light"
               color="teal"
               size="sm"
               loading={isLoadingQa}
             >
-              Load Prompt & Answer Databasse
+              Load Prompt & Answer Database
             </Button>
           )}
         </Group>
         
         {/* QA Answers dropdown - only shown if loaded */}
         {qaData.length > 0 && (
-          <Group mb="md">
-            <Select
-              label="Load Prompt & Answer Database"
-              placeholder="Select a Q&A pair"
-              icon={<MessageSquare size={16} />}
-              data={getSelectOptions()}
-              onChange={handleQaSelect}
-              style={{ width: '100%' }}
-              styles={{
-                input: {
-                  backgroundColor: isDark ? '#25262b' : '#ffffff',
-                  color: isDark ? '#c1c2c5' : '#212529',
-                  borderColor: isDark ? '#373A40' : '#ced4da'
-                },
-                label: {
-                  color: isDark ? '#c1c2c5' : '#212529'
-                }
-              }}
-            />
-          </Group>
+          <div style={{ width: '100%' }}>
+            <Group mb="md">
+              <Select
+                label="Load Prompt & Answer Database"
+                placeholder="Select a Q&A pair"
+                icon={<MessageSquare size={16} />}
+                data={getSelectOptions()}
+                onChange={handleQaSelect}
+                style={{ width: '100%' }}
+                styles={{
+                  input: {
+                    backgroundColor: isDark ? '#25262b' : '#ffffff',
+                    color: isDark ? '#c1c2c5' : '#212529',
+                    borderColor: isDark ? '#373A40' : '#ced4da'
+                  },
+                  label: {
+                    color: isDark ? '#c1c2c5' : '#212529'
+                  }
+                }}
+              />
+            </Group>
+            
+            {/* Load More button */}
+            {hasMoreRecords && (
+              <Group position="center" mb="md">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={loadMoreQaAnswers}
+                  loading={isLoadingQa}
+                  leftIcon={<ChevronDown size={14} />}
+                >
+                  Load More Records
+                </Button>
+                <Text size="xs" color="dimmed">
+                  {qaData.length} records loaded
+                </Text>
+              </Group>
+            )}
+          </div>
         )}
         
         {fileName && (
