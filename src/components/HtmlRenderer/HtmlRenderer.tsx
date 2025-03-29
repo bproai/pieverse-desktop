@@ -516,6 +516,83 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     }
   };
 
+    // Add a new utility function to convert HTML to Markdown
+  const htmlToMarkdown = (html: string): string => {
+    try {
+      // Simple conversion of common HTML elements to Markdown
+      let markdown = html
+        // Replace headers
+        .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+        .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+        .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+        .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
+        .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
+        .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
+        
+        // Replace paragraphs
+        .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+        
+        // Replace line breaks
+        .replace(/<br\s*\/?>/gi, '\n')
+        
+        // Replace bold and italic
+        .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+        .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+        .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+        .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+        
+        // Replace links
+        .replace(/<a[^>]*href="(.*?)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+        
+        // Replace unordered lists
+        .replace(/<ul[^>]*>(.*?)<\/ul>/gis, '$1\n')
+        .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
+        
+        // Replace ordered lists
+        .replace(/<ol[^>]*>(.*?)<\/ol>/gis, '$1\n')
+        .replace(/<li[^>]*>(.*?)<\/li>/gi, '1. $1\n')
+        
+        // Replace code blocks
+        .replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n')
+        .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+        
+        // Replace blockquotes
+        .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n\n')
+        
+        // Replace horizontal rules
+        .replace(/<hr[^>]*>/gi, '---\n\n')
+        
+        // Handle images
+        .replace(/<img[^>]*src="(.*?)"[^>]*alt="(.*?)"[^>]*>/gi, '![$2]($1)')
+        .replace(/<img[^>]*alt="(.*?)"[^>]*src="(.*?)"[^>]*>/gi, '![$1]($2)')
+        .replace(/<img[^>]*src="(.*?)"[^>]*>/gi, '![]($1)');
+        
+      // Remove remaining HTML tags
+      markdown = markdown.replace(/<[^>]*>/g, '');
+      
+      // Decode HTML entities
+      markdown = markdown
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ');
+      
+      // Normalize spaces and newlines
+      markdown = markdown
+        .replace(/\n{3,}/g, '\n\n')  // Normalize excessive newlines
+        .trim();
+      
+      return markdown;
+    } catch (error) {
+      console.error('Error converting HTML to Markdown:', error);
+      return html; // Return original content if conversion fails
+    }
+  };
+
+
+
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder className="mb-4">
       <div className="space-y-4">
@@ -647,6 +724,118 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
               >
                 Copy {renderMode === 'markdown' ? 'Rendered Content' : 'Rendered HTML'}
               </Button>
+
+              <Button
+                size="sm"
+                variant="light"
+                onClick={() => {
+                  // Function to extract text from the rendered content
+                  const contentContainer = document.querySelector('.render-preview-container .rounded');
+                  if (contentContainer) {
+                    const textContent = contentContainer.textContent || '';
+                    navigator.clipboard.writeText(textContent)
+                      .then(() => {
+                        console.log('Copied output box text content');
+                      })
+                      .catch(err => {
+                        console.error('Failed to copy output box content:', err);
+                      });
+                  }
+                }}
+              >
+                Copy Output Text
+              </Button>
+
+              <Button
+                size="sm"
+                variant="light"
+                onClick={() => {
+                  let markdownContent;
+                  
+                  // If we're already in markdown mode, use the original content
+                  if (renderMode === 'markdown') {
+                    markdownContent = htmlInput;
+                  } else {
+                    // For HTML, JSON, or text-format modes, convert the rendered HTML to Markdown
+                    const container = document.querySelector('.render-preview-container .rounded');
+                    if (container) {
+                      const renderedHtml = container.innerHTML;
+                      markdownContent = htmlToMarkdown(renderedHtml);
+                    } else {
+                      markdownContent = htmlToMarkdown(getRenderedContent());
+                    }
+                  }
+                  
+                  // Copy to clipboard
+                  if (markdownContent) {
+                    navigator.clipboard.writeText(markdownContent)
+                      .then(() => {
+                        console.log('Copied as Markdown');
+                      })
+                      .catch(err => {
+                        console.error('Failed to copy as Markdown:', err);
+                      });
+                  }
+                }}
+              >
+                Copy as Markdown
+              </Button>
+
+
+
+              <Button
+                size="sm"
+                variant="light"
+                onClick={() => {
+                  // Copy rendered content as rich text (HTML)
+                  const contentContainer = document.querySelector('.render-preview-container .rounded');
+                  if (contentContainer) {
+                    // Create a temporary element to hold the formatted content
+                    const tempElem = document.createElement('div');
+                    tempElem.innerHTML = contentContainer.innerHTML;
+                    
+                    // Apply basic styling for better appearance when pasted
+                    tempElem.style.fontFamily = 'inherit';
+                    tempElem.style.fontSize = 'inherit';
+                    tempElem.style.color = 'inherit';
+                    
+                    // Select the element content
+                    document.body.appendChild(tempElem);
+                    const range = document.createRange();
+                    range.selectNode(tempElem);
+                    const selection = window.getSelection();
+                    
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                      
+                      try {
+                        // Execute the copy command to copy the selected HTML
+                        document.execCommand('copy');
+                        console.log('Copied as rich text');
+                      } catch (err) {
+                        console.error('Failed to copy as rich text:', err);
+                        // Fallback to copying as HTML
+                        navigator.clipboard.writeText(tempElem.innerHTML)
+                          .then(() => console.log('Copied as HTML (fallback)'))
+                          .catch(err => console.error('Clipboard fallback failed:', err));
+                      } finally {
+                        // Clean up
+                        selection.removeAllRanges();
+                        document.body.removeChild(tempElem);
+                      }
+                    }
+                  }
+                }}
+                title="Copy with formatting for pasting into Word, email, etc."
+              >
+                Copy as Rich Text
+              </Button>
+
+
+              
+
+
             </Group>
             
             <Card
