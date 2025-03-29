@@ -115,16 +115,21 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       const altText = imageMenu.image.alt || '';
       const pathParts = imageMenu.image.src.split('/');
       const filename = altText 
-        ? `${altText.replace(/\s+/g, '_').toLowerCase()}.png`
+        ? `${altText.replace(/\s+/g, '_').toLowerCase()}`
         : (pathParts[pathParts.length - 1] || 'image.png');
       
+      console.log("Image filename:", filename);
       // Call Tauri command to download the image using core.invoke
       await core.invoke('download_image', {
         imageData: imageSrc,
         filename
       });
-    } catch (error) {
-      console.error("Error downloading image:", error);
+    } catch (error: any) {
+      if (error&&error === "Save operation cancelled") {
+        console.log(error);
+      } else {
+        console.error("Error downloading image:", error);
+      }
     }
     
     // Close the menu

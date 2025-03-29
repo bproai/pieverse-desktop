@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X } from 'lucide-react';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
@@ -18,23 +18,72 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoadingQa, setIsLoadingQa] = useState(false);
   const [qaAnswersLoaded, setQaAnswersLoaded] = useState(false);
-  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [newestTimestamp, setNewestTimestamp] = useState<string | null>(null);
+  const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null);
   const [hasMoreRecords, setHasMoreRecords] = useState<boolean>(true);
   const [filterText, setFilterText] = useState<string>('');
   const [isFiltering, setIsFiltering] = useState<boolean>(false);
+  const [hasNewRecords, setHasNewRecords] = useState<boolean>(false);
   const pageSize = 50; // Records per page
 
-  // Function to load QA answers with pagination and filtering
-  const loadQaAnswers = (page = 1, filter = '') => {
+  // Check for new records periodically
+  useEffect(() => {
+    if (!qaAnswersLoaded || !newestTimestamp) return;
+    
+    const checkNewRecordsInterval = setInterval(() => {
+      checkForNewRecords();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(checkNewRecordsInterval);
+  }, [qaAnswersLoaded, newestTimestamp]);
+  
+  // Function to check for new records
+  const checkForNewRecords = () => {
+    if (!newestTimestamp) return;
+    
+    const whereClause = isFiltering && filterText 
+      ? `WHERE (LOWER(q.question) LIKE LOWER('%${filterText}%') OR LOWER(a.answer) LIKE LOWER('%${filterText}%'))` 
+      : '';
+    
+    const timeClause = `${whereClause ? 'AND' : 'WHERE'} q.timestamp > '${newestTimestamp}'`;
+    
+    core.invoke('sqlite_execute_query', {
+      query: `
+        SELECT COUNT(*) as new_count
+        FROM qa_answers a
+        LEFT JOIN qa_questions q ON a.question_id = q.id
+        ${whereClause}
+        ${timeClause}
+      `
+    }).then(result => {
+      if (Array.isArray(result) && result.length > 0) {
+        const newCount = result[0]?.new_count || 0;
+        if (newCount > 0) {
+          setHasNewRecords(true);
+          console.log(`${newCount} new records available`);
+        }
+      }
+    }).catch(error => {
+      console.error("Error checking for new records:", error);
+    });
+  };
+
+  // Function to load QA answers with cursor-based pagination and filtering
+  const loadQaAnswers = (direction = 'initial', filter = '') => {
     setIsLoadingQa(true);
     
-    // Calculate offset based on page number
-    const offset = (page - 1) * pageSize;
-    
     // Build WHERE clause for filtering with case-insensitive matching
-    const whereClause = filter 
+    let whereClause = filter 
       ? `WHERE (LOWER(q.question) LIKE LOWER('%${filter}%') OR LOWER(a.answer) LIKE LOWER('%${filter}%'))` 
       : '';
+    
+    // Add timestamp condition based on direction
+    let timeClause = '';
+    if (direction === 'older' && oldestTimestamp) {
+      timeClause = `${whereClause ? 'AND' : 'WHERE'} q.timestamp < '${oldestTimestamp}'`;
+    } else if (direction === 'newer' && newestTimestamp) {
+      timeClause = `${whereClause ? 'AND' : 'WHERE'} q.timestamp > '${newestTimestamp}'`;
+    }
     
     // Use a timeout to ensure UI isn't blocked
     setTimeout(() => {
@@ -53,8 +102,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           FROM qa_answers a
           LEFT JOIN qa_questions q ON a.question_id = q.id
           ${whereClause}
+          ${timeClause}
           ORDER BY q.timestamp DESC
-          LIMIT ${pageSize} OFFSET ${offset};
+          LIMIT ${pageSize};
         `
       })
       .then(result => {
@@ -62,8 +112,16 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           // Get total count from first record
           const totalCount = result[0]?.total_count || 0;
           
+          // Get timestamps to track position in result set
+          const timestamps = result.map(item => item.timestamp).filter(Boolean);
+          const resultNewestTimestamp = timestamps.length > 0 ? timestamps[0] : null;
+          const resultOldestTimestamp = timestamps.length > 0 ? timestamps[timestamps.length - 1] : null;
+          
           // Check if we have more records to load
-          setHasMoreRecords(totalCount > offset + result.length);
+          const fetchedCount = direction === 'initial' 
+            ? result.length 
+            : qaData.length + result.length;
+          setHasMoreRecords(totalCount > fetchedCount);
           
           // Process the results to ensure IDs are strings and filter out nulls
           const processedData = result
@@ -86,28 +144,43 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               };
             });
           
-          // Add index to answer_id to ensure uniqueness
+          // Generate unique IDs for each item
           const uniqueData = processedData.map((item, index) => ({
             ...item,
-            answer_id: `${item.answer_id}_${page}_${index}`
+            answer_id: `${item.answer_id}_${direction}_${index}`
           }));
           
-          // If this is page 1, replace data, otherwise append
-          if (page === 1) {
+          // Update the data based on direction
+          if (direction === 'initial') {
             setQaData(uniqueData);
-          } else {
+            // Set newest timestamp from the first result
+            if (resultNewestTimestamp) {
+              setNewestTimestamp(resultNewestTimestamp);
+            }
+          } else if (direction === 'older') {
             setQaData(prev => [...prev, ...uniqueData]);
+          } else if (direction === 'newer') {
+            setQaData(prev => [...uniqueData, ...prev]);
+            // Update newest timestamp if newer records were loaded
+            if (resultNewestTimestamp) {
+              setNewestTimestamp(resultNewestTimestamp);
+            }
+          }
+          
+          // Set oldest timestamp from the last result
+          if (resultOldestTimestamp) {
+            setOldestTimestamp(resultOldestTimestamp);
           }
           
           setQaAnswersLoaded(true);
-          setPageNumber(page);
-          console.log(`Loaded QA answers page ${page} successfully:`, uniqueData);
+          setHasNewRecords(false);
+          console.log(`Loaded QA answers (${direction}) successfully:`, uniqueData);
         } else {
           console.log("No QA answers found in database or end of results reached");
           setHasMoreRecords(false);
           
           // If filtering resulted in no results, show a message
-          if (filter && page === 1) {
+          if (filter && direction === 'initial') {
             setQaData([]);
           }
         }
@@ -121,17 +194,30 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     }, 100);
   };
 
-  // Function to load more records
+  // Function to load more (older) records
   const loadMoreQaAnswers = () => {
-    loadQaAnswers(pageNumber + 1, isFiltering ? filterText : '');
+    loadQaAnswers('older', isFiltering ? filterText : '');
+  };
+  
+  // Function to load newer records
+  const loadNewerQaAnswers = () => {
+    loadQaAnswers('newer', isFiltering ? filterText : '');
+  };
+  
+  // Function to refresh all data
+  const refreshQaAnswers = () => {
+    setNewestTimestamp(null);
+    setOldestTimestamp(null);
+    loadQaAnswers('initial', isFiltering ? filterText : '');
   };
   
   // Apply filter to loaded data
   const applyFilter = () => {
     if (filterText.trim()) {
       setIsFiltering(true);
-      setPageNumber(1);
-      loadQaAnswers(1, filterText.trim());
+      setNewestTimestamp(null);
+      setOldestTimestamp(null);
+      loadQaAnswers('initial', filterText.trim());
     }
   };
   
@@ -139,8 +225,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const clearFilter = () => {
     setFilterText('');
     setIsFiltering(false);
-    setPageNumber(1);
-    loadQaAnswers(1, '');
+    setNewestTimestamp(null);
+    setOldestTimestamp(null);
+    loadQaAnswers('initial', '');
   };
 
   // Load file from disk using Tauri's dialog API
@@ -266,7 +353,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           {!qaAnswersLoaded && (
             <Button
               leftIcon={<Database size={16} />}
-              onClick={() => loadQaAnswers(1)}
+              onClick={() => loadQaAnswers('initial')}
               variant="light"
               color="teal"
               size="sm"
@@ -280,14 +367,14 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         {/* QA Answers dropdown - only shown if loaded */}
         {qaData.length > 0 && (
           <div style={{ width: '100%' }}>
-            <Group mb="md">
+            <Group mb="md" position="apart">
               <Select
                 label="Load Prompt & Answer Database"
                 placeholder="Select a Q&A pair"
                 icon={<MessageSquare size={16} />}
                 data={getSelectOptions()}
                 onChange={handleQaSelect}
-                style={{ width: '100%' }}
+                style={{ width: '90%' }}
                 styles={{
                   input: {
                     backgroundColor: isDark ? '#25262b' : '#ffffff',
@@ -299,7 +386,31 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   }
                 }}
               />
+              
+              <Button
+                variant="subtle"
+                size="xs"
+                onClick={refreshQaAnswers}
+                title="Refresh Database"
+                style={{ marginTop: '22px' }}
+              >
+                <RefreshCw size={16} />
+              </Button>
             </Group>
+            
+            {/* New Records Notification */}
+            {hasNewRecords && (
+              <Group mb="md" position="center">
+                <Button
+                  variant="light"
+                  size="xs"
+                  color="blue"
+                  onClick={loadNewerQaAnswers}
+                >
+                  Load New Records
+                </Button>
+              </Group>
+            )}
             
             {/* Filter controls */}
             <Group mb="md">
@@ -456,6 +567,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Use the search box to filter answers by keywords
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Click the refresh button to check for new entries
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Right-click in the input area and select "Paste" to paste from clipboard
