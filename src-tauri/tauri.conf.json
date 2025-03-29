@@ -53,6 +53,11 @@
     },
     "microphone": {
       "enabled": true
+    },
+    "updater": {
+      "active": false,
+      "endpoints": ["https://reasonone.ai/updates"],
+      "dialog": true
     }
   }
 }
