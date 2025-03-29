@@ -436,7 +436,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           </Group>
           
           {/* Button to load QA answers on demand */}
-          {!qaAnswersLoaded && (
+          {!qaAnswersLoaded ? (
             <Button
               leftIcon={<Database size={16} />}
               onClick={() => loadQaAnswers('initial')}
@@ -446,6 +446,17 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               loading={isLoadingQa}
             >
               Load Prompt & Answer Database
+            </Button>
+          ) : (
+            <Button
+              leftIcon={<Database size={16} />}
+              onClick={refreshQaAnswers}
+              variant="light"
+              color="teal"
+              size="sm"
+              loading={isLoadingQa}
+            >
+              Reload Prompt & Answer Database
             </Button>
           )}
         </Group>
