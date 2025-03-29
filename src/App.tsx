@@ -82,6 +82,17 @@ function App() {
                   Document Renderer
                 </Tabs.Tab>
 
+                <Tabs.Tab value="references" leftSection={<BookOpen size={16} />}>
+                  References
+                </Tabs.Tab>
+
+                <Tabs.Tab value="folder-structure" leftSection={<FolderTree size={16} />}>
+                  Project Structure
+                </Tabs.Tab>
+                <Tabs.Tab value="llm-rules" leftSection={<Brain size={16} />}>
+                  LLM Rules
+                </Tabs.Tab>
+
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB
                 </Tabs.Tab>
@@ -102,15 +113,6 @@ function App() {
                     Chrome Debugger
                   </Tabs.Tab>
                 )}
-                <Tabs.Tab value="folder-structure" leftSection={<FolderTree size={16} />}>
-                  Project Structure
-                </Tabs.Tab>
-                <Tabs.Tab value="references" leftSection={<BookOpen size={16} />}>
-                  References
-                </Tabs.Tab>
-                <Tabs.Tab value="llm-rules" leftSection={<Brain size={16} />}>
-                  LLM Rules
-                </Tabs.Tab>
                 <Tabs.Tab value="vscode" leftSection={<Brackets size={16} />}>
                   VS Code Integration
                 </Tabs.Tab>
@@ -140,6 +142,19 @@ function App() {
                 <HtmlRendererPanel isDark={isDark} />
               </Tabs.Panel>
 
+              <Tabs.Panel value="references" className="p-4">
+                <ReferencesPanel />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="folder-structure" className="p-4">
+                <FolderStructurePanel />
+              </Tabs.Panel>
+              
+              <Tabs.Panel value="llm-rules" className="p-4">
+                <LLMRulesPanel />
+              </Tabs.Panel>
+
+
               <Tabs.Panel value="mongodb" className="p-4">
                 <MongoDBPanel />
               </Tabs.Panel>
@@ -167,18 +182,6 @@ function App() {
                 </Tabs.Panel>
               )}
               
-              <Tabs.Panel value="folder-structure" className="p-4">
-                <FolderStructurePanel />
-              </Tabs.Panel>
-              
-              <Tabs.Panel value="references" className="p-4">
-                <ReferencesPanel />
-              </Tabs.Panel>
-
-              <Tabs.Panel value="llm-rules" className="p-4">
-                <LLMRulesPanel />
-              </Tabs.Panel>
-
               <Tabs.Panel value="vscode" className="p-4">
                 <VSCodeIntegrationPanel />
               </Tabs.Panel>
