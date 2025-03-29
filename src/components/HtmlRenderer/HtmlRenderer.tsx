@@ -95,8 +95,11 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
         try {
           const response = await fetch(imageSrc);
+          console.log("Response content type:", response.headers.get("content-type"));
+
           const blob = await response.blob();
-          
+          console.log("Fetched blob type:", blob.type);
+                    
           // Convert to base64
           const reader = new FileReader();
           imageSrc = await new Promise((resolve) => {

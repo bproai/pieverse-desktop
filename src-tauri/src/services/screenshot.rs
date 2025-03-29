@@ -320,19 +320,37 @@ pub async fn download_image(app_handle: tauri::AppHandle, image_data: String, fi
         _ => ("png", "PNG Image (*.png)"), // Default to PNG for unknown types
     };
     
+    println!("Debug: MIME type '{}' corresponds to extension '{}'", mime_type, extension);    
     // Generate default filename if none provided
     let default_filename = if let Some(name) = filename {
-        // If filename doesn't have an extension, add the correct one
-        if !name.contains('.') {
-            format!("{}.{}", name, extension)
+        // Extract just the filename part after the last slash, if present
+        let file_part = if let Some(index) = name.rfind('/') {
+            &name[index+1..]
         } else {
-            name
+            &name
+        };
+        
+        // Remove all known image extensions
+        let mut base_name = file_part.to_string();
+        for ext in &[".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"] {
+            if base_name.to_lowercase().ends_with(ext) {
+                let ext_len = ext.len();
+                base_name.truncate(base_name.len() - ext_len);
+            }
         }
+        
+        // Add the correct extension based on MIME type
+        format!("{}", base_name)
+        // format!("{}.{}", base_name, extension)
     } else {
         // Create a timestamped filename with the correct extension
         let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
-        format!("pieverse_image_{}.{}", timestamp, extension)
+        // format!("pieverse_image_{}.{}", timestamp, extension)
+        format!("pieverse_image_{}", timestamp)
     };
+    
+    // Log the filename for debugging
+    println!("Setting dialog filename to: {}", default_filename);
     
     // Use Tauri 2 dialog API with the correct extension filter
     let save_path = app_handle
@@ -342,23 +360,36 @@ pub async fn download_image(app_handle: tauri::AppHandle, image_data: String, fi
         .set_file_name(&default_filename)
         .blocking_save_file();
     
-    if let Some(path) = save_path {
-        // Convert FilePath to a regular String path
-        let path_str = path.to_string();
-        
-        // Decode the base64 data
-        let image_bytes = match general_purpose::STANDARD.decode(&base64_data) {
-            Ok(data) => data,
-            Err(e) => return Err(format!("Failed to decode image data: {}", e))
-        };
-        
-        // Save the file using the string path
-        match fs::write(&path_str, &image_bytes) {
-            Ok(_) => Ok(path_str),
-            Err(e) => Err(format!("Failed to save image: {}", e))
+        if let Some(path) = save_path {
+            // Convert FilePath to a regular String path
+            let path_str = path.to_string();
+            
+            // Decode the base64 data
+            let image_bytes = match general_purpose::STANDARD.decode(&base64_data) {
+                Ok(data) => data,
+                Err(e) => return Err(format!("Failed to decode image data: {}", e))
+            };
+            
+            // The path returned by the dialog may already have the extension attached
+            // Let's check if it ends with the expected extension
+            let expected_ext = format!(".{}", extension);
+            let final_path = if path_str.to_lowercase().ends_with(&expected_ext.to_lowercase()) {
+                // Path already has the correct extension, use as-is
+                path_str
+            } else {
+                // Path doesn't have the correct extension, add it
+                format!("{}{}", path_str, expected_ext)
+            };
+            
+            println!("Saving file to path: {}", final_path);
+            
+            // Save the file using the finalized path
+            match fs::write(&final_path, &image_bytes) {
+                Ok(_) => Ok(final_path),
+                Err(e) => Err(format!("Failed to save image: {}", e))
+            }
+        } else {
+            // User cancelled the save dialog
+            Err("Save operation cancelled".to_string())
         }
-    } else {
-        // User cancelled the save dialog
-        Err("Save operation cancelled".to_string())
-    }
 }

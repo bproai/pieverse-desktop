@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
 import React, { useState } from 'react';
-import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown } from 'lucide-react';
+import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput } from '@mantine/core';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
@@ -20,14 +20,21 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [qaAnswersLoaded, setQaAnswersLoaded] = useState(false);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [hasMoreRecords, setHasMoreRecords] = useState<boolean>(true);
+  const [filterText, setFilterText] = useState<string>('');
+  const [isFiltering, setIsFiltering] = useState<boolean>(false);
   const pageSize = 50; // Records per page
 
-  // Function to load QA answers with pagination
-  const loadQaAnswers = (page = 1) => {
+  // Function to load QA answers with pagination and filtering
+  const loadQaAnswers = (page = 1, filter = '') => {
     setIsLoadingQa(true);
     
     // Calculate offset based on page number
     const offset = (page - 1) * pageSize;
+    
+    // Build WHERE clause for filtering with case-insensitive matching
+    const whereClause = filter 
+      ? `WHERE (LOWER(q.question) LIKE LOWER('%${filter}%') OR LOWER(a.answer) LIKE LOWER('%${filter}%'))` 
+      : '';
     
     // Use a timeout to ensure UI isn't blocked
     setTimeout(() => {
@@ -40,9 +47,12 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             q.id as question_id,
             q.platform,
             q.timestamp,
-            (SELECT COUNT(*) FROM qa_answers) as total_count
+            (SELECT COUNT(*) FROM qa_answers a 
+             LEFT JOIN qa_questions q ON a.question_id = q.id
+             ${whereClause}) as total_count
           FROM qa_answers a
           LEFT JOIN qa_questions q ON a.question_id = q.id
+          ${whereClause}
           ORDER BY q.timestamp DESC
           LIMIT ${pageSize} OFFSET ${offset};
         `
@@ -95,6 +105,11 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         } else {
           console.log("No QA answers found in database or end of results reached");
           setHasMoreRecords(false);
+          
+          // If filtering resulted in no results, show a message
+          if (filter && page === 1) {
+            setQaData([]);
+          }
         }
       })
       .catch(error => {
@@ -108,7 +123,24 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
 
   // Function to load more records
   const loadMoreQaAnswers = () => {
-    loadQaAnswers(pageNumber + 1);
+    loadQaAnswers(pageNumber + 1, isFiltering ? filterText : '');
+  };
+  
+  // Apply filter to loaded data
+  const applyFilter = () => {
+    if (filterText.trim()) {
+      setIsFiltering(true);
+      setPageNumber(1);
+      loadQaAnswers(1, filterText.trim());
+    }
+  };
+  
+  // Clear filter and reload data
+  const clearFilter = () => {
+    setFilterText('');
+    setIsFiltering(false);
+    setPageNumber(1);
+    loadQaAnswers(1, '');
   };
 
   // Load file from disk using Tauri's dialog API
@@ -269,6 +301,66 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               />
             </Group>
             
+            {/* Filter controls */}
+            <Group mb="md">
+              <div style={{ display: 'flex', width: '100%', gap: '8px' }}>
+                <TextInput
+                  placeholder="Filter by keyword..."
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.currentTarget.value)}
+                  icon={<Search size={14} />}
+                  rightSection={
+                    filterText && 
+                    <div style={{ cursor: 'pointer' }} onClick={() => setFilterText('')}>
+                      <X size={14} />
+                    </div>
+                  }
+                  style={{ flex: 1 }}
+                  styles={{
+                    input: {
+                      backgroundColor: isDark ? '#25262b' : '#ffffff',
+                      color: isDark ? '#c1c2c5' : '#212529',
+                      borderColor: isDark ? '#373A40' : '#ced4da'
+                    }
+                  }}
+                  autoComplete="off"
+                  spellCheck="false"
+                  autoCorrect="off"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      applyFilter();
+                    }
+                  }}
+                />
+                <Button
+                  variant="light"
+                  size="xs"
+                  onClick={applyFilter}
+                  disabled={!filterText.trim()}
+                >
+                  Search
+                </Button>
+                {isFiltering && (
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={clearFilter}
+                    color="gray"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </Group>
+            
+            {isFiltering && (
+              <Group mb="md">
+                <Badge color="blue">
+                  Filtered results: "{filterText}"
+                </Badge>
+              </Group>
+            )}
+            
             {/* Load More button */}
             {hasMoreRecords && (
               <Group position="center" mb="md">
@@ -282,11 +374,17 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   Load More Records
                 </Button>
                 <Text size="xs" color="dimmed">
-                  {qaData.length} records loaded
+                  {qaData.length} records loaded {isFiltering ? "(filtered)" : ""}
                 </Text>
               </Group>
             )}
           </div>
+        )}
+        
+        {qaAnswersLoaded && qaData.length === 0 && isFiltering && (
+          <Text color="dimmed" align="center" size="sm" mt="md" mb="md">
+            No results found for "{filterText}". Try a different search term.
+          </Text>
         )}
         
         {fileName && (
@@ -355,6 +453,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Select an answer from the dropdown to load it
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Use the search box to filter answers by keywords
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Right-click in the input area and select "Paste" to paste from clipboard
