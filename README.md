@@ -24,7 +24,7 @@
 - [License](#license)
 
 ## ✨ Overview
-PieVerse Desktop is more than just a toolkit—it's your personal AI companion and creative partner. Built with cutting-edge AI technology, PieVerse adapts to your unique needs, whether you're in a business meeting, solving complex problems, or exploring creative pursuits. The application combines intelligent assistance, dynamic UI customization, and innovative creative tools to help you unlock new possibilities.
+PieVerse Desktop is more than just a toolkit—it's your personal AI companion and creative partner. Built with cutting-edge AI technology, PieVerse adapts to your unique needs, whether you're in a business meeting, solving complex problems, or exploring creative pursuits. The application combines intelligent assistance, dynamic UI customization, and innovative creative tools to help you unlock new possibilities. Think of it as your comprehensive AI playbook for productivity and creativity—a single platform that learns from your interactions and evolves alongside your workflow.
 
 ## 🌟 Complete Digital Twin - Your Evolving Digital Counterpart
 
@@ -41,6 +41,8 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
 - **💪 Physical Wellness Steward:** Integrates with health wearables to track wellness metrics, motivate positive lifestyle adaptations, and suggest personalized health interventions.
 
 - **🧿 Legacy Preservation:** Captures your stories, wisdom, and creative outputs in a comprehensive archive that preserves your intellectual and spiritual legacy for future reference or sharing.
+
+- **📘 Interactive Playbook:** Functions as your personal playbook for life scenarios, business challenges, and creative endeavors—providing strategies, templates, and insights tailored to your specific situations.
 
 *Future Embodiment:* Architected to eventually inhabit highly dexterous robotic systems or immersive VR environments, bringing these capabilities into physical and virtual worlds for tangible interaction.
 
@@ -71,6 +73,15 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
 - Efficient management of multiple Claude instances with different contexts
 - Support for multiple MCP server types through a unified configuration interface
 - Built-in templates for various MCP server configurations (filesystem, brave-search, memory, etc.)
+
+### 📊 Interactive AI Playbook
+- Serves as a comprehensive knowledge repository and strategic guide
+- Functions as an "operating manual" for both personal and professional challenges
+- Provides customized templates, frameworks, and strategies based on your past decisions
+- Evolves with use, developing increasingly tailored recommendations and insights
+- Seamlessly integrates with all other features to provide contextual guidance
+- Offers scenario planning capabilities for complex decision-making situations
+- Creates visualization aids to simplify complex concepts and strategic options
 
 ### 🧪 Enhanced LLM Developer Assistance
 - Advanced problem-solving journey capture system that records complete developer-LLM interactions
@@ -121,8 +132,11 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
   - **Dark/Light Mode:** Full theme support with optimized syntax highlighting.
   - **Syntax Detection:** Automatic content type detection for seamless workflow.
   - **Dynamic Syntax Highlighting:** The integrated Monaco Editor automatically detects the file type and applies appropriate syntax highlighting (e.g., JavaScript, Python, HTML, Markdown) based on the file extension.
+  - **Advanced Copy Options:** Copy content as Source (raw HTML/Markdown), Text (plain text), Rich Text (formatted for Word/email), or Markdown format.
+  - **Image Download:** Right-click on images to save them directly to your computer.
 - Intelligent handling of newlines and data attributes.
 - Preview and edit content from various sources with easy file loading capabilities.
+- Complete tab navigation with Help documentation for all features.
 
 ### 🐍 Python Sandbox
 - Integrated Python environment with Monaco Editor (syntax highlighting and autocompletion).
@@ -166,14 +180,16 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
   - **One-click copy:** Easily copy log entries to clipboard
 - Helps troubleshoot extension behavior, track background processes, and debug service worker interactions
 
-### 💻 VS Code Integration
+### 💻 VS Code Integration Playbook
 - Seamless integration with Visual Studio Code through a dedicated extension
+- Serves as your complete development playbook with customized coding strategies and patterns
 - Features include:
   - **Terminal integration:** Execute and capture terminal output directly from PieVerse
   - **Command execution:** Run VS Code commands from within the PieVerse interface
   - **File diagnostics:** View and navigate code issues and suggestions
   - **Real-time collaboration:** Work together on code with AI assistance
   - **Context-aware help:** Get targeted coding assistance based on your active files
+  - **Development playbooks:** Access customized coding strategies for your specific projects
 - Custom terminal implementation provides a full shell experience while maintaining output capture capability
 
 ### 🧠 AI/Human Collaborative Learning
@@ -479,6 +495,8 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
   Added Enhanced LLM Developer Assistance with problem-solving journey capture and specialized fine-tuning capabilities.
 - **v0.5.0:**
   Added VS Code integration for terminal access, diagnostics viewing, and seamless code interaction.
+- **v0.5.1:**
+  Fixed tab navigation in Document Renderer and added multiple content copying options (Source, Text, Rich Text, and Markdown).  
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 
