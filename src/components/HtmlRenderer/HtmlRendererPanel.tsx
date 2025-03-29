@@ -519,25 +519,38 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         )}
       </Card>
       
-      <Tabs value={activeTab} onTabChange={setActiveTab}>
-        <Tabs.List>
-          <Tabs.Tab value="preview" icon={<FileText size={16} />}>
-            Preview
-          </Tabs.Tab>
-          <Tabs.Tab value="help" icon={<Settings size={16} />}>
-            Help
-          </Tabs.Tab>
-        </Tabs.List>
-        
-        <Tabs.Panel value="preview" pt="xs">
-          <HtmlRenderer 
-            content={htmlContent} 
-            darkMode={isDark}
-            onContentChange={handleContentChange}
-          />
-        </Tabs.Panel>
-        
-        <Tabs.Panel value="help" pt="xs">
+      <Tabs 
+  defaultValue="preview" // Add a default value
+  value={activeTab} 
+  onChange={setActiveTab}
+  style={{ flex: 1, display: 'flex', flexDirection: 'column' }} // Add proper styling
+>
+  <Tabs.List>
+    <Tabs.Tab value="preview" icon={<FileText size={16} />}>
+      Preview
+    </Tabs.Tab>
+    <Tabs.Tab value="help" icon={<Settings size={16} />}>
+      Help
+    </Tabs.Tab>
+  </Tabs.List>
+  
+  <Tabs.Panel value="preview" pt="xs">
+    <HtmlRenderer 
+      content={htmlContent} 
+      darkMode={isDark}
+      onContentChange={handleContentChange}
+    />
+  </Tabs.Panel>
+  
+  <Tabs.Panel value="help" pt="xs">
+    <HtmlRenderer 
+      content={htmlContent} 
+      darkMode={isDark}
+      onContentChange={handleContentChange}
+    />
+  </Tabs.Panel>
+  
+  <Tabs.Panel value="help" pt="xs">
           <Card 
             shadow="sm" 
             padding="lg" 
