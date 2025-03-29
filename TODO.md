@@ -291,6 +291,9 @@ This initiative will not only improve PieVerse development efficiency but can al
   - [ ] Design human-in-the-loop refinement interface for quick presentation editing
   - [ ] Create templates system with industry and purpose-specific designs
   - [ ] Implement presentation analytics to improve generation quality over time
+- [ ] **Implement Horizontal Gene Transfer Mechanism for Code Evolution:**
+  Develop a system that automatically scouts for useful code segments ("genes") from external sources (e.g., open source repositories, internal code samples) and integrates them into PieVerse Desktop to foster continuous self-improvement and adaptive growth. This feature is inspired by the biological process of horizontal gene transfer.
+
 ---
 
 ## Marketing, Outreach & Project Management
