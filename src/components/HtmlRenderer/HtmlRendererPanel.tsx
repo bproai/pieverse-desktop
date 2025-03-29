@@ -615,11 +615,43 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   size="sm"
                   style={{ color: isDark ? '#C1C2C5' : '#495057' }}
                 >
+                  Content Export:
+                </Text>
+                <ul className="list-disc pl-5 mt-1">
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    "Copy Source" - Copy the raw HTML/Markdown content
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    "Copy as Text" - Extract only the plain text without formatting
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    "Copy as Rich Text" - Preserve formatting when pasting into Word, email, etc.
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    "Copy as Markdown" - Convert content to Markdown format
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Right-click on images to download them directly
+                  </li>
+                </ul>
+              </div>
+              
+              <Divider my="sm" color={isDark ? '#373A40' : '#e9ecef'} />
+              
+              <div>
+                <Text 
+                  weight={500} 
+                  size="sm"
+                  style={{ color: isDark ? '#C1C2C5' : '#495057' }}
+                >
                   Content Types:
                 </Text>
                 <ul className="list-disc pl-5 mt-1">
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     HTML: Standard HTML markup with tags
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Markdown: GitHub Flavored Markdown with code syntax highlighting
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Text with Newlines: Plain text with line breaks
@@ -647,6 +679,35 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Normalize newlines: Convert multiple newlines to paragraph breaks
                   </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Show HTML source: View raw HTML instead of rendered content
+                  </li>
+                </ul>
+              </div>
+              
+              <Divider my="sm" color={isDark ? '#373A40' : '#e9ecef'} />
+              
+              <div>
+                <Text 
+                  weight={500} 
+                  size="sm"
+                  style={{ color: isDark ? '#C1C2C5' : '#495057' }}
+                >
+                  Database Features:
+                </Text>
+                <ul className="list-disc pl-5 mt-1">
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Pagination: Load additional records with "Load More Records"
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Search: Filter entries by text in questions or answers
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    New records: Notifications appear when new entries are added
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Refresh: Update the database contents with latest entries
+                  </li>
                 </ul>
               </div>
               
@@ -672,6 +733,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#909296' : '#6c757d' }}>
                     Delete/Backspace: Remove selected text
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#909296' : '#6c757d' }}>
+                    Enter: Apply filter when search box is focused
                   </li>
                 </ul>
               </div>
