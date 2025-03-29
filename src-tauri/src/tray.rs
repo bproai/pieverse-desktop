@@ -45,7 +45,9 @@ pub fn setup_tray_handler(app: &AppHandle) {
 
 pub fn handle_window_event(window: &tauri::Window, event: &WindowEvent) {
     if let WindowEvent::CloseRequested { api, .. } = event {
-        let _ = window.hide();
-        api.prevent_close();
+        // let _ = window.hide();
+        // api.prevent_close();
+        // Exit the app entirely
+        std::process::exit(0);        
     }
 }

@@ -165,6 +165,14 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           // Update the data based on direction
           if (direction === 'initial') {
             setQaData(uniqueData);
+
+            // Automatically select the first item and show its content
+            if (uniqueData.length > 0) {
+              const firstItem = uniqueData[0];
+              setSelectedQaId(firstItem.answer_id);
+              setHtmlContent(firstItem.answer);
+              setActiveTab('preview'); // Optionally switch to preview tab
+            }            
             // Set newest timestamp from the first result
             if (resultNewestTimestamp) {
               setNewestTimestamp(resultNewestTimestamp);
