@@ -89,7 +89,6 @@ use services::chrome_extension_ws::{
     ChromeExtWebSocketState,
 };
 
-use crate::services::api_server::ApiServer;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
