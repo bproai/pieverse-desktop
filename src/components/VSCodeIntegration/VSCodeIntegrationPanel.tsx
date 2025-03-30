@@ -14,7 +14,8 @@ import {
   Tabs,
   Tooltip,
   ActionIcon,
-  Collapse
+  Collapse,
+  Checkbox
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { AlertCircle, Code as CodeIcon, RefreshCw, CheckCircle, MessageSquare, FileCode, Eraser, X, Folder, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
@@ -85,6 +86,8 @@ const VSCodeIntegrationPanel: React.FC = () => {
 
   const [statusInfo, setStatusInfo] = useState<string | null>(null);
 
+  const [showNotifications, setShowNotifications] = useState<boolean>(true);
+
   useEffect(() => {
     // Force a resize event when the connection panel visibility changes
     // This helps the Monaco editor recalculate its dimensions
@@ -92,6 +95,19 @@ const VSCodeIntegrationPanel: React.FC = () => {
       window.dispatchEvent(new Event('resize'));
     }, 300); // Short delay to allow the collapse animation to finish
   }, [isConnectionOpen]);
+
+  const showNotificationIfEnabled = (title: string, message: string, color: string = 'blue') => {
+    if (showNotifications) {
+      notifications.show({
+        title,
+        message,
+        color
+      });
+    }
+    
+    // Always log to console for debugging
+    console.log(`${title}: ${message}`);
+  };
 
   const browseForFile = async () => {
     try {
@@ -454,31 +470,39 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 
                 {!status.isRunning ? (
                   <Button 
-                  onClick={startServer}
-                  loading={loading}
+                    onClick={startServer}
+                    loading={loading}
+                    leftSection={<RefreshCw size={14} />}
+                  >
+                    Start Server
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={stopServer}
+                    loading={loading}
+                    color="red"
+                    leftSection={<AlertCircle size={14} />}
+                  >
+                    Stop Server
+                  </Button>
+                )}
+                
+                <Button 
+                  variant="outline"
+                  onClick={fetchStatus}
                   leftSection={<RefreshCw size={14} />}
                 >
-                  Start Server
+                  Refresh Status
                 </Button>
-              ) : (
-                <Button 
-                  onClick={stopServer}
-                  loading={loading}
-                  color="red"
-                  leftSection={<AlertCircle size={14} />}
-                >
-                  Stop Server
-                </Button>
-              )}
-              
-              <Button 
-                variant="outline"
-                onClick={fetchStatus}
-                leftSection={<RefreshCw size={14} />}
-              >
-                Refresh Status
-              </Button>
-            </Group>
+                
+                {/* Add the checkbox with proper alignment */}
+                <Checkbox
+                  label="Show Notifications"
+                  checked={showNotifications}
+                  onChange={(e) => setShowNotifications(e.currentTarget.checked)}
+                  style={{ marginBottom: '6px' }} /* This aligns just the checkbox with buttons */
+                />
+              </Group>
           </div>
         </Collapse>
 
@@ -508,9 +532,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
               <Tabs.Tab value="terminal" leftSection={<Terminal size={16} />}>
                 Terminal
               </Tabs.Tab>
-              <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
+              {/* <Tabs.Tab value="debug" leftSection={<AlertCircle size={16} />}>
                 Debug
-              </Tabs.Tab>
+              </Tabs.Tab> */}
             </Tabs.List>
 
             <Tabs.Panel value="diff" p="md" style={{ flex: 1 }}>
@@ -657,7 +681,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
               />
             </Tabs.Panel>
             
-            <Tabs.Panel value="debug" p="md">
+            {/* <Tabs.Panel value="debug" p="md">
               <Card withBorder p="md" mt="md">
                 <Text fw={600} mb="md">Debug Information</Text>
                 <Stack gap="md">
@@ -748,7 +772,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   </Group>
                 </Stack>
               </Card>
-            </Tabs.Panel>
+            </Tabs.Panel> */}
           </Tabs>
         </div>
       </Stack>
