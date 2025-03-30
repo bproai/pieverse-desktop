@@ -343,7 +343,6 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   };
 
   // Delete function for QA pairs with auto-selection of next/previous item
-  // Delete function for QA pairs with auto-selection of next/previous item
   const deleteQAPair = async (questionId: string) => {
     if (!questionId) return;
     

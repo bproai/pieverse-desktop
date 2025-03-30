@@ -104,6 +104,16 @@ pub fn run() {
             // Setup tray icon handlers
             tray::setup_tray_handler(&app.handle());
 
+            // Explicitly start API server in production mode
+            let sqlite_service = app.state::<SqliteService>();
+            let api_server_state = app.state::<ApiServerState>();
+        
+            tauri::async_runtime::block_on(async move {
+                start_api_server(sqlite_service, api_server_state, Some(3030))
+                    .await
+                    .expect("Failed to start API server");
+            });
+
             // Store resource directory path in the trend spike service.
             // Note the use of `.ok()` to convert the Result to an Option.
             if let Some(resource_dir) = app.handle().path().resource_dir().ok() {
