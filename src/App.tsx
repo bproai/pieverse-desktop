@@ -23,12 +23,21 @@ import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 import { MCPServerPanel } from './components/MCPServer';
 import { MCPClientPanel } from './components/MCPClient';
 import { ContextBuilderPanel } from './components/ContextBuilder';
+import { useEffect } from 'react';
+import { setupNativeMenu } from './systemMenu';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
   const [promptsBackend, setPromptsBackend] = React.useState<'mysql' | 'sqlite'>('sqlite');
 
   const isDevMode = import.meta.env.DEV === true;
+
+  useEffect(() => {
+    setupNativeMenu().catch(err => {
+      console.error('Failed to setup native menu:', err);
+    });
+  }, []);
+
 
   const toggleColorScheme = async () => {
     const newIsDark = !isDark;
