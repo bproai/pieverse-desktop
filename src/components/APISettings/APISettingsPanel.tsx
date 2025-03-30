@@ -524,12 +524,12 @@ export function APISettingsPanel() {
               disabled={httpIsLoading}
             />
 
-            <Text size="sm" c="dimmed">
+            <Text size="sm" color="dimmed">
               Server URL: http://localhost:{httpPort}
             </Text>
 
             {httpError && (
-              <Text size="sm" c="red">
+              <Text size="sm" color="red">
                 {httpError}
               </Text>
             )}
@@ -594,16 +594,16 @@ export function APISettingsPanel() {
               disabled={wsIsLoading}
             />
 
-            <Text size="sm" c="dimmed">
+            <Text size="sm" color="dimmed">
               Server URL: ws://localhost:{wsPort}
             </Text>
 
-            <Text size="xs" c="dimmed">
+            <Text size="xs" color="dimmed">
               This WebSocket server enables real-time communication with Chrome extensions.
             </Text>
 
             {wsError && (
-              <Text size="sm" c="red">
+              <Text size="sm" color="red">
                 {wsError}
               </Text>
             )}
@@ -638,7 +638,7 @@ export function APISettingsPanel() {
             </Button>
           </Group>
           {chromeConnected && (
-            <Text size="xs" c="dimmed">
+            <Text size="xs" color="dimmed">
               Chrome extension connected from: {connectedClient}
             </Text>
           )}          
@@ -770,7 +770,7 @@ export function APISettingsPanel() {
               <Badge color="violet" variant="filled">ChatGPT & Claude</Badge>
             </Group>
             
-            <Text size="xs" c="dimmed">
+            <Text size="xs" color="dimmed">
               Creates a new conversation by triggering the New Chat functionality in ChatGPT or Claude.
             </Text>
             
@@ -866,7 +866,7 @@ export function APISettingsPanel() {
                       )}
                     </Group>
                     {newChatStatus.result.tabId && (
-                      <Text size="xs" c="dimmed">Tab ID: {newChatStatus.result.tabId}</Text>
+                      <Text size="xs" color="dimmed">Tab ID: {newChatStatus.result.tabId}</Text>
                     )}
                   </Group>
                   
@@ -879,12 +879,12 @@ export function APISettingsPanel() {
                     <>
                       {/* ChatGPT specific details */}
                       {newChatStatus.result.initialArticleCount !== undefined && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="xs" color="dimmed">
                           Article count: {newChatStatus.result.initialArticleCount} → {newChatStatus.result.finalArticleCount || 0}
                         </Text>
                       )}
                       {newChatStatus.result.attempts && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="xs" color="dimmed">
                           Attempts: {newChatStatus.result.attempts}
                         </Text>
                       )}
@@ -895,12 +895,12 @@ export function APISettingsPanel() {
                     <>
                       {/* Claude specific details */}
                       {newChatStatus.result.initialMessageCount !== undefined && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="xs" color="dimmed">
                           Message count: {newChatStatus.result.initialMessageCount} → {newChatStatus.result.finalMessageCount || 0}
                         </Text>
                       )}
                       {newChatStatus.result.method && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="xs" color="dimmed">
                           Method: {newChatStatus.result.method.replace(/-/g, ' ')}
                         </Text>
                       )}
@@ -908,7 +908,7 @@ export function APISettingsPanel() {
                   )}
                   
                   {/* Timestamp */}
-                  <Text size="xs" c="dimmed" ta="right">
+                  <Text size="xs" color="dimmed" ta="right">
                     {new Date().toLocaleTimeString()}
                   </Text>
                 </Stack>

@@ -452,11 +452,11 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
                     </Group>
                     <Group>
                       {cmd.directory && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="xs" color="dimmed">
                           [{cmd.directory.split('/').pop() || cmd.directory.split('\\').pop()}]
                         </Text>
                       )}
-                      <Text size="xs" c="dimmed">
+                      <Text size="xs" color="dimmed">
                         {cmd.timestamp.toLocaleTimeString()}
                       </Text>
                       <ActionIcon 

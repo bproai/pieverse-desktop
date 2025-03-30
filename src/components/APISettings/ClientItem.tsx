@@ -58,7 +58,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
             <Group spacing={4} nowrap='true'>
               <SafeFavicon url={client.favicon} size={12} />
               <Tooltip label={client.tab_url} position="top">
-                <Text size="xs" c="dimmed" style={{ 
+                <Text size="xs" color="dimmed" style={{ 
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
@@ -83,7 +83,7 @@ export function ClientItem({ client, selected, onClick }: ClientItemProps) {
             <Badge size="xs" variant="outline">
               {client.platform || 'Unknown'}
             </Badge>
-            <Text size="xs" c="dimmed">{client.addr}</Text>
+            <Text size="xs" color="dimmed">{client.addr}</Text>
           </Group>
         </Stack>
         

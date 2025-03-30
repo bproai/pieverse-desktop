@@ -103,7 +103,7 @@ const ContextBuilderPanel: React.FC = () => {
                     <Upload size={48} />
                     <Text size="sm">Drag and drop files or</Text>
                     <Button variant="outline" size="sm">Browse Files</Button>
-                    <Text size="xs" c="dimmed">Selected files will be added as context sections</Text>
+                    <Text size="xs" color="dimmed">Selected files will be added as context sections</Text>
                   </Stack>
                 </Group>
               </Card>
@@ -134,7 +134,7 @@ const ContextBuilderPanel: React.FC = () => {
             <Tabs.Panel value="llm-rules" pt="md">
               <Card withBorder p="md" radius="md">
                 <Text>LLM Rules will be shown here</Text>
-                <Text size="sm" c="dimmed" mt="md">
+                <Text size="sm" color="dimmed" mt="md">
                   You can include model rules, system prompts, and custom instructions to include in your context.
                 </Text>
                 <Select
@@ -153,7 +153,7 @@ const ContextBuilderPanel: React.FC = () => {
             <Tabs.Panel value="references" pt="md">
               <Card withBorder p="md" radius="md">
                 <Text>References will be shown here</Text>
-                <Text size="sm" c="dimmed" mt="md">
+                <Text size="sm" color="dimmed" mt="md">
                   You can include documentation references, API specifications, and other reference materials to add to your context.
                 </Text>
                 <Group position="apart" mt="md">

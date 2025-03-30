@@ -500,7 +500,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                   </Accordion.Control>
                   <Accordion.Panel>
                     <Stack gap="xs">
-                      <Text size="xs" c="dimmed">{fileDiag.file}</Text>
+                      <Text size="xs" color="dimmed">{fileDiag.file}</Text>
                       {fileDiag.diagnostics.map((diag, diagIndex) => (
                         <Card 
                           key={diagIndex} 
@@ -526,7 +526,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                               ))}
                             </Group>
                             <Group>
-                              <Text size="xs" c="dimmed">
+                              <Text size="xs" color="dimmed">
                                 Line {diag.range.start.line + 1}, Col {diag.range.start.character + 1}
                               </Text>
                               <Tooltip label="Open file at location">

@@ -122,7 +122,7 @@ const VSCodeChat: React.FC<VSCodeChatProps> = ({ isServerRunning }) => {
         <ScrollArea.Autosize maxHeight={300} style={{ width: '100%', flex: 1 }}>
           <Stack spacing="xs" p="xs">
             {messages.length === 0 ? (
-              <Text c="dimmed" size="sm" align="center" p="md">
+              <Text color="dimmed" size="sm" align="center" p="md">
                 No messages yet. Start chatting with VS Code!
               </Text>
             ) : (
@@ -138,7 +138,7 @@ const VSCodeChat: React.FC<VSCodeChatProps> = ({ isServerRunning }) => {
                   }}
                 >
                   <Text size="sm">{message.content}</Text>
-                  <Text size="xs" c="dimmed" align="right">
+                  <Text size="xs" color="dimmed" align="right">
                     {message.timestamp.toLocaleTimeString()}
                   </Text>
                 </Paper>
