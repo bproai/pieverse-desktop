@@ -266,12 +266,12 @@ const VSCodeIntegrationPanel: React.FC = () => {
     setError(null);
     try {
       await core.invoke('stop_vscode_ws_server');
+      await fetchStatus(); // Immediately fetch updated status
       notifications.show({
         title: 'Success',
         message: 'VS Code WebSocket server stopped',
         color: 'blue'
       });
-      setStatus({ ...status, isRunning: false });
     } catch (error: any) {
       console.error('Error stopping VS Code WebSocket server:', error);
       setError(error.toString());
@@ -284,6 +284,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   // Send a test diff to VS Code
   const sendTestDiff = async () => {
@@ -651,7 +652,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
             </Tabs.Panel>
 
             <Tabs.Panel value="terminal" p="md">
-              <VSCodeTerminalPanel isServerRunning={status.isRunning} />
+              <VSCodeTerminalPanel isServerRunning={status.isRunning}
+              isConnectionOpen={isConnectionOpen}
+              />
             </Tabs.Panel>
             
             <Tabs.Panel value="debug" p="md">

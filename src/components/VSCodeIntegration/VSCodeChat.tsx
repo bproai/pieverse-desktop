@@ -52,7 +52,7 @@ const VSCodeChat: React.FC<VSCodeChatProps> = ({ isServerRunning }) => {
     return () => {
       unlisten.then(fn => fn());
     };
-  }, []);
+  }, [isServerRunning]); // Add isServerRunning to dependency array
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

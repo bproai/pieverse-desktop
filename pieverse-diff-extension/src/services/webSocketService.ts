@@ -171,6 +171,38 @@ export class WebSocketService {
       // Try to parse as JSON to determine message type
       const jsonData = JSON.parse(dataStr);
       console.log('Successfully parsed JSON data:', jsonData);
+
+      if (jsonData.type === 'serverShutdown') {
+        console.log('Received intentional server shutdown message:', jsonData.message);
+        // Disable automatic reconnection
+        this.reconnectAttempts = this.MAX_RECONNECT_ATTEMPTS;
+        if (this.wsReconnectInterval) {
+            clearInterval(this.wsReconnectInterval);
+            this.wsReconnectInterval = null;
+        }
+        
+        // Update UI to show intentional disconnect
+        globals.statusBarItem.text = "$(circle-slash) PieVerse";
+        globals.statusBarItem.tooltip = "PieVerse: Server stopped intentionally";
+        globals.sidebarProvider.updateConnectionStatus('disconnected');
+        
+        // Show a notification to the user
+        vscode.window.showInformationMessage(`PieVerse server stopped: ${jsonData.message}`);
+
+        globals.sidebarProvider.addSystemMessage(
+          `PieVerse server stopped: ${jsonData.message}`,
+          'info'
+        );
+        
+        // Close the connection from our side as well
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        
+        return;
+      }
+
       
       if (jsonData.type === 'chat') {
         try {

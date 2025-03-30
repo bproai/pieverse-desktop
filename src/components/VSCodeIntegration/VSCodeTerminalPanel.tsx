@@ -32,9 +32,10 @@ interface TerminalCommand {
 
 interface VSCodeTerminalPanelProps {
   isServerRunning: boolean;
+  isConnectionOpen: boolean;  
 }
 
-const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunning }) => {
+const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunning, isConnectionOpen }) => {
   const [commands, setCommands] = useState<TerminalCommand[]>([]);
   const [commandInput, setCommandInput] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -425,7 +426,7 @@ const VSCodeTerminalPanel: React.FC<VSCodeTerminalPanelProps> = ({ isServerRunni
         </Group>
         
         <ScrollArea 
-          style={{ height: 'calc(70vh - 250px)' }} 
+          style={{ height: isConnectionOpen ? 'calc(35vh)': 'calc(60vh)' }}
           viewportRef={scrollRef}
           scrollbarSize={8}
           type="auto"

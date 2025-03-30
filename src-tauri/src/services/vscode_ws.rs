@@ -282,15 +282,45 @@ pub fn stop_vscode_ws_server(state: tauri::State<'_, VSCodeWebSocketState>) -> R
         return Err("Server is not running".to_string());
     }
 
+    // Send a shutdown message to clients before closing
+    if let Ok(tx_lock) = state.broadcast_tx.lock() {
+        if let Some(tx) = tx_lock.clone() {
+            let shutdown_msg = serde_json::json!({
+                "type": "serverShutdown",
+                "message": "Server is shutting down intentionally"
+            });
+            
+            // Try to send the message
+            if let Ok(msg_str) = serde_json::to_string(&shutdown_msg) {
+                let _ = tx.send(msg_str);
+                
+                // Give a small delay for the message to be sent
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+        }
+    }
+
     // Get shutdown sender
     let sender = match state.shutdown_sender.lock() {
         Ok(mut lock) => lock.take(),
         Err(_) => return Err("Failed to lock shutdown sender".to_string()),
     };
 
+    // Clear the broadcast channel
+    if let Ok(mut tx_lock) = state.broadcast_tx.lock() {
+        // Replace with None to drop all subscribers
+        *tx_lock = None;
+    }
+
     // Send shutdown signal
     if let Some(tx) = sender {
         let _ = tx.send(());
+        
+        // Set server as not running immediately - don't wait for the server to stop
+        if let Ok(mut is_running) = state.server_running.lock() {
+            *is_running = false;
+        }
+        
         Ok(())
     } else {
         Err("No shutdown sender available".to_string())

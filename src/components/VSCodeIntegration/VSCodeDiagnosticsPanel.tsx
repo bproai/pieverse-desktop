@@ -117,7 +117,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
     return () => {
       unlisten.then(fn => fn());
     };
-  }, []);
+  }, [isServerRunning]); // Add isServerRunning to dependency array
 
   // Function to manually request diagnostics
   const requestDiagnostics = async () => {
