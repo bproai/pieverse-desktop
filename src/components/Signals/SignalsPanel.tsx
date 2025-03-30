@@ -668,7 +668,7 @@ const SignalsPanel = () => {
                   
                   <ScrollArea h={400} mt="md">
                     {predictions.length === 0 ? (
-                      <Text c="dimmed" align="center" mt="xl">
+                      <Text color="dimmed" align="center" mt="xl">
                         No predictions yet. Add keywords to monitor or run a prediction.
                       </Text>
                     ) : (
@@ -704,7 +704,7 @@ const SignalsPanel = () => {
                             )}
                             
                             {prediction.detected_at && (
-                              <Text size="xs" c="dimmed" mt="xs">
+                              <Text size="xs" color="dimmed" mt="xs">
                                 Detected: {new Date(prediction.detected_at).toLocaleDateString()}
                               </Text>
                             )}
@@ -857,7 +857,7 @@ const SignalsPanel = () => {
                   <Card shadow="xs" p="md" withBorder style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Stack align="center" spacing="md">
                       <Info size={48} color="#adb5bd" />
-                      <Text c="dimmed" align="center">
+                      <Text color="dimmed" align="center">
                         Select a prediction to view details or add keywords to monitor
                       </Text>
                     </Stack>
@@ -960,7 +960,7 @@ const SignalsPanel = () => {
                   
                   <ScrollArea h={300}>
                     {Object.keys(monitoredKeywords).length === 0 ? (
-                      <Text c="dimmed" align="center" py="md">
+                      <Text color="dimmed" align="center" py="md">
                         No keywords added yet. Add keywords to monitor for trend spikes.
                       </Text>
                     ) : (

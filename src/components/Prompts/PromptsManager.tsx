@@ -820,7 +820,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                       <Text size="lg" weight={500}>{prompt.title}</Text>
                       <Text 
                         size="sm" 
-                        c="dimmed"
+                        color="dimmed"
                         className="truncate"
                         style={{ 
                           width: "100%",
@@ -877,7 +877,7 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
               </Card>
             ))}
             {promptsByCategory[category]?.length === 0 && (
-              <Text c="dimmed" align="center" italic size="sm">
+              <Text color="dimmed" align="center" italic size="sm">
                 No prompts in this category
               </Text>
             )}
@@ -999,10 +999,10 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
         size="lg"
       >
         <Stack spacing="md">
-          <Text size="sm" c="dimmed">
+          <Text size="sm" color="dimmed">
             Paste your JSON array of prompts. Each prompt should have: title, description, category, display_order, and is_active fields.
           </Text>
-          <Text size="sm" c="dimmed">
+          <Text size="sm" color="dimmed">
             Example format:
             <pre className="bg-gray-100 p-2 rounded mt-1 text-xs">
 {JSON.stringify([{

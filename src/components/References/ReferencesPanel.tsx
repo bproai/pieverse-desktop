@@ -437,7 +437,7 @@ const ReferencesPanel: React.FC = () => {
         
         <Tabs.Panel value="list" pt="md">
           {filteredReferences.length === 0 ? (
-            <Text c="dimmed" ta="center" mt={20}>
+            <Text color="dimmed" ta="center" mt={20}>
               No references found. Add some or change your search criteria.
             </Text>
           ) : (
@@ -465,7 +465,7 @@ const ReferencesPanel: React.FC = () => {
                   </Group>
                   
                   {reference.content && (
-                    <Text size="sm" c="dimmed" mb="md">
+                    <Text size="sm" color="dimmed" mb="md">
                       {reference.content}
                     </Text>
                   )}
@@ -476,7 +476,7 @@ const ReferencesPanel: React.FC = () => {
                         <Badge key={tag} size="sm">{tag}</Badge>
                       ))}
                     </Group>
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" color="dimmed">
                       {new Date(reference.dateAdded).toLocaleDateString()}
                     </Text>
                   </Group>

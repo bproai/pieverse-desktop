@@ -645,7 +645,7 @@ Use variables like this:
         
         <ScrollArea style={{ height: 'calc(100vh - 250px)' }}>
           {filteredRules.length === 0 ? (
-            <Text c="dimmed" align="center" mt={20}>
+            <Text color="dimmed" align="center" mt={20}>
               No rules found. Add some or change your search criteria.
             </Text>
           ) : (
@@ -670,12 +670,12 @@ Use variables like this:
                       <Badge size="xs" color="blue">System</Badge>
                     )}
                   </Group>
-                  <Text size="xs" c="dimmed" lineClamp={2}>
+                  <Text size="xs" color="dimmed" lineClamp={2}>
                     {rule.description}
                   </Text>
                   <Group position="apart" mt="xs">
                     <Badge size="xs">{rule.model}</Badge>
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" color="dimmed">
                       {new Date(rule.dateModified).toLocaleDateString()}
                     </Text>
                   </Group>
@@ -782,7 +782,7 @@ Use variables like this:
                 
                 <Tabs.Panel value="content" pt="md">
                   <Text size="sm" weight={500} mb={5}>Rule Content</Text>
-                  <Text size="xs" c="dimmed" mb={10}>
+                  <Text size="xs" color="dimmed" mb={10}>
                     Use {"{{variableName}}"} syntax to include variables in your content.                    
                   </Text>
                   <Textarea
@@ -861,7 +861,7 @@ Use variables like this:
                   
                   <Text weight={500} mb="xs">Variables</Text>
                   {newRule.variables.length === 0 ? (
-                    <Text c="dimmed">No variables defined yet.</Text>
+                    <Text color="dimmed">No variables defined yet.</Text>
                   ) : (
                     <div className="space-y-3">
                       {newRule.variables.map((variable, index) => (
@@ -872,7 +872,7 @@ Use variables like this:
                                 <Text weight={500}>{`{${variable.name}}`}</Text>
                                 <Badge size="xs">{variable.type}</Badge>
                               </Group>
-                              <Text size="xs" c="dimmed">
+                              <Text size="xs" color="dimmed">
                                 {variable.description || 'No description'}
                               </Text>
                               <Text size="xs">
@@ -969,7 +969,7 @@ Use variables like this:
                         <Badge color="blue">System</Badge>
                       )}
                     </Group>
-                    <Text size="sm" c="dimmed">{selectedRule.description}</Text>
+                    <Text size="sm" color="dimmed">{selectedRule.description}</Text>
                   </div>
                   
                   <Group>
@@ -1010,10 +1010,10 @@ Use variables like this:
                 </Group>
                 
                 <Group position="apart" mt="xs">
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" color="dimmed">
                     Created: {new Date(selectedRule.dateCreated).toLocaleString()}
                   </Text>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" color="dimmed">
                     Last modified: {new Date(selectedRule.dateModified).toLocaleString()}
                   </Text>
                 </Group>
@@ -1091,7 +1091,7 @@ Use variables like this:
                 <Tabs.Panel value="variables" style={{ height: 'calc(100vh - 350px)' }}>
                   <ScrollArea style={{ height: '100%' }}>
                     {selectedRule.variables.length === 0 ? (
-                      <Text c="dimmed" align="center" mt={20}>
+                      <Text color="dimmed" align="center" mt={20}>
                         No variables defined for this rule.
                       </Text>
                     ) : (
@@ -1108,7 +1108,7 @@ Use variables like this:
                                   <Text weight={500}>{`{${variable.name}}`}</Text>
                                   <Badge size="xs">{variable.type}</Badge>
                                 </Group>
-                                <Text size="xs" c="dimmed">
+                                <Text size="xs" color="dimmed">
                                   {variable.description || 'No description'}
                                 </Text>
                               </div>
@@ -1164,7 +1164,7 @@ Use variables like this:
             </div>
           ) : (
             <div className="h-full flex items-center justify-center">
-              <Text c="dimmed" align="center">
+              <Text color="dimmed" align="center">
                 Select a rule from the sidebar or create a new one.
               </Text>
             </div>

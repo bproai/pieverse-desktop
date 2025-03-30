@@ -31,7 +31,7 @@ const DetectedSpikeCard: React.FC<DetectedSpikeCardProps> = ({ prediction, getPr
         </Group>
       )}
       {prediction.detected_at && (
-        <Text size="sm" c="dimmed" mt="xs">
+        <Text size="sm" color="dimmed" mt="xs">
           Detected At: {new Date(prediction.detected_at).toLocaleDateString()}
         </Text>
       )}

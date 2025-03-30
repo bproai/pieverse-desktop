@@ -206,7 +206,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
             ))}
             
             {categories.length === 0 && (
-              <Text align="center" c="dimmed" italic>No categories added yet</Text>
+              <Text align="center" color="dimmed" italic>No categories added yet</Text>
             )}
           </Stack>
         </Card>
