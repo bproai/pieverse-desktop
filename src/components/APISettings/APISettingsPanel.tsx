@@ -71,6 +71,24 @@ export function APISettingsPanel() {
   const wsService = WebSocketService.getInstance();
 
   useEffect(() => {
+    const unlisten = listen('api-server-started', (event) => {
+      const actualPort = event.payload as number;
+      if (actualPort !== httpPort) {
+        setHttpPort(actualPort);
+        setHttpError(`Port ${httpPort} busy; using ${actualPort}`);
+      } else {
+        setHttpError('');
+      }
+    });
+  
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [httpPort]);
+  
+
+
+  useEffect(() => {
     const setupNewChatListener = async () => {
       const unlisten = await listen('chrome-extension-message', (event) => {
         const payload = event.payload as NewChatResult;
@@ -276,6 +294,16 @@ export function APISettingsPanel() {
     try {
       const response = await fetch(`http://localhost:${httpPort}/api/status`);
       if (response.ok) {
+
+        const actualPort = await core.invoke('start_api_server', { port: httpPort }) as number;
+        if (actualPort !== httpPort) {
+          setHttpPort(actualPort);
+          setHttpError(`Port ${httpPort} busy; using port ${actualPort}`);
+        }
+        else {
+          setHttpError('');
+        }
+
         setHttpStatus('running');
       } else {
         await handleStartHttpService();
@@ -323,18 +351,19 @@ export function APISettingsPanel() {
     setHttpIsLoading(true);
     setHttpError('');
     try {
-      await core.invoke('start_api_server', { port: httpPort });
+      const actualPort = await core.invoke('start_api_server', { port: httpPort }) as number;
+      if (actualPort !== httpPort) {
+        setHttpPort(actualPort);
+        setHttpError(`Port ${httpPort} busy; using port ${actualPort}`);
+      } else {
+        setHttpError('');
+      }
+      console.log('API server started on port:', actualPort);
       setHttpStatus('running');
     } catch (error) {
       console.error('Failed to start API server:', error);
-      // If error contains "already running", just set status to running
-      const errorStr = String(error);
-      if (errorStr.includes('already running')) {
-        setHttpStatus('running');
-      } else {
-        setHttpStatus('stopped');
-        setHttpError(errorStr);
-      }
+      setHttpStatus('stopped');
+      setHttpError(String(error));
     } finally {
       setHttpIsLoading(false);
     }

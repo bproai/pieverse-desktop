@@ -16,6 +16,9 @@ use std::sync::Arc;
 use tokio::sync::{watch, Mutex};
 use tower_http::cors::CorsLayer;
 
+use tauri::{AppHandle, Emitter};
+
+
 // Changed to single error type since ServerError is never used
 #[derive(Debug)]
 pub struct ApiError(String);
@@ -63,7 +66,7 @@ impl ApiServer {
         TcpListener::bind(("127.0.0.1", port)).is_ok()
     }
 
-    pub async fn start(&self) -> Result<(), String> {
+    pub async fn start(&self, app_handle: &tauri::AppHandle) -> Result<(), String> {
         if !Self::check_port_available(self.port) {
             return Err(format!("Port {} is already in use", self.port));
         }
@@ -95,6 +98,11 @@ impl ApiServer {
         };
 
         println!("API server successfully bound to address");
+
+        // Emit the actual port back to frontend
+        app_handle.emit("api-server-started", self.port)
+            .map_err(|e| format!("Failed to emit event: {}", e))?;
+        // --- End fix here ---
 
         let mut shutdown_rx = self.shutdown.subscribe();
 
@@ -537,6 +545,10 @@ impl ApiServer {
             Err(e) => Err(ApiError(format!("Failed to delete question: {}", e)))
         }
     }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
     
 }
 
@@ -544,29 +556,41 @@ impl ApiServer {
 pub async fn start_api_server(
     state: tauri::State<'_, SqliteService>,
     api_state: tauri::State<'_, ApiServerState>,
+    app_handle: AppHandle,
     port: Option<u16>,
-) -> Result<(), String> {
-    let port = port.unwrap_or(3030);
+) -> Result<u16, String> {
+    let requested_port = port.unwrap_or(3030);
 
     let guard = api_state.server.lock().await;
-    if guard.is_some() {
-        return Ok(());
+    if let Some(existing_server) = guard.as_ref() {
+        // Always emit event when the command is called
+        app_handle.emit("api-server-started", existing_server.port())
+            .map_err(|e| e.to_string())?;
+        return Ok(existing_server.port());
     }
     drop(guard);
 
-    if !ApiServer::check_port_available(port) {
-        return Err(format!("Port {} is already in use", port));
+    let mut port = requested_port;
+    while !ApiServer::check_port_available(port) && port < 3040 {
+        port += 1;
+    }
+
+    if port >= 3040 {
+        return Err("No available ports found in range".into());
     }
 
     let state_ref = Arc::new(Mutex::new(state.inner().clone()));
     let server = ApiServer::new(state_ref, port);
 
-    server.start().await?;
+    // Start and emit the event internally
+    server.start(&app_handle).await?;
+    app_handle.emit("api-server-started", port)
+        .map_err(|e| e.to_string())?;
 
     let mut guard = api_state.server.lock().await;
     *guard = Some(server);
 
-    Ok(())
+    Ok(port)
 }
 
 #[tauri::command]

@@ -109,7 +109,8 @@ pub fn run() {
             // Explicitly start API server in production mode
             let sqlite_service = app.state::<SqliteService>();
             let api_server_state = app.state::<ApiServerState>();
-
+            let app_handle = app.handle();  // <--- Obtain handle here first, outside async block
+            let default_port = 3030;
 
             // tauri::async_runtime::block_on(async move {
             //     start_api_server(sqlite_service, api_server_state, Some(3030))
@@ -117,40 +118,17 @@ pub fn run() {
             //         .expect("Failed to start API server");
         
             tauri::async_runtime::block_on(async move {
-                // Define default port
-                let default_port = 3030;
-                
-                // First check if default port is available
-                if ApiServer::check_port_available(default_port) {
-                    // Start with default port
-                    if let Err(e) = start_api_server(sqlite_service, api_server_state, Some(default_port)).await {
-                        println!("Failed to start API server on port {}: {}", default_port, e);
-                    } else {
-                        println!("API server started successfully on port {}", default_port);
-                    }
-                } else {
-                    println!("Port {} is already in use, trying alternative ports...", default_port);
-                    
-                    // Try to find an available port in a range
-                    let mut port_found = false;
-                    for port in 3031..3040 {  // Try ports 3031-3039
-                        if ApiServer::check_port_available(port) {
-                            // Try starting with this port
-                            if let Err(e) = start_api_server(sqlite_service, api_server_state, Some(port)).await {
-                                println!("Failed to start API server on port {}: {}", port, e);
-                            } else {
-                                println!("API server started successfully on port {}", port);
-                                port_found = true;
-                            }
-                            break;  // We only try once with these states
-                        }
-                    }
-                    
-                    if !port_found {
-                        println!("Could not start API server - no available ports found in range 3030-3039");
-                    }
+                // use cloned handle inside async block
+                if let Err(e) = start_api_server(
+                    sqlite_service,
+                    api_server_state,
+                    app_handle.clone(),
+                    Some(default_port)
+                ).await {
+                    println!("Error starting API server: {}", e);
                 }
             });
+        
 
             // Store resource directory path in the trend spike service.
             // Note the use of `.ok()` to convert the Result to an Option.
