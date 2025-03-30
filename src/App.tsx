@@ -102,41 +102,61 @@ function App() {
                   LLM Rules
                 </Tabs.Tab>
 
+                {isDevMode && (
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="mysql" leftSection={<Database size={16} />}>
                   MySQL
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="python" leftSection={<Terminal size={16} />}>
                   Python Sandbox
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="jssandbox" leftSection={<CodeIcon size={16} />}>
                   JavaScript Sandbox
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="signals" leftSection={<TrendingUp size={16} />}>
                   Signals
                 </Tabs.Tab>
+                )}
                 {isDevMode && (
                   <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
                     Chrome Debugger
                   </Tabs.Tab>
                 )}
+                {isDevMode && (
                 <Tabs.Tab value="vscode" leftSection={<Brackets size={16} />}>
                   VS Code Integration
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="filesystem" leftSection={<HardDrive size={16} />}>
                   File System
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="context-builder" leftSection={<Layers size={16} />}>
                   Context Builder
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="claude-mcp" leftSection={<Server size={16} />}>
                   MCP Server
                 </Tabs.Tab>
+                )}
+                {isDevMode && (
                 <Tabs.Tab value="puppeteer-mcp" leftSection={<User size={16} />}>
                   MCP Client
                 </Tabs.Tab>
+                )}
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
@@ -163,27 +183,35 @@ function App() {
                 <LLMRulesPanel />
               </Tabs.Panel>
 
-
+              {isDevMode && (
               <Tabs.Panel value="mongodb" className="p-4">
                 <MongoDBPanel />
               </Tabs.Panel>
+              )}
 
+              {isDevMode && (
               <Tabs.Panel value="mysql" className="p-4">
                 <MySQLPanel />
               </Tabs.Panel>
+              )}
 
+              {isDevMode && (
               <Tabs.Panel value="python" className="p-4">
                 <PythonPanel />
               </Tabs.Panel>
+              )}
               
+              {isDevMode && (
               <Tabs.Panel value="jssandbox" className="p-4">
                 <JsSandboxPanel isDark={isDark} />
               </Tabs.Panel>
+              )}
               
+              {isDevMode && (
               <Tabs.Panel value="signals" className="p-4">
                 <SignalsPanel />
               </Tabs.Panel>
-
+              )}
 
               {isDevMode && (
                 <Tabs.Panel value="chrome-debugger" className="p-4">
@@ -191,21 +219,32 @@ function App() {
                 </Tabs.Panel>
               )}
               
+              {isDevMode && (
               <Tabs.Panel value="vscode" className="p-4">
                 <VSCodeIntegrationPanel />
               </Tabs.Panel>
+              )}
+
+              {isDevMode && (
               <Tabs.Panel value="filesystem" className="p-4">
                 <FileSystemPanel />
               </Tabs.Panel>
+              )}
+              {isDevMode && (
               <Tabs.Panel value="context-builder" className="p-4">
                 <ContextBuilderPanel />
               </Tabs.Panel>
+              )}
+              {isDevMode && (
               <Tabs.Panel value="claude-mcp" className="p-4">
                 <MCPServerPanel />
               </Tabs.Panel>
+              )}
+              {isDevMode && (
               <Tabs.Panel value="puppeteer-mcp" className="p-4">
                 <MCPClientPanel />
               </Tabs.Panel>                
+              )}
             </Tabs>           
           </main>
 

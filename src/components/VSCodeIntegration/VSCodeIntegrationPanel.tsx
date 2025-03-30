@@ -401,7 +401,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
               <Text size="xl" fw={700}>VS Code Integration</Text>
             </Group>
             <Badge 
-              c={status.isRunning ? 'green' : 'gray'}
+              color={status.isRunning ? 'green' : 'gray'}
               variant="filled"
             >
               {status.isRunning ? 'Connected' : 'Disconnected'}
@@ -421,7 +421,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
             <div>
               <Alert 
                 icon={<AlertCircle size={16} />} 
-                c="blue" 
+                color="blue" 
                 title="VS Code Extension Connection"
               >
                 <Text size="sm">
@@ -463,7 +463,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 <Button 
                   onClick={stopServer}
                   loading={loading}
-                  c="red"
+                  color="red"
                   leftSection={<AlertCircle size={14} />}
                 >
                   Stop Server
@@ -482,7 +482,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
         </Collapse>
 
         {error && (
-          <Alert c="red" title="Error" icon={<AlertCircle size={16} />}>
+          <Alert color="red" title="Error" icon={<AlertCircle size={16} />}>
             {error}
           </Alert>
         )}
@@ -560,7 +560,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                           size="lg"
                           title="Browse for file"
                           style={{ marginRight: '8px' }}
-                          c="blue"
+                          color="blue"
                         >
                           <Folder size={16} />
                         </ActionIcon>
@@ -619,7 +619,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   <Group gap="xs">
                     <Button
                       variant="subtle"
-                      c="red"
+                      color="red"
                       onClick={resetSuggestedContent}
                       leftSection={<X size={14} />}
                       size="sm"
@@ -629,7 +629,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     
                     <Button
                       variant="outline"
-                      c="gray"
+                      color="gray"
                       onClick={resetForm}
                       leftSection={<Eraser size={14} />}
                     >
@@ -660,7 +660,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                 <Stack gap="md">
                   <Alert 
                     icon={<AlertCircle size={16} />} 
-                    c="blue" 
+                    color="blue" 
                     title="Debug Mode"
                   >
                     This panel shows debug information to help diagnose connection issues.
@@ -668,7 +668,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   
                   {statusInfo && (
                     <Alert 
-                      c="blue" 
+                      color="blue" 
                       title="Status Information" 
                       icon={<CheckCircle size={16} />}
                       withCloseButton
@@ -696,7 +696,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                   
                   {error && (
                     <>
-                      <Text size="sm" fw={600} c="red">Error Details:</Text>
+                      <Text size="sm" fw={600} color="red">Error Details:</Text>
                       <Code block>
                         {error}
                       </Code>
@@ -722,7 +722,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
                     
                     <Button
                       variant="outline"
-                      c="yellow"
+                      color="yellow"
                       onClick={async () => {
                         try {
                           // Just invoke the send_code_diff_to_vscode command directly with test data

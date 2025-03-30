@@ -376,13 +376,13 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
           </Group>
           <Group>
             <Badge 
-              c={isServerRunning ? 'green' : 'gray'}
+              color={isServerRunning ? 'green' : 'gray'}
               variant="filled"
             >
               {isServerRunning ? 'Connected' : 'Disconnected'}
             </Badge>
             <Badge 
-              c="blue"
+              color="blue"
               variant="outline"
             >
               {diagnostics.length > 0 
@@ -395,7 +395,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
       
       <Stack gap="md" mt="md">
         {error && (
-          <Alert c="red" title="Error" icon={<AlertCircle size={16} />} withCloseButton onClose={() => setError(null)}>
+          <Alert color="red" title="Error" icon={<AlertCircle size={16} />} withCloseButton onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -446,7 +446,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
           
           <Button
             variant="subtle"
-            c="gray"
+            color="gray"
             onClick={clearDiagnostics}
             leftSection={<X size={14} />}
           >
@@ -457,7 +457,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
         <ScrollArea style={{ height: isConnectionOpen ? 'calc(40vh)': 'calc(60vh)' }}>
           {filteredDiagnostics.length === 0 ? (
             <Alert
-              c="blue"
+              color="blue"
               title={diagnostics.length === 0
                 ? "No Diagnostics Available"
                 : "No Matching Diagnostics"}
@@ -478,7 +478,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                     <Group justify="space-between">
                       <Group>
                         <Text>{getFileName(fileDiag.file)}</Text>
-                        <Badge c={
+                        <Badge color={
                           fileDiag.diagnostics.some(d => d.severity === 0) ? 'red' :
                           fileDiag.diagnostics.some(d => d.severity === 1) ? 'yellow' : 'blue'
                         }>
@@ -516,11 +516,11 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                         >
                           <Group justify="apart">
                             <Group>
-                              <Badge c={getSeverityColor(diag.severity)}>
+                              <Badge color={getSeverityColor(diag.severity)}>
                                 {getSeverityText(diag.severity)}
                               </Badge>
                               {diag.tags && diag.tags.map((tag, tagIndex) => (
-                                <Badge key={tagIndex} c="violet" leftSection={<Tag size={12} />}>
+                                <Badge key={tagIndex} color="violet" leftSection={<Tag size={12} />}>
                                   {getTagText(tag)}
                                 </Badge>
                               ))}
@@ -550,13 +550,13 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                           
                           {diag.source && (
                             <Group mt="xs">
-                              <Badge c="gray" variant="light">Source: {diag.source}</Badge>
+                              <Badge color="gray" variant="light">Source: {diag.source}</Badge>
                             </Group>
                           )}
                           
                           {diag.code && (
                             <Group mt="xs">
-                              <Badge leftSection={<Code2 size={12} />} c="gray" variant="light">
+                              <Badge leftSection={<Code2 size={12} />} color="gray" variant="light">
                                 Code: {typeof diag.code === 'string' ? diag.code : diag.code.value}
                               </Badge>
                             </Group>
@@ -585,7 +585,7 @@ const VSCodeDiagnosticsPanel: React.FC<VSCodeDiagnosticsPanelProps> = ({ isServe
                                   <List.Item 
                                     key={infoIndex}
                                     icon={
-                                      <ThemeIcon c="blue" size={20} radius="xl">
+                                      <ThemeIcon color="blue" size={20} radius="xl">
                                         <FileText size={12} />
                                       </ThemeIcon>
                                     }

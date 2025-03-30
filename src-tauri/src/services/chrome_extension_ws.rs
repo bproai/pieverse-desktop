@@ -291,8 +291,8 @@ pub fn get_chrome_ws_clients(
 pub fn send_targeted_message_to_chrome(
     state: tauri::State<'_, ChromeExtWebSocketState>,
     message: String,
-    targetType: String,
-    targetId: Option<String>,
+    target_type: String,
+    target_id: Option<String>,
 ) -> Result<(), String> {
     // Get broadcast sender
     let tx = match state.broadcast_tx.lock() {
@@ -314,9 +314,9 @@ pub fn send_targeted_message_to_chrome(
         let obj = message_json.as_object_mut().unwrap();
         obj.insert(
             "targetType".to_string(),
-            serde_json::Value::String(targetType),
+            serde_json::Value::String(target_type),
         );
-        if let Some(id) = targetId {
+        if let Some(id) = target_id {
             obj.insert("targetId".to_string(), serde_json::Value::String(id));
         }
     }
