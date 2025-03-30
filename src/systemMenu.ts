@@ -3,7 +3,7 @@ import { Menu, PredefinedMenuItem, MenuItem } from '@tauri-apps/api/menu';
 
 export async function setupNativeMenu() {
   try {
-    // Create predefined menu items
+    // Create predefined menu items for Edit menu
     const undo = await PredefinedMenuItem.new({
       text: 'undo-text',
       item: 'Undo',
@@ -39,13 +39,26 @@ export async function setupNativeMenu() {
       item: 'SelectAll',
     });
     
-    // Create custom menu items
+    // Create app menu items for the πeVerse menu
     const aboutItem = await MenuItem.new({
       id: 'about',
       text: 'About PieVerse',
       action: () => alert(`PieVerse Desktop\nv1.0.0\nby Brian Pan\nReason ONE LLC`)
     });
     
+    const prefsItem = await MenuItem.new({
+      id: 'preferences',
+      text: 'Preferences...',
+      action: () => alert('Preferences not implemented yet')
+    });
+    
+    const quitItem = await MenuItem.new({
+      id: 'quit',
+      text: 'Quit PieVerse',
+      action: () => window.close()
+    });
+
+    // Create help menu items
     const docsItem = await MenuItem.new({
       id: 'docs',
       text: 'Documentation',
@@ -58,24 +71,29 @@ export async function setupNativeMenu() {
       action: () => alert('Checking for updates...')
     });
     
-    // Create Help menu with items
-    const helpMenu = await Menu.new({
+    // Create main application menu with App, Edit, and Help menus
+    const appMenu = await Menu.new({
       items: [
+        {
+          id: 'app', // This will become the app name on macOS
+          text: 'App', // This text isn't used on macOS (it becomes the app name)
+          items: [aboutItem, separator, prefsItem, separator, quitItem]
+        },
+        {
+          id: 'edit',
+          text: 'Edit',
+          items: [undo, redo, separator, cut, copy, paste, selectAll]
+        },
         {
           id: 'help',
           text: 'Help',
-          items: [aboutItem, docsItem, updatesItem]
+          items: [docsItem, updatesItem]
         }
       ]
     });
     
-    // Create Edit menu with predefined items
-    const editMenu = await Menu.new({
-      items: [undo, redo, separator, cut, copy, paste, selectAll]
-    });
-    
     // Set as app menu
-    await helpMenu.setAsAppMenu();
+    await appMenu.setAsAppMenu();
     
     console.log('Native menu setup complete using Tauri 2.0 API');
   } catch (error) {
