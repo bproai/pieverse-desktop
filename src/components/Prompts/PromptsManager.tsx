@@ -38,7 +38,8 @@ import {
   Settings,
   Send,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from 'lucide-react';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { MySQLService } from '../MySQL/MySQLService';
@@ -49,6 +50,7 @@ import CategoryManager from './CategoryManager';
 import { useCategories } from './categoryHooks';
 import { listen } from '@tauri-apps/api/event';
 import { ClientSelectItem } from '../APISettings/ClientSelectItem';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 interface PromptsManagerProps {
   backend: 'mysql' | 'sqlite';
@@ -654,6 +656,24 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
     });
   }
 
+  const handleCopyPrompt = async (description: string) => {
+    try {
+      await writeText(description);
+      notifications.show({
+        title: 'Copied',
+        message: 'Prompt copied to clipboard.',
+        color: 'blue'
+      });
+    } catch (error) {
+      console.error('Failed to copy prompt:', error);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to copy to clipboard: ${error}`,
+        color: 'red'
+      });
+    }
+  };
+
   return (
     <div className="relative min-h-[calc(100vh-200px)]">
       <LoadingOverlay visible={loading} overlayBlur={2} />
@@ -860,6 +880,24 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
                     >
                       <Pencil size={16} />
                     </Button>
+                    
+                    <Tooltip label="Copy prompt to clipboard">
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyPrompt(prompt.description);
+                        }}
+                      >
+                        <Copy size={16} />
+                      </Button>
+                    </Tooltip>
+
+
+
+
+
                     <Button
                       variant="subtle"
                       color="red"

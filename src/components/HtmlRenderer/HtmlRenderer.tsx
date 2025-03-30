@@ -8,7 +8,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './HtmlRenderer.css';
 import { core } from '@tauri-apps/api'; // Using core.invoke for commands
-
+import { useHotkeys } from '@mantine/hooks';
+import { readText } from '@tauri-apps/plugin-clipboard-manager';
+import { Window } from '@tauri-apps/api/window';
 
 interface HtmlRendererProps {
   content: string;
@@ -50,6 +52,65 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     y: 0,
     image: null as HTMLImageElement | null
   });
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const handleKeyDown = (e) => {
+      // Check for Cmd+V or Ctrl+V
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+        console.log('Paste shortcut detected directly on textarea');
+        // Since this is detected directly on the textarea, you could just let the 
+        // default behavior happen and then update your state after
+        setTimeout(() => {
+          setHtmlInput(textarea.value);
+          if (onContentChange) {
+            onContentChange(textarea.value);
+          }
+        }, 0);
+      }
+    };
+    
+    textarea.addEventListener('keydown', handleKeyDown);
+    return () => {
+      textarea.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [textareaRef.current]);
+
+  useHotkeys([
+    ['mod+v', async (event) => {
+      event.preventDefault();
+      try {
+        // Use the same Tauri clipboard manager that works elsewhere in your app
+        const text = await readText();
+        
+        if (textareaRef.current && text) {
+          const textarea = textareaRef.current;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const value = textarea.value;
+          
+          // Create new value with pasted text
+          const newValue = value.substring(0, start) + text + value.substring(end);
+          
+          // Update state
+          setHtmlInput(newValue);
+          if (onContentChange) {
+            onContentChange(newValue);
+          }
+          
+          // Set cursor position after pasted text
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + text.length, start + text.length);
+          }, 0);
+        }
+      } catch (err) {
+        console.error('Failed to read clipboard:', err);
+      }
+    }]
+  ]);
 
   // Update internal state when content prop changes
   useEffect(() => {
@@ -622,17 +683,51 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
             <div className="relative">
               <div className="flex justify-between items-center mb-1">
                 <Text size="sm" weight={500}>Content Input</Text>
-                {htmlInput && (
+                <Group spacing="xs">
+                  {/* Add the paste button here */}
                   <Button 
                     size="xs" 
-                    variant="subtle" 
-                    color="red"
-                    onClick={handleClear}
-                    leftIcon={<Trash size={12} />}
+                    variant="light" 
+                    onClick={async () => {
+                      try {
+                        const text = await readText();
+                        if (textareaRef.current && text) {
+                          const textarea = textareaRef.current;
+                          const start = textarea.selectionStart;
+                          const end = textarea.selectionEnd;
+                          const value = textarea.value;
+                          
+                          const newValue = value.substring(0, start) + text + value.substring(end);
+                          setHtmlInput(newValue);
+                          if (onContentChange) {
+                            onContentChange(newValue);
+                          }
+                          
+                          setTimeout(() => {
+                            textarea.focus();
+                            textarea.setSelectionRange(start + text.length, start + text.length);
+                          }, 0);
+                        }
+                      } catch (err) {
+                        console.error('Failed to paste:', err);
+                      }
+                    }}
                   >
-                    Clear
+                    Paste
                   </Button>
-                )}
+                  
+                  {htmlInput && (
+                    <Button 
+                      size="xs" 
+                      variant="subtle" 
+                      color="red"
+                      onClick={handleClear}
+                      leftIcon={<Trash size={12} />}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </Group>
               </div>
               
               <Textarea
