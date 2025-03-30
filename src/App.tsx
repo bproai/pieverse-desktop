@@ -132,11 +132,9 @@ function App() {
                     Chrome Debugger
                   </Tabs.Tab>
                 )}
-                {isDevMode && (
                 <Tabs.Tab value="vscode" leftSection={<Brackets size={16} />}>
                   VS Code Integration
                 </Tabs.Tab>
-                )}
                 {isDevMode && (
                 <Tabs.Tab value="filesystem" leftSection={<HardDrive size={16} />}>
                   File System
@@ -219,11 +217,9 @@ function App() {
                 </Tabs.Panel>
               )}
               
-              {isDevMode && (
               <Tabs.Panel value="vscode" className="p-4">
                 <VSCodeIntegrationPanel />
               </Tabs.Panel>
-              )}
 
               {isDevMode && (
               <Tabs.Panel value="filesystem" className="p-4">
