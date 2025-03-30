@@ -3,39 +3,32 @@ import { Menu, PredefinedMenuItem, MenuItem } from '@tauri-apps/api/menu';
 
 export async function setupNativeMenu() {
   try {
-    // Create predefined menu items for Edit menu
+    // Create predefined menu items for Edit menu using standard macOS naming
     const undo = await PredefinedMenuItem.new({
-      text: 'undo-text',
       item: 'Undo',
     });
     
     const redo = await PredefinedMenuItem.new({
-      text: 'redo-text',
       item: 'Redo',
     });
     
     const separator = await PredefinedMenuItem.new({
-      text: 'separator-text',
       item: 'Separator',
     });
     
     const cut = await PredefinedMenuItem.new({
-      text: 'cut-text',
       item: 'Cut',
     });
     
     const copy = await PredefinedMenuItem.new({
-      text: 'copy-text',
       item: 'Copy',
     });
     
     const paste = await PredefinedMenuItem.new({
-      text: 'paste-text',
       item: 'Paste',
     });
     
     const selectAll = await PredefinedMenuItem.new({
-      text: 'selectAll-text',
       item: 'SelectAll',
     });
     

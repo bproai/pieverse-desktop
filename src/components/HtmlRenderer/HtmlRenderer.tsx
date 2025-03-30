@@ -8,9 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './HtmlRenderer.css';
 import { core } from '@tauri-apps/api'; // Using core.invoke for commands
-import { useHotkeys } from '@mantine/hooks';
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
-import { Window } from '@tauri-apps/api/window';
 
 interface HtmlRendererProps {
   content: string;
@@ -77,40 +75,6 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       textarea.removeEventListener('keydown', handleKeyDown);
     };
   }, [textareaRef.current]);
-
-  useHotkeys([
-    ['mod+v', async (event) => {
-      event.preventDefault();
-      try {
-        // Use the same Tauri clipboard manager that works elsewhere in your app
-        const text = await readText();
-        
-        if (textareaRef.current && text) {
-          const textarea = textareaRef.current;
-          const start = textarea.selectionStart;
-          const end = textarea.selectionEnd;
-          const value = textarea.value;
-          
-          // Create new value with pasted text
-          const newValue = value.substring(0, start) + text + value.substring(end);
-          
-          // Update state
-          setHtmlInput(newValue);
-          if (onContentChange) {
-            onContentChange(newValue);
-          }
-          
-          // Set cursor position after pasted text
-          setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(start + text.length, start + text.length);
-          }, 0);
-        }
-      } catch (err) {
-        console.error('Failed to read clipboard:', err);
-      }
-    }]
-  ]);
 
   // Update internal state when content prop changes
   useEffect(() => {
@@ -774,10 +738,10 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                 <div className={`mt-2 p-3 rounded border ${darkMode ? 'bg-blue-900 text-blue-200 border-blue-700' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                   <Text size="sm" className="flex items-center">
                     <Info size={14} className="mr-2" />
-                    <span>
-                      <strong>Tip:</strong> Right-click in the input area to paste content from clipboard. 
-                      Use the Clear button above or select all text (Ctrl+A or ⌘+A) then delete to remove content.
-                    </span>
+                      <span>
+                        <strong>Tip:</strong> Use the Paste button or Cmd+V (Ctrl+V) to paste content. 
+                        Use the Clear button or select all text (Ctrl+A or ⌘+A) then delete to remove content.
+                      </span>
                   </Text>
                 </div>
               )}
