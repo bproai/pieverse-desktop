@@ -1,6 +1,6 @@
 // src/components/HtmlRenderer/HtmlRenderer.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Textarea, Switch, Group, Button, Text, Select, Tabs, Code, Menu, ActionIcon, Tooltip } from '@mantine/core';
+import { Card, Textarea, Switch, Group, Button, Text, Select, Tabs, Code, Menu, ActionIcon } from '@mantine/core';
 import { Trash, Copy, Info, Menu as MenuIcon, Settings } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
