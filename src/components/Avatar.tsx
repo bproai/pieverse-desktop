@@ -67,6 +67,10 @@ const Avatar = () => {
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const rtcAudioElement = useRef(null);
 
+  const [pendingFunctionCall, setPendingFunctionCall] = useState(null);
+  const [pendingFunctionArgs, setPendingFunctionArgs] = useState('');
+
+
   // Add this useEffect to clean up WebRTC resources on unmount
   useEffect(() => {
     return () => {
@@ -390,9 +394,9 @@ const Avatar = () => {
             setIntentResponse((prev) => prev + deltaText);
           } else if (message.type === "response.created") {
             setIntentResponse('');
-          } else if (message.type === "tool_calls") {
+          } else if (message.type === "function_call") {
             console.log("Tool calls received:", JSON.stringify(message.tool_calls, null, 2));
-            
+            // 
             if (message.tool_calls && message.tool_calls.length > 0) {
               for (const toolCall of message.tool_calls) {
                 // Log the entire toolCall object to see its structure
@@ -503,7 +507,98 @@ const Avatar = () => {
                 }
               }
             }
+          } else if (message.type === "response.function_call_arguments.delta") {
+            // This message contains partial function call arguments
+            console.log("Function call arguments delta:", message.delta);
+            
+            // Update the pending arguments with the new delta
+            setPendingFunctionArgs(prev => prev + (message.delta || ''));
+            
+            // If we don't have a pending function call yet but this message has the info
+            if (!pendingFunctionCall && message.function_call) {
+              setPendingFunctionCall({
+                id: message.function_call.id,
+                name: message.function_call.name
+              });
+            }
           }
+          else if (message.type === "response.function_call_arguments.done") {
+            // Arguments are now complete - process the function call
+            console.log("Function call arguments complete");
+            
+            // Process the complete function call
+            try {
+              const toolArgs = JSON.parse(message.arguments);
+              
+              if (message.name === "get_weather") {
+                setIntentResponse("Getting weather information...");
+                
+                // Process weather request
+                const location = toolArgs.location || "";
+                let lat = toolArgs.lat;
+                let lng = toolArgs.lng; // Check for lng first (reference format)
+                let lon = toolArgs.lon; // Fallback to lon
+                let longitude = lng || lon;
+                
+                // If no coordinates but we have a location, get them
+                console.log("get lat, lon from location:", location)
+                if (true || (location && (!lat || !longitude))) {
+                  const locationData = await getLocationFromPlace(location);
+                  
+                  if (!locationData.error) {
+                    lat = parseFloat(locationData.lat);
+                    longitude = parseFloat(locationData.lon);
+                  } else {
+                    throw new Error(`Could not find coordinates for ${location}`);
+                  }
+                }
+                
+                console.log("lat, lon: ", lat, longitude)
+                // Get weather data
+                const weatherData = await getWeatherData(lat, longitude);
+                
+                // Send response - CORRECTED STRUCTURE
+                const toolResponse = {
+
+                  type: "response.create",
+                  event_id: crypto.randomUUID(),
+                  response: {                      
+                    'instructions': `give functional call result to the user: ${JSON.stringify(weatherData)}`
+                  }                
+                };
+                
+                console.log("Sending tool response:", JSON.stringify(toolResponse, null, 2));
+                dc.send(JSON.stringify(toolResponse));
+              }
+              
+              // Clear the pending function call
+              setPendingFunctionCall(null);
+              setPendingFunctionArgs('');
+              
+            } catch (error) {
+              console.error("Error processing function call:", error);
+              
+              // Send error response - ALSO CORRECTED
+              if (message.call_id) {
+                const errorResponse = {
+                  type: "tool_results.add",
+                  tool_call_id: message.call_id,
+                  content: JSON.stringify({ error: error.message }),
+                  event_id: crypto.randomUUID()
+                };
+                
+                dc.send(JSON.stringify(errorResponse));
+              }
+              
+              // Clear the pending state
+              setPendingFunctionCall(null);
+              setPendingFunctionArgs('');
+              
+              // Update UI
+              setIntentResponse(`Error: ${error.message}`);
+            }
+          }
+
         } catch (error) {
           console.error("Error processing message:", error);
           console.dir(event); // This prints the object without stringifying
