@@ -764,11 +764,34 @@ const Avatar = () => {
       if (!key) {
         return { intent: 'error', response: "No API key set." };
       }
+      
+      // Check if this is a writing polishing request
+      if (input.toLowerCase().includes("polish my writing") || 
+          input.toLowerCase().includes("improve my text") ||
+          input.toLowerCase().includes("edit my writing")) {
+        setIntentResponse("Please paste the text you'd like me to polish.");
+        
+        // Set up a state to indicate we're in "polish mode"
+        return { 
+          intent: 'polish_request', 
+          response: "Please paste the text you'd like me to polish. I'll help improve its clarity, grammar, and style." 
+        };
+      }
+      
       const openAIResponse = await callOpenAIMini(input, key);
       return { intent: 'openai', response: openAIResponse };
     } else {
       const text = input.toLowerCase().trim();
-      if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
+      
+      // Add handling for polish writing requests in rule-based mode
+      if (text.includes('polish my writing') || 
+          text.includes('improve my text') || 
+          text.includes('edit my writing')) {
+        return { 
+          intent: 'polish_request', 
+          response: "I'd be happy to polish your writing! Please paste the text you'd like me to improve." 
+        };
+      } else if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
         return { intent: 'greeting', response: "Hello there! How can I help you today?" };
       } else if (text.includes('weather')) {
         return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
@@ -787,7 +810,7 @@ const Avatar = () => {
       } else if (text.includes('help')) {
         return { 
           intent: 'help', 
-          response: "I can help with basic questions about the time, date, weather, and more. Just type your question!"
+          response: "I can help with basic questions about the time, date, weather, and more. I can also polish your writing - just ask me to 'polish my writing' and then paste your text!"
         };
       } else {
         return { 
@@ -797,6 +820,33 @@ const Avatar = () => {
       }
     }
   };
+
+  const polishText = async (text: string) => {
+    if (!text.trim()) {
+      return "Please provide some text for me to polish.";
+    }
+    
+    const key = ensureApiKey();
+    if (!key) {
+      return "API key is required for text polishing.";
+    }
+    
+    setIntentResponse("Polishing your text...");
+    setExpression('thoughtful');
+    
+    try {
+      const polishPrompt = `Please improve the following text. Make it more clear, concise, and professional while preserving the original meaning:\n\n${text}`;
+      const polishedText = await callOpenAIMini(polishPrompt, key);
+      
+      setExpression('happy');
+      return polishedText;
+    } catch (error) {
+      console.error('Error polishing text:', error);
+      setExpression('thoughtful');
+      return `Sorry, I encountered an issue while polishing your text: ${error.message || error}`;
+    }
+  };
+  
 
   const speakResponse = (text: string) => {
     if ('speechSynthesis' in window) {
@@ -834,6 +884,15 @@ const Avatar = () => {
     // If in realtime mode, use the realtime handler
     if (modelType === "realtime" || modelType === "realtime-mini") {
       handleRealtimeInputSubmit(e);
+      return;
+    }
+
+    // Check if we're responding to a polish request
+    if (intentResponse.includes("Please paste the text you'd like me to polish")) {
+      // We're in polish mode, treat the input as text to polish
+      const polishedText = await polishText(userInput);
+      setIntentResponse(polishedText);
+      setUserInput('');
       return;
     }
     
@@ -1660,7 +1719,7 @@ const Avatar = () => {
                 cursor: "pointer"
               }}
             >
-              <option value="regular">Rule-based</option>
+              {/* <option value="regular">Rule-based</option> */}
               <option value="openai">OpenAI 4o-mini</option>
               <option value="realtime">OpenAI Real-time</option>
               <option value="realtime-mini">OpenAI Real-time (mini)</option>
@@ -1719,7 +1778,13 @@ const Avatar = () => {
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                placeholder={clipboardImage ? "Describe this image..." : "Type your question here..."}
+                placeholder={
+                  clipboardImage 
+                    ? "Describe this image..." 
+                    : (modelType === "realtime" || modelType === "realtime-mini") 
+                      ? "Speak or type your question here..." 
+                      : "Type your question here..."
+                }
                 className="intent-input"
                 disabled={isProcessingImage}
               />

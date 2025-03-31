@@ -761,9 +761,9 @@ const PromptsManager = ({ backend, onBackendChange }: PromptsManagerProps) => {
             
             {/* Client selection dropdown */}
             <Group spacing="xs" noWrap>
-              <Tooltip label="Click to select an AI client" withArrow>
+              <Tooltip label="Click to select an AI web client in Chrome browser" withArrow>
                 <Select
-                  placeholder="Select AI client..."
+                  placeholder="Select AI web client..."
                   value={selectedClientId}
                   onChange={setSelectedClientId}
                   data={getClientOptions()}

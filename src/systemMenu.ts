@@ -36,7 +36,7 @@ export async function setupNativeMenu() {
     const aboutItem = await MenuItem.new({
       id: 'about',
       text: 'About PieVerse',
-      action: () => alert(`PieVerse Desktop\nv1.0.0\nby Brian Pan\nReason ONE LLC`)
+      action: () => alert(`PieVerse Desktop\nv1.0.0\n\nby Brian Pan\nReason ONE LLC\nMountain View, California`)
     });
     
     const prefsItem = await MenuItem.new({
