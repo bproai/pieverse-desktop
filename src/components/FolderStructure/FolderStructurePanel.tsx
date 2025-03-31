@@ -825,7 +825,7 @@ const FolderStructurePanel: React.FC = () => {
                     </Button>
                 </Group>
                 </Group>
-                <Text size="xs" c="dimmed">
+                <Text size="xs" color="dimmed">
                 Tip: Use Copy to Clipboard (recommended) for reliable transfer, or drag selected files for compatible targets.
                 </Text>
             </Alert>
@@ -872,7 +872,7 @@ const FolderStructurePanel: React.FC = () => {
                       value={filterOptions.exclude_patterns}
                       onChange={(e) => setFilterOptions({...filterOptions, exclude_patterns: e.currentTarget.value})}
                     />
-                    <Text size="xs" c="dimmed" mt="xs">
+                    <Text size="xs" color="dimmed" mt="xs">
                       Supports wildcard patterns like *.db and regular expressions
                     </Text>
                   </>
@@ -914,7 +914,7 @@ const FolderStructurePanel: React.FC = () => {
                 </Group>
                 <ScrollArea h={500} type="auto" p="md">
                   {fileTree ? renderNode(fileTree) : (
-                    <Text c="dimmed" align="center" mt="lg">
+                    <Text color="dimmed" align="center" mt="lg">
                       {loading ? "Loading project structure..." : "No project loaded"}
                     </Text>
                   )}
@@ -952,7 +952,7 @@ const FolderStructurePanel: React.FC = () => {
                     autosize
                     style={{ fontFamily: 'monospace', fontSize: '12px' }}
                   />
-                  <Text size="xs" c="dimmed" mt="sm">
+                  <Text size="xs" color="dimmed" mt="sm">
                     Edit this text as needed before using it as context with an LLM.
                   </Text>
                 </div>
