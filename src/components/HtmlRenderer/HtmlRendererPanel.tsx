@@ -28,6 +28,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const pageSize = 50; // Records per page
   const [selectedQaId, setSelectedQaId] = useState<string | null>(null);
   const [rendererActiveTab, setRendererActiveTab] = useState("input");
+  const [selectedQAUrl, setSelectedQAUrl] = useState<string>('');
 
   // Check for new records periodically
   useEffect(() => {
@@ -105,6 +106,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           SELECT 
             a.id as answer_id,
             a.answer,
+            a.url,
             q.question,
             q.id as question_id,
             q.platform,
@@ -289,13 +291,15 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     setSelectedQaId(id);
     if (!id) {
       setHtmlContent('');
+      setSelectedQAUrl(''); // Reset URL
       return;
     }
     
     const selectedItem = qaData.find(item => item.answer_id === id);
     if (selectedItem) {
       setHtmlContent(selectedItem.answer);
-      // Switch inner tab to "output" if it’s currently "input"
+      setSelectedQAUrl(selectedItem.url || ''); // Set URL from the selected item
+      // Switch inner tab to "output" if it's currently "input"
       if (rendererActiveTab === "input") {
         setRendererActiveTab("output");
       }
@@ -651,6 +655,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       onContentChange={handleContentChange}
       activeTab={rendererActiveTab}
       setActiveTab={setRendererActiveTab}
+      url={selectedQAUrl} // Pass the URL
     />
   </Tabs.Panel>
   

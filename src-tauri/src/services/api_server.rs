@@ -269,7 +269,8 @@ impl ApiServer {
                     model TEXT,
                     timestamp TEXT NOT NULL,
                     turn_number INTEGER,
-                    metadata TEXT
+                    metadata TEXT,
+                    url TEXT
                 )";
         sqlite_guard
             .execute_query(create_questions)
@@ -315,8 +316,8 @@ impl ApiServer {
             // Execute the parameterized query
             match sqlite_guard.execute_parameterized(
                 "INSERT OR REPLACE INTO qa_answers 
-                 (id, question_id, message_id, platform, answer, model, timestamp, turn_number, metadata)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                 (id, question_id, message_id, platform, answer, model, timestamp, turn_number, metadata, url)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     answer_id,
                     answer.question_id,
@@ -327,6 +328,7 @@ impl ApiServer {
                     answer.timestamp,
                     answer.turn_number,
                     answer.metadata.as_ref().map(|v| v.as_str()),
+                    answer.url.as_ref().map(|v| v.as_str()),
                 ],
             ) {
                 Ok(_) => {
@@ -440,7 +442,8 @@ impl ApiServer {
             a.model,
             a.timestamp AS answer_timestamp,
             a.turn_number,
-            a.metadata
+            a.metadata,
+            a.url
         FROM qa_questions q
         LEFT JOIN qa_answers a ON q.id = a.question_id
         "#;
@@ -624,6 +627,7 @@ pub struct AnswerData {
     pub timestamp: String,
     pub turn_number: Option<i32>,
     pub metadata: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

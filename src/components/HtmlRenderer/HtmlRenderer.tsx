@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRenderer.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Textarea, Switch, Group, Button, Text, Select, Tabs, Code, Menu, ActionIcon } from '@mantine/core';
-import { Trash, Copy, Info, Menu as MenuIcon, Settings } from 'lucide-react';
+import { Trash, Copy, Info, Menu as MenuIcon, Settings, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -17,6 +17,7 @@ interface HtmlRendererProps {
   onContentChange?: (content: string) => void;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
+  url?: string; // New prop for URL
 }
 
 /**
@@ -29,7 +30,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   darkMode = false,
   onContentChange,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  url = '' // Default to empty string
 }) => {
   const [htmlInput, setHtmlInput] = useState<string>(content);
   const [showDataAttributes, setShowDataAttributes] = useState<boolean>(false);
@@ -647,6 +649,16 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
             <div className="relative">
               <div className="flex justify-between items-center mb-1">
                 <Text size="sm" weight={500}>Content Input</Text>
+                {/* Display URL if it exists */}
+                {url && (
+                  <Text size="sm" className="truncate max-w-md">
+                    <a href={url} target="_blank" rel="noopener noreferrer" 
+                      className="text-blue-500 hover:underline flex items-center">
+                      <ExternalLink size={12} className="mr-1" />
+                      {url}
+                    </a>
+                  </Text>
+                )}
                 <Group spacing="xs">
                   {/* Add the paste button here */}
                   <Button 
@@ -906,6 +918,19 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
                 Copy as Rich Text
               </Button>
 
+              {/* Add URL display after Copy as Rich Text */}
+              {url && (
+                <a 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-500 hover:underline text-sm ml-2"
+                  title={url}
+                >
+                  <ExternalLink size={14} className="mr-1" />
+                  <span className="truncate max-w-xs">{url}</span>
+                </a>
+              )}
 
               
 
