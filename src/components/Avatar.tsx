@@ -61,7 +61,7 @@ const Avatar = () => {
   const formRef = useRef<HTMLFormElement>(null);
 
     // Add these state variables near the top of your Avatar component
-  const [modelType, setModelType] = useState('regular'); // 'regular', 'openai', or 'realtime'
+  const [modelType, setModelType] = useState('realtime-mini'); // 'openai', or 'realtime'
   const [peerConnection, setPeerConnection] = useState(null);
   const [dataChannel, setDataChannel] = useState(null);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
@@ -1225,6 +1225,27 @@ const Avatar = () => {
   };
 
   useEffect(() => {
+    if (showHelp) {
+      // Adjust the panel position when it's shown
+      const panel = document.querySelector('.help-panel');
+      if (panel) {
+        const panelRect = panel.getBoundingClientRect();
+        
+        // Check if panel is outside viewport boundaries and adjust if needed
+        if (panelRect.left < 20) {
+          panel.style.right = 'auto';
+          panel.style.left = '20px';
+        }
+        
+        if (panelRect.top < 20) {
+          panel.style.bottom = 'auto';
+          panel.style.top = '20px';
+        }
+      }
+    }
+  }, [showHelp, position]);
+
+  useEffect(() => {
     // Run this effect whenever intentResponse changes
     const responseElement = document.querySelector('.intent-response');
     if (responseElement) {
@@ -1571,8 +1592,10 @@ const Avatar = () => {
           className="help-panel" 
           style={{
             position: 'fixed',
-            left: `${position.x + 220}px`,
-            top: `${position.y + 20}px`
+            right: `${window.innerWidth - position.x + 20}px`, // Position from right edge of screen
+            bottom: `${window.innerHeight - position.y - 120}px`, // Position from bottom of screen
+            left: 'auto', // Remove left positioning
+            top: 'auto' // Remove top positioning
           }}
         >
 
