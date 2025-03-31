@@ -232,6 +232,19 @@ const Avatar = () => {
     }
   };
 
+  // Add this function to handle errors
+  const setError = (errorMessage) => {
+    console.error("API Error:", errorMessage);
+    setIntentResponse(`Error: ${errorMessage}`);
+    setExpression('thoughtful');
+  };
+
+  // Add this to setConnectionStatus function (you'll need to create this)
+  const setConnectionStatus = (status) => {
+    console.log(`Connection status: ${status}`);
+    // You can use this to update UI based on connection status
+  };
+
   // Add these WebRTC functions
   const startRealtimeSession = async () => {
     try {
@@ -287,26 +300,54 @@ const Avatar = () => {
           setIsRealtimeActive(true);
           setIntentResponse("Real-time session started! You can speak or type normally.");
           setExpression('happy');
+          
           // Send a session update to request streaming audio output
           const sessionUpdate = {
             type: "session.update",
             event_id: crypto.randomUUID(),
             session: {
               output_audio_format: "pcm16",
-              voice: "alloy",              
+              voice: "alloy",
+              // Tools in the correct format
+              tools: [
+                {
+                  name: "get_weather", // Name moved to this level
+                  type: "function",
+                  description: "Get current weather information for a location",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      location: {
+                        type: "string",
+                        description: "The city and state, e.g. San Francisco, CA"
+                      },
+                      lat: {
+                        type: "number",
+                        description: "Latitude of the location"
+                      },
+                      lon: {
+                        type: "number",
+                        description: "Longitude of the location"
+                      }
+                    },
+                    required: ["location"]
+                  }
+                }
+              ]
             }
           };
-          dc.send(JSON.stringify(sessionUpdate));          
+          
+          dc.send(JSON.stringify(sessionUpdate));
+          console.log("Session updated with weather tool capability");
         }, 500);
       };
       
-      dc.onmessage = (event) => {
+      // Make the onmessage handler async to support await
+      dc.onmessage = async (event) => {
         try {
           const message = JSON.parse(event.data);
+          console.log("FULL MESSAGE DATA:", JSON.stringify(message, null, 2));
           console.log("Received message type:", message.type);
-          // console.log("Received message:", message);
-          
-          // console.log("Full message:", JSON.stringify(message, null, 2));
           
           // Handle different message types
           if (message.type === "response.chunk") {
@@ -318,23 +359,10 @@ const Avatar = () => {
                 const chunkText = textChunks[0].text || "";
                 console.log("**TEXT CHUNK RECEIVED**:", chunkText);
                 
-                // Set state with a callback to log both before and after
-                console.log("BEFORE setState - intentResponse:", intentResponse);
                 setIntentResponse(prev => {
-                  console.log("INSIDE setState - previous value:", prev);
                   const newValue = prev.startsWith("You: ") ? chunkText : prev + chunkText;
-                  console.log("INSIDE setState - new value:", newValue);
                   return newValue;
                 });
-                console.log("AFTER setState call - intentResponse:", intentResponse);
-                
-                // Force a check after a short delay
-                setTimeout(() => {
-                  console.log("DELAYED check - intentResponse:", intentResponse);
-                  const element = document.querySelector('.intent-response');
-                  console.log("DELAYED check - element exists:", !!element);
-                  if (element) console.log("DELAYED check - element text:", element.textContent);
-                }, 100);
               }
             }
           } else if (message.type === "response.complete") {
@@ -352,7 +380,8 @@ const Avatar = () => {
           } else if (message.type === "media") {
             // Handle media messages (like audio)
             if (message.media && message.media.type === "audio") {
-              processAudioData(message.media.data);
+              // You need to implement this function
+              // processAudioData(message.media.data);
             }
           } else if (message.type === "response.audio_transcript.delta") {
             const deltaText = message.delta || "";
@@ -361,13 +390,126 @@ const Avatar = () => {
             setIntentResponse((prev) => prev + deltaText);
           } else if (message.type === "response.created") {
             setIntentResponse('');
+          } else if (message.type === "tool_calls") {
+            console.log("Tool calls received:", JSON.stringify(message.tool_calls, null, 2));
+            
+            if (message.tool_calls && message.tool_calls.length > 0) {
+              for (const toolCall of message.tool_calls) {
+                // Log the entire toolCall object to see its structure
+                console.log("TOOL CALL OBJECT:", JSON.stringify(toolCall, null, 2));
+                
+                // Check different possible structures based on API versions
+                let toolName = toolCall.name || (toolCall.function && toolCall.function.name);
+                let toolId = toolCall.id || toolCall.tool_call_id;
+                let toolArgs;
+                
+                try {
+                  // Try different possible argument formats
+                  toolArgs = typeof toolCall.arguments === 'string' 
+                    ? JSON.parse(toolCall.arguments) 
+                    : (toolCall.function && toolCall.function.arguments 
+                        ? JSON.parse(toolCall.function.arguments) 
+                        : toolCall.arguments);
+                } catch (e) {
+                  console.error("Error parsing tool arguments:", e);
+                  toolArgs = toolCall.arguments || (toolCall.function && toolCall.function.arguments) || {};
+                }
+                
+                console.log(`Processed tool call: name=${toolName}, id=${toolId}, args=`, toolArgs);
+                
+                if (toolName === "get_weather") {
+                  try {
+                    setIntentResponse("Getting weather information...");
+                    
+                    // Extract location and coordinates
+                    const location = toolArgs.location || "";
+                    let lat = toolArgs.lat;
+                    let lon = toolArgs.lon;
+                    
+                    // If no coordinates but we have a location, get them
+                    if (location && (!lat || !lon)) {
+                      console.log(`Getting coordinates for location: ${location}`);
+                      const locationData = await getLocationFromPlace(location);
+                      
+                      if (!locationData.error) {
+                        lat = parseFloat(locationData.lat);
+                        lon = parseFloat(locationData.lon);
+                        console.log(`Found coordinates: lat=${lat}, lon=${lon}`);
+                      } else {
+                        throw new Error(`Could not find coordinates for ${location}: ${locationData.error}`);
+                      }
+                    }
+                    
+                    if (!lat || !lon) {
+                      throw new Error("Could not determine coordinates for weather lookup");
+                    }
+                    
+                    // Get the weather data
+                    console.log(`Getting weather for lat=${lat}, lon=${lon}`);
+                    const weatherData = await getWeatherData(lat, lon);
+                    
+                    if (weatherData.error) {
+                      throw new Error(`Weather data error: ${weatherData.error}`);
+                    }
+                    
+                    // Format a nice response for the console log
+                    const weatherResponseData = {
+                      location: location || weatherData.location,
+                      temperature: weatherData.temperature,
+                      unit: weatherData.unit,
+                      description: weatherData.description,
+                      windSpeed: weatherData.windSpeed,
+                      windDirection: weatherData.windDirection,
+                      detailedForecast: weatherData.detailedForecast
+                    };
+                    
+                    console.log("Weather data response:", weatherResponseData);
+                    
+                    // Ensure tool_call_id is used correctly
+                    const toolResponse = {
+                      type: "tool_response",
+                      tool_call_id: toolId,
+                      content: JSON.stringify(weatherResponseData),
+                      event_id: crypto.randomUUID()
+                    };
+                    
+                    // Log what we're sending to help with debugging
+                    console.log("Sending tool response:", JSON.stringify(toolResponse, null, 2));
+                    
+                    // Send the response
+                    dc.send(JSON.stringify(toolResponse));
+                    
+                    // Let the user know we've processed the weather request
+                    // setIntentResponse("Weather information sent to the assistant. Waiting for response...");
+                  } catch (error) {
+                    console.error("Error handling weather tool call:", error);
+                    
+                    // Send an error response with the correct structure
+                    const errorResponse = {
+                      type: "tool_response",
+                      tool_call_id: toolId,
+                      content: JSON.stringify({
+                        error: error.message || "Failed to get weather data"
+                      }),
+                      event_id: crypto.randomUUID()
+                    };
+                    
+                    console.log("Sending error response:", JSON.stringify(errorResponse, null, 2));
+                    dc.send(JSON.stringify(errorResponse));
+                    
+                    // Update UI with error
+                    setIntentResponse(`Error getting weather: ${error.message}`);
+                  }
+                }
+              }
+            }
           }
         } catch (error) {
           console.error("Error processing message:", error);
-          console.dir(event); // This prints the object without stringifying          
+          console.dir(event); // This prints the object without stringifying
         }
       };
-
+  
       dc.onerror = (error) => {
         console.error("Data channel error:", error);
         setIntentResponse("Connection error occurred. Try again.");
@@ -736,6 +878,119 @@ const Avatar = () => {
     }
   };
 
+
+  // JavaScript implementation of the weather function
+  const getWeatherData = async (lat, lon) => {
+    try {
+      // Define headers for the API request
+      const headers = {
+        'User-Agent': '(myweatherapp.com, contact@myweatherapp.com)'
+      };
+      
+      // Step 1: Get the grid point for the given latitude and longitude
+      const pointsUrl = `https://api.weather.gov/points/${lat},${lon}`;
+      const pointsResponse = await fetch(pointsUrl, { headers });
+      
+      if (!pointsResponse.ok) {
+        throw new Error(`Unable to fetch grid point data: ${pointsResponse.status}`);
+      }
+      
+      const gridData = await pointsResponse.json();
+      const forecastUrl = gridData.properties.forecast;
+      
+      // Step 2: Get the forecast for the grid point
+      const forecastResponse = await fetch(forecastUrl, { headers });
+      
+      if (!forecastResponse.ok) {
+        throw new Error(`Unable to fetch forecast data: ${forecastResponse.status}`);
+      }
+      
+      const forecastData = await forecastResponse.json();
+      const periods = forecastData.properties.periods;
+      
+      // Extract relevant weather information
+      const currentWeather = periods[0]; // Assuming the first period is the current forecast
+      
+      return {
+        location: `Lat: ${lat}, Lon: ${lon}`,
+        temperature: currentWeather.temperature,
+        unit: currentWeather.temperatureUnit,
+        description: currentWeather.shortForecast,
+        detailedForecast: currentWeather.detailedForecast,
+        windSpeed: currentWeather.windSpeed,
+        windDirection: currentWeather.windDirection,
+        icon: currentWeather.icon
+      };
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      return { error: error.message || 'Unable to fetch weather data' };
+    }
+  };
+
+  // Function to get location from a place name using CORS-compatible service
+  const getLocationFromPlace = async (place) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': '(myweatherapp.com, contact@myweatherapp.com)'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Unable to geocode location: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.length === 0) {
+        throw new Error(`Location "${place}" not found`);
+      }
+      
+      return {
+        lat: data[0].lat,
+        lon: data[0].lon,
+        displayName: data[0].display_name
+      };
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return { error: error.message || 'Unable to find location' };
+    }
+  };
+
+  // Main weather function to be called from your component
+  const getWeatherForPlace = async (place) => {
+    try {
+      // First get coordinates for the place
+      const locationData = await getLocationFromPlace(place);
+      
+      if (locationData.error) {
+        return `I couldn't find the location "${place}". Could you be more specific?`;
+      }
+      
+      // Then get the weather data using those coordinates
+      const weatherData = await getWeatherData(locationData.lat, locationData.lon);
+      
+      if (weatherData.error) {
+        return `I found ${locationData.displayName}, but couldn't get weather data: ${weatherData.error}`;
+      }
+      
+      // Format a nice weather report
+      return `
+  Current weather for ${locationData.displayName}:
+  • Temperature: ${weatherData.temperature}°${weatherData.unit}
+  • Conditions: ${weatherData.description}
+  • Wind: ${weatherData.windSpeed} ${weatherData.windDirection}
+
+  ${weatherData.detailedForecast}
+      `.trim();
+    } catch (error) {
+      console.error('Weather lookup error:', error);
+      return `Sorry, I encountered an error getting the weather: ${error.message}`;
+    }
+  };
+
+
   // ============== NEW HELPER: CALL OPENAI 4o-mini ==============
   const callOpenAIMini = async (prompt: string, key: string, imageBase64?: string) => {
     try {
@@ -794,7 +1049,20 @@ const Avatar = () => {
       } else if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
         return { intent: 'greeting', response: "Hello there! How can I help you today?" };
       } else if (text.includes('weather')) {
-        return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
+        // Check if there's a place mentioned in the input
+        const placeMatcher = input.match(/weather\s+(?:in|for|at|of)?\s+([a-zA-Z\s,]+)/i);
+        let place = '';
+        
+        if (placeMatcher && placeMatcher[1]) {
+          place = placeMatcher[1].trim();
+        } else {
+          return { intent: 'weather', response: "I'd be happy to check the weather for you. Where are you located?" };
+        }
+        
+        // Get weather for the place
+        setIntentResponse(`Getting weather information for ${place}...`);
+        const weatherReport = await getWeatherForPlace(place);
+        return { intent: 'weather', response: weatherReport };
       } else if (text.includes('time')) {
         const now = new Date();
         return { intent: 'time', response: `The current time is ${now.toLocaleTimeString()}.` };
