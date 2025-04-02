@@ -9,6 +9,9 @@ import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import './HtmlRenderer.css';
 import { core } from '@tauri-apps/api'; // Using core.invoke for commands
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
+import { refreshCurrentBucket } from '../S3Lite/S3LitePanel';
+import { save, ask } from '@tauri-apps/plugin-dialog';
+import { Notifications } from '@mantine/notifications';
 
 interface HtmlRendererProps {
   content: string;
@@ -18,6 +21,7 @@ interface HtmlRendererProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
   url?: string; // New prop for URL
+  currentBucket?: string;
 }
 
 /**
@@ -31,7 +35,8 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   onContentChange,
   activeTab,
   setActiveTab,
-  url = '' // Default to empty string
+  url = '', // Default to empty string
+  currentBucket = ''
 }) => {
   const [htmlInput, setHtmlInput] = useState<string>(content);
   const [showDataAttributes, setShowDataAttributes] = useState<boolean>(false);
@@ -625,6 +630,196 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     }
   };
 
+  const saveImageToBucket = async () => {
+    if (!imageMenu.image || !currentBucket) return;
+    
+    try {
+      // Get image source
+      let imageSrc = imageMenu.image.src;
+      
+      // If it's a remote URL, fetch and convert to data URL
+      if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
+        try {
+          const response = await fetch(imageSrc);
+          console.log("Response content type:", response.headers.get("content-type"));
+  
+          const blob = await response.blob();
+          console.log("Fetched blob type:", blob.type);
+                  
+          // Convert to base64
+          const reader = new FileReader();
+          imageSrc = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error("Failed to fetch remote image:", error);
+        }
+      }
+      
+      // Extract a reasonable filename
+      let fileName = 'image.png'; // Default name
+      
+      // Try to get a good filename from alt text first
+      const altText = imageMenu.image.alt || '';
+      if (altText && altText.length < 50) {
+        fileName = `${altText.replace(/\s+/g, '_').toLowerCase()}`;
+        // Add extension if missing
+        if (!fileName.includes('.')) {
+          fileName += '.png';
+        }
+      } else {
+        // Try to extract from URL path
+        let urlPath = '';
+        
+        // Handle data URLs and normal URLs differently
+        if (imageMenu.image.src.startsWith('data:')) {
+          // For data URLs, use the default name
+          fileName = 'image.png';
+        } else if (imageMenu.image.src.startsWith('s3://')) {
+          // For S3 URLs, get the last part
+          const s3Parts = imageMenu.image.src.split('/');
+          if (s3Parts.length > 1) {
+            fileName = s3Parts[s3Parts.length - 1];
+          }
+        } else {
+          // For standard URLs
+          try {
+            const url = new URL(imageMenu.image.alt);
+            urlPath = url.pathname;
+          } catch (e) {
+            // If URL parsing fails, just use the raw src
+            urlPath = imageMenu.image.src;
+          }
+          
+          // Extract filename from path
+          const pathParts = urlPath.split('/').filter(part => part.length > 0);
+          if (pathParts.length > 0) {
+            const lastPart = pathParts[pathParts.length - 1];
+            
+            // Check if the last part looks like a filename (has an extension or no weird chars)
+            if (
+              lastPart.includes('.') || 
+              !/[?#&=]/.test(lastPart)
+            ) {
+              fileName = lastPart;
+              
+              // Remove query parameters if any
+              if (fileName.includes('?')) {
+                fileName = fileName.split('?')[0];
+              }
+            }
+          }
+        }
+      }
+      
+      // Ensure the filename has a valid extension
+      if (!fileName.match(/\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i)) {
+        // If no valid extension, add .png as default
+        fileName += '.png';
+      }
+      
+      // // Prompt user to confirm or change the filename
+      // const userFileName = await save({
+      //   title: `Save to Bucket ${currentBucket}`,
+      //   filters: [{
+      //     name: 'Image Files',
+      //     extensions: ['png', 'jpg', 'gif', 'webp', 'svg', 'bmp']
+      //   }],
+      //   defaultPath: fileName,
+      // });
+
+      const userFileName = fileName;
+      
+      console.log("userFileName", userFileName)
+      // If user cancels, abort
+      if (!userFileName) {
+        return;
+      }
+      
+      // Final filename - ensure it has an extension
+      const finalFileName = userFileName.includes('.') 
+        ? userFileName 
+        : `${userFileName}.png`;
+      
+      console.log(`Saving image to bucket: ${currentBucket}, filename: ${finalFileName}`);
+      
+      // Extract base64 data - strip the prefix if it exists
+      let base64Data = imageSrc;
+      
+      if (base64Data.startsWith('data:')) {
+        base64Data = base64Data.split(',')[1];
+      }
+      
+      // Determine the mime type
+      let mimeType = 'image/png'; // Default
+      
+      if (imageSrc.startsWith('data:')) {
+        const mimeMatch = imageSrc.match(/data:(.*?);/);
+        if (mimeMatch && mimeMatch[1]) {
+          mimeType = mimeMatch[1];
+        }
+      } else {
+        // Try to determine from file extension
+        const ext = finalFileName.split('.').pop()?.toLowerCase() || '';
+        switch (ext) {
+          case 'jpg':
+          case 'jpeg':
+            mimeType = 'image/jpeg';
+            break;
+          case 'png':
+            mimeType = 'image/png';
+            break;
+          case 'gif':
+            mimeType = 'image/gif';
+            break;
+          case 'webp':
+            mimeType = 'image/webp';
+            break;
+          case 'svg':
+            mimeType = 'image/svg+xml';
+            break;
+          case 'bmp':
+            mimeType = 'image/bmp';
+            break;
+        }
+      }
+      
+      // Call the S3Lite upload function
+      await core.invoke('s3_upload', {
+        bucket: currentBucket,
+        key: finalFileName,
+        dataBase64: base64Data,
+        mimeType: mimeType
+      });
+  
+      // Refresh the S3LitePanel
+      if (typeof refreshCurrentBucket === 'function') {
+        await refreshCurrentBucket();
+      }
+      
+      console.log(`Image saved successfully to bucket "${currentBucket}" as "${finalFileName}"`);
+      
+      // Show success notification
+      Notifications.show({
+        title: 'Image Saved',
+        message: `Saved to "${currentBucket}" as "${finalFileName}"`,
+        color: 'green'
+      });
+    } catch (error) {
+      console.error("Error saving image to bucket:", error);
+      
+      // Show error notification
+      notifications.show({
+        title: 'Save Failed',
+        message: `Failed to save image: ${error}`,
+        color: 'red'
+      });
+    }
+    
+    // Close the menu
+    setImageMenu(prev => ({ ...prev, visible: false }));
+  };
 
 
   return (
@@ -1063,16 +1258,27 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
             overflow: 'hidden'
           }}
         >
-          <div style={{ padding: '8px' }}>
-            <Button 
-              size="xs" 
-              variant="light" 
-              leftIcon={<span>💾</span>}
-              onClick={handleDownloadImage}
-            >
-              Download Image
-            </Button>
-          </div>
+          <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Button 
+                size="xs" 
+                variant="light" 
+                leftIcon={<span>💾</span>}
+                onClick={handleDownloadImage}
+              >
+                Download Image
+              </Button>
+              
+              {currentBucket && (
+                <Button 
+                  size="xs" 
+                  variant="light" 
+                  leftIcon={<span>📤</span>}
+                  onClick={saveImageToBucket}
+                >
+                  Save to Bucket {currentBucket}
+                </Button>
+              )}
+            </div>
         </div>
       </>
     )}

@@ -7,6 +7,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
 import HtmlRenderer from './HtmlRenderer';
 import { notifications } from '@mantine/notifications';
+import { getCurrentBucket } from '../S3Lite/S3LitePanel';
 
 interface HtmlRendererPanelProps {
   isDark: boolean;
@@ -29,6 +30,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [selectedQaId, setSelectedQaId] = useState<string | null>(null);
   const [rendererActiveTab, setRendererActiveTab] = useState("input");
   const [selectedQAUrl, setSelectedQAUrl] = useState<string>('');
+  const [currentS3Bucket, setCurrentS3Bucket] = useState<string>('');
 
   // Check for new records periodically
   useEffect(() => {
@@ -397,7 +399,22 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       });
     }
   };
+
+  const updateCurrentBucket = (bucket: string) => {
+    setCurrentS3Bucket(bucket);
+  };
   
+  useEffect(() => {
+    // Update current bucket periodically
+    const intervalId = setInterval(() => {
+      const bucket = getCurrentBucket();
+      if (bucket !== currentS3Bucket) {
+        setCurrentS3Bucket(bucket);
+      }
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [currentS3Bucket]);
   
 
   return (
@@ -656,6 +673,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       activeTab={rendererActiveTab}
       setActiveTab={setRendererActiveTab}
       url={selectedQAUrl} // Pass the URL
+      currentBucket={currentS3Bucket}
     />
   </Tabs.Panel>
   
@@ -664,6 +682,7 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
       content={htmlContent} 
       darkMode={isDark}
       onContentChange={handleContentChange}
+      currentBucket={currentS3Bucket}
     />
   </Tabs.Panel>
   

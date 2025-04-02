@@ -13,6 +13,9 @@ interface S3FileEntry {
   created_at: string;
 }
 
+let currentBucketRef = '';
+let refreshFilesFunction: (() => Promise<void>) | null = null;
+
 const S3LitePanel: React.FC = () => {
   const [buckets, setBuckets] = useState<string[]>([]);
   const [currentBucket, setCurrentBucket] = useState<string>('');
@@ -24,11 +27,21 @@ const S3LitePanel: React.FC = () => {
   const [newBucketValue, setNewBucketValue] = useState<string>('');
 
   useEffect(() => {
+    // Store the loadFiles function in the outer variable
+    refreshFilesFunction = loadFiles;
+    
+    return () => {
+      refreshFilesFunction = null;
+    };
+  }, []);
+
+  useEffect(() => {
     loadBuckets();
   }, []);
 
   useEffect(() => {
     if (currentBucket) {
+      currentBucketRef = currentBucket;
       loadFiles();
     }
   }, [currentBucket]);
@@ -481,6 +494,16 @@ const S3LitePanel: React.FC = () => {
       )}
     </div>
   );
+};
+
+export const getCurrentBucket = () => {
+  return currentBucketRef;
+};
+
+export const refreshCurrentBucket = async () => {
+  if (refreshFilesFunction) {
+    await refreshFilesFunction();
+  }
 };
 
 export default S3LitePanel;
