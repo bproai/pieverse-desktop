@@ -70,13 +70,13 @@ class AdvancedFileService {
    */
   async generateFileTree(
     directory: string, 
-    includeFiles: boolean = true,
-    maxDepth?: number
+    include_files: boolean = true,
+    max_depth?: number
   ): Promise<string> {
     return await core.invoke('generate_file_tree', { 
       directory, 
-      include_files: includeFiles,
-      max_depth: maxDepth 
+      include_files: include_files,
+      max_depth: max_depth 
     });
   }
 

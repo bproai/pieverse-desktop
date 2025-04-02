@@ -56,20 +56,20 @@ pub async fn get_project_structure(
 }
 
 #[command]
-pub fn generate_structure_text(node: FileNode, includeFiles: bool) -> String {
+pub fn generate_structure_text(node: FileNode, include_files: bool) -> String {
     // Start with the root node name and an empty prefix.
     let mut output = format!("{}/\n", node.name);
     if let Some(children) = node.children {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
             let is_last = i == count - 1;
-            output.push_str(&generate_tree(child, "", is_last, includeFiles));
+            output.push_str(&generate_tree(child, "", is_last, include_files));
         }
     }
     output
 }
 
-fn generate_tree(node: &FileNode, prefix: &str, is_last: bool, includeFiles: bool) -> String {
+fn generate_tree(node: &FileNode, prefix: &str, is_last: bool, include_files: bool) -> String {
     let mut output = String::new();
     let branch = if is_last { "└── " } else { "├── " };
     output.push_str(&format!("{}{}{}\n", prefix, branch, node.name));
@@ -90,9 +90,9 @@ fn generate_tree(node: &FileNode, prefix: &str, is_last: bool, includeFiles: boo
                     child,
                     &new_prefix,
                     child_is_last,
-                    includeFiles,
+                    include_files,
                 ));
-            } else if includeFiles {
+            } else if include_files {
                 let file_branch = if child_is_last {
                     "└── "
                 } else {
