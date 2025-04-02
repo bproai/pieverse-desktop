@@ -104,7 +104,7 @@ function App() {
                 </Tabs.Tab>
                 
                 <Tabs.Tab value="s3lite" leftSection={<Image size={16} />}>
-                  Image Storage
+                  Image Depot
                 </Tabs.Tab>
 
                 {isDevMode && (

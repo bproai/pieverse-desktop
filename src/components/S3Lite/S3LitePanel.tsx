@@ -280,7 +280,7 @@ const S3LitePanel: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">S3Lite Storage</h2>
+      <h2 className="text-xl font-bold mb-4">Image Depot</h2>
       
       <div className="flex flex-col md:flex-row gap-4">
         {/* Left panel - Buckets & Upload */}
