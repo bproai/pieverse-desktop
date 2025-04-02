@@ -6,6 +6,11 @@ use std::fs;
 use tauri::{Runtime, Builder, AppHandle, State, UriSchemeContext};
 use tauri::http::Response;
 use tauri::{Manager};
+use zip::{ZipWriter, write::FileOptions};
+use std::path::Path;
+use std::fs::File;
+use std::io::Write;
+
 pub struct S3LiteState {
     db_path: String,
 }
@@ -34,6 +39,8 @@ impl S3LiteState {
         
         // Initialize the database
         let conn = Connection::open(&db_path).expect("Failed to open database");
+        
+        // Create the files table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS s3_files (
                 bucket TEXT NOT NULL,
@@ -45,9 +52,32 @@ impl S3LiteState {
                 PRIMARY KEY (bucket, key)
             )",
             [],
-        ).expect("Failed to create table");
+        ).expect("Failed to create files table");
+        
+        // Create a dedicated buckets table to store bucket names
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS s3_buckets (
+                name TEXT PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            [],
+        ).expect("Failed to create buckets table");
         
         Self { db_path }
+    }
+    
+    // Other methods remain the same...
+    
+    // Add a method to create a bucket
+    pub fn create_bucket(&self, bucket: &str) -> Result<(), Box<dyn Error>> {
+        let conn = self.get_connection()?;
+        
+        conn.execute(
+            "INSERT OR IGNORE INTO s3_buckets (name) VALUES (?)",
+            params![bucket],
+        )?;
+        
+        Ok(())
     }
     
     // Get connection to the database
@@ -131,7 +161,8 @@ impl S3LiteState {
     pub fn list_buckets(&self) -> Result<Vec<String>, Box<dyn Error>> {
         let conn = self.get_connection()?;
         
-        let mut stmt = conn.prepare("SELECT DISTINCT bucket FROM s3_files ORDER BY bucket")?;
+        // First get all buckets from the dedicated table
+        let mut stmt = conn.prepare("SELECT name FROM s3_buckets ORDER BY name")?;
         
         let bucket_iter = stmt.query_map([], |row| {
             row.get::<_, String>(0)
@@ -142,9 +173,133 @@ impl S3LiteState {
             buckets.push(bucket?);
         }
         
+        // Also include any buckets that might exist in s3_files but not in s3_buckets
+        // This ensures backward compatibility
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT bucket FROM s3_files 
+             WHERE bucket NOT IN (SELECT name FROM s3_buckets) 
+             ORDER BY bucket"
+        )?;
+        
+        let file_bucket_iter = stmt.query_map([], |row| {
+            row.get::<_, String>(0)
+        })?;
+        
+        for bucket in file_bucket_iter {
+            buckets.push(bucket?);
+        }
+        
         Ok(buckets)
     }
+
+    pub fn rename_bucket(&self, old_name: &str, new_name: &str) -> Result<(), Box<dyn Error>> {
+        // Validate the new bucket name
+        if new_name.is_empty() || new_name.contains('/') {
+            return Err("Invalid bucket name".into());
+        }
+        
+        let conn = self.get_connection()?;
+        
+        // Begin a transaction for atomicity
+        conn.execute("BEGIN TRANSACTION", [])?;
+        
+        // Try to execute all operations within the transaction
+        let result: Result<(), Box<dyn Error>> = (|| {
+            // First, rename the bucket in the s3_buckets table
+            conn.execute(
+                "UPDATE s3_buckets SET name = ? WHERE name = ?",
+                params![new_name, old_name],
+            )?;
+            
+            // Then, update all files in the s3_files table
+            conn.execute(
+                "UPDATE s3_files SET bucket = ? WHERE bucket = ?",
+                params![new_name, old_name],
+            )?;
+            
+            Ok(())
+        })();
+        
+        // Commit or rollback based on the result
+        if result.is_ok() {
+            conn.execute("COMMIT", [])?;
+        } else {
+            conn.execute("ROLLBACK", [])?;
+        }
+        
+        result
+    }
+
+    pub fn export_bucket_as_zip(&self, bucket: &str, export_path: &str) -> Result<(), Box<dyn Error>> {
+        // Get connection to the database
+        let conn = self.get_connection()?;
+        
+        // Query all image files in the bucket
+        let mut stmt = conn.prepare(
+            "SELECT key, data, mime_type FROM s3_files 
+             WHERE bucket = ? AND mime_type LIKE 'image/%'
+             ORDER BY key"
+        )?;
+        
+        let files_iter = stmt.query_map(params![bucket], |row| {
+            let key: String = row.get(0)?;
+            let data: Vec<u8> = row.get(1)?;
+            let mime_type: String = row.get(2)?;
+            Ok((key, data, mime_type))
+        })?;
+        
+        // Collect all files
+        let mut files = Vec::new();
+        for file in files_iter {
+            files.push(file?);
+        }
+        
+        if files.is_empty() {
+            return Err("No image files found in bucket".into());
+        }
+        
+        // Create zip file
+        let zip_path = Path::new(export_path);
+        let file = File::create(zip_path)?;
+        
+        let mut zip = ZipWriter::new(file);
+        let options = FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated)
+            .unix_permissions(0o755);
+        
+        // Add each file to the zip
+        for (key, data, _) in files {
+            // Clean up filename for zip
+            let filename = key.replace("/", "_");
+            
+            // Add file to zip
+            zip.start_file(filename, options)?;
+            zip.write_all(&data)?;
+        }
+        
+        // Finalize zip file
+        zip.finish()?;
+        
+        Ok(())
+    }
 }
+
+#[tauri::command]
+pub async fn s3_export_bucket_as_zip(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+    export_path: String,
+) -> Result<(), String> {
+    // Validate the bucket name
+    if bucket.is_empty() || bucket.contains('/') {
+        return Err("Invalid bucket name".into());
+    }
+    
+    // Export the bucket
+    state.inner().export_bucket_as_zip(&bucket, &export_path)
+        .map_err(|e| format!("Failed to export bucket: {}", e))
+}
+
 
 // Updated to use Response instead of ResponseBuilder
 pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
@@ -161,7 +316,15 @@ pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
                     .unwrap();
             }
             let bucket = parts[0];
-            let key = parts[1..].join("/");
+            
+            // Join the remaining parts and URL decode the result
+            let encoded_key = parts[1..].join("/");
+            
+            // URL decode the key to handle %20 (spaces) and other encoded characters
+            let key = match urlencoding::decode(&encoded_key) {
+                Ok(decoded) => decoded.into_owned(),
+                Err(_) => encoded_key // Fall back to the original if decoding fails
+            };
 
             // Get the app handle from the context.
             let app_handle = context.app_handle();
@@ -181,7 +344,6 @@ pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         },
     )
 }
-
 
 // Tauri commands
 
@@ -231,19 +393,43 @@ pub async fn s3_list_buckets(
 
 #[tauri::command]
 pub async fn s3_create_bucket(
-    _state: State<'_, S3LiteState>,
+    state: State<'_, S3LiteState>,
     bucket: String,
 ) -> Result<(), String> {
-    // Creating a bucket doesn't require any action since buckets
-    // are implicitly created when files are uploaded
-    // We can just verify the bucket name is valid
+    // Validate the bucket name
     if bucket.is_empty() || bucket.contains('/') {
         return Err("Invalid bucket name".into());
     }
-    Ok(())
+    
+    // Create the bucket in the database
+    state.create_bucket(&bucket)
+        .map_err(|e| format!("Failed to create bucket: {}", e))
 }
 
 #[tauri::command]
 pub fn s3_get_url(bucket: String, key: String) -> String {
     format!("s3://{}/{}", bucket, key)
+}
+
+
+
+// Add this Tauri command to your commands section
+#[tauri::command]
+pub async fn s3_rename_bucket(
+    state: State<'_, S3LiteState>,
+    old_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    // Validate the bucket names
+    if old_name.is_empty() || old_name.contains('/') {
+        return Err("Invalid old bucket name".into());
+    }
+    
+    if new_name.is_empty() || new_name.contains('/') {
+        return Err("Invalid new bucket name".into());
+    }
+    
+    // Rename the bucket
+    state.inner().rename_bucket(&old_name, &new_name)
+        .map_err(|e| format!("Failed to rename bucket: {}", e))
 }

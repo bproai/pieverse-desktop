@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
+import { save } from '@tauri-apps/plugin-dialog';
 
 interface S3FileEntry {
   bucket: string;
@@ -19,6 +20,8 @@ const S3LitePanel: React.FC = () => {
   const [newBucketName, setNewBucketName] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [editingBucket, setEditingBucket] = useState<string | null>(null);
+  const [newBucketValue, setNewBucketValue] = useState<string>('');
 
   useEffect(() => {
     loadBuckets();
@@ -197,6 +200,84 @@ const S3LitePanel: React.FC = () => {
     return `${files.length} files, ${formattedSize}`;
   };
 
+  const renameBucket = async (oldName: string, newName: string) => {
+    if (!newName || oldName === newName) {
+      setEditingBucket(null);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log(`Renaming bucket from "${oldName}" to "${newName}"`);
+      
+      // Fix parameter names to match Rust backend
+      await core.invoke('s3_rename_bucket', {
+        oldName: oldName,  // Changed from oldName to old_name
+        newName: newName   // Changed from newName to new_name
+      });
+      
+      console.log('Bucket renamed successfully');
+      
+      // Update currentBucket if we're renaming the currently selected bucket
+      if (currentBucket === oldName) {
+        setCurrentBucket(newName);
+      }
+      
+      // Refresh the bucket list
+      await loadBuckets();
+      setEditingBucket(null);
+    } catch (error) {
+      console.error('Error renaming bucket:', error);
+      alert(`Failed to rename bucket: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add a function to start editing a bucket name
+  const startEditingBucket = (bucket: string) => {
+    setEditingBucket(bucket);
+    setNewBucketValue(bucket);
+  };
+
+  const exportBucketAsZip = async () => {
+    if (!currentBucket) return;
+    
+    try {
+      setLoading(true);
+      
+      // Open save dialog to select destination
+      const savePath = await save({
+        filters: [{
+          name: 'Zip Archive',
+          extensions: ['zip']
+        }],
+        defaultPath: `${currentBucket}-images.zip`
+      });
+      
+      if (!savePath) {
+        setLoading(false);
+        return; // User cancelled
+      }
+      
+      console.log(`Exporting images from bucket "${currentBucket}" to "${savePath}"`);
+      
+      // Call backend to export the bucket
+      await core.invoke('s3_export_bucket_as_zip', {
+        bucket: currentBucket,
+        exportPath: savePath // Make sure to use snake_case to match your Rust backend
+      });
+      
+      console.log('Bucket exported successfully');
+      alert(`Images from "${currentBucket}" exported successfully to "${savePath}"`);
+    } catch (error) {
+      console.error('Error exporting bucket:', error);
+      alert(`Failed to export bucket: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">S3Lite Storage</h2>
@@ -213,6 +294,9 @@ const S3LitePanel: React.FC = () => {
               value={newBucketName}
               onChange={(e) => setNewBucketName(e.target.value)}
               placeholder="New bucket name"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               className="border p-2 rounded mr-2 flex-grow"
             />
             <button 
@@ -233,12 +317,60 @@ const S3LitePanel: React.FC = () => {
                 {buckets.map(bucket => (
                   <li 
                     key={bucket}
-                    className={`py-2 px-2 cursor-pointer ${currentBucket === bucket ? 'bg-blue-100' : ''}`}
-                    onClick={() => setCurrentBucket(bucket)}
+                    onClick={() => setCurrentBucket(bucket)} // Make the entire row clickable
+                    className={`py-2 px-2 cursor-pointer hover:bg-blue-50 ${currentBucket === bucket ? 'bg-blue-100' : ''}`}
                   >
                     <div className="flex justify-between items-center">
-                      <span>{bucket}</span>
-                      <span className="text-xs text-gray-500">{getBucketStats(bucket)}</span>
+                      {editingBucket === bucket ? (
+                        // Edit mode - stop propagation to prevent bucket selection
+                        <div className="flex w-full" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={newBucketValue}
+                            onChange={(e) => setNewBucketValue(e.target.value)}
+                            className="border p-1 rounded mr-2 flex-grow"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                renameBucket(bucket, newBucketValue);
+                              } else if (e.key === 'Escape') {
+                                setEditingBucket(null);
+                              }
+                            }}
+                          />
+                          <button 
+                            onClick={() => renameBucket(bucket, newBucketValue)}
+                            className="bg-green-500 text-white px-2 py-1 rounded mr-1 text-xs"
+                          >
+                            Save
+                          </button>
+                          <button 
+                            onClick={() => setEditingBucket(null)}
+                            className="bg-gray-500 text-white px-2 py-1 rounded text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        // View mode
+                        <>
+                          <span className="flex-grow">
+                            {bucket}
+                          </span>
+                          <div className="flex items-center">
+                            <span className="text-xs text-gray-500 mr-2">{getBucketStats(bucket)}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent bucket selection when clicking Rename
+                                startEditingBucket(bucket);
+                              }}
+                              className="text-gray-500 hover:text-blue-500 text-xs ml-2"
+                            >
+                              Rename
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -248,13 +380,21 @@ const S3LitePanel: React.FC = () => {
           
           {/* Upload button - only if bucket is selected */}
           {currentBucket && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-2">
               <button
                 onClick={uploadFile}
                 disabled={loading}
                 className="w-full bg-green-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
               >
                 Upload Image to {currentBucket}
+              </button>
+              
+              <button
+                onClick={exportBucketAsZip}
+                disabled={loading || files.filter(f => f.mime_type.startsWith('image/')).length === 0}
+                className="w-full bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
+              >
+                Export Images as ZIP
               </button>
             </div>
           )}

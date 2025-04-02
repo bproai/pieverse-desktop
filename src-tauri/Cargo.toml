@@ -55,3 +55,5 @@ hyper = { version = "0.14", features = ["full"] }
 walkdir = "2.3"
 async-stream = "0.3"
 mcp-client = "0.1.0"
+urlencoding = "2.1.0"
+zip = "0.6"
