@@ -39,11 +39,11 @@ export async function setupNativeMenu() {
       action: () => alert(`PieVerse Desktop\nv1.0.0\n\nby Brian Pan\nReason ONE LLC\nMountain View, California`)
     });
     
-    const prefsItem = await MenuItem.new({
-      id: 'preferences',
-      text: 'Preferences...',
-      action: () => alert('Preferences not implemented yet')
-    });
+    // const prefsItem = await MenuItem.new({
+    //   id: 'preferences',
+    //   text: 'Preferences...',
+    //   action: () => alert('Preferences not implemented yet')
+    // });
     
     const quitItem = await MenuItem.new({
       id: 'quit',
@@ -70,7 +70,8 @@ export async function setupNativeMenu() {
         {
           id: 'app', // This will become the app name on macOS
           text: 'App', // This text isn't used on macOS (it becomes the app name)
-          items: [aboutItem, separator, prefsItem, separator, quitItem]
+          // items: [aboutItem, separator, prefsItem, separator, quitItem]
+          items: [aboutItem, separator, quitItem]
         },
         {
           id: 'edit',

@@ -42,3 +42,5 @@ pub mod mcp_client_service;
 
 // Chrome extension WebSocket service
 pub mod chrome_extension_ws;
+
+pub mod s3_lite; 

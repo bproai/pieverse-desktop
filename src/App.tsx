@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers, Image } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -23,6 +23,7 @@ import FileSystemPanel from './components/FileSystem/FileSystemPanel';
 import { MCPServerPanel } from './components/MCPServer';
 import { MCPClientPanel } from './components/MCPClient';
 import { ContextBuilderPanel } from './components/ContextBuilder';
+import S3LitePanel from './components/S3Lite';
 import { useEffect } from 'react';
 import { setupNativeMenu } from './systemMenu';
 
@@ -100,6 +101,10 @@ function App() {
                 </Tabs.Tab>
                 <Tabs.Tab value="llm-rules" leftSection={<Brain size={16} />}>
                   LLM Rules
+                </Tabs.Tab>
+                
+                <Tabs.Tab value="s3lite" leftSection={<Image size={16} />}>
+                  Image Storage
                 </Tabs.Tab>
 
                 {isDevMode && (
@@ -179,6 +184,10 @@ function App() {
               
               <Tabs.Panel value="llm-rules" className="p-4">
                 <LLMRulesPanel />
+              </Tabs.Panel>
+              
+              <Tabs.Panel value="s3lite" className="p-4">
+                <S3LitePanel />
               </Tabs.Panel>
 
               {isDevMode && (

@@ -89,6 +89,12 @@ use services::chrome_extension_ws::{
     ChromeExtWebSocketState,
 };
 
+// Import the S3Lite functions separately
+use services::s3_lite::{
+    register_s3_protocol, s3_upload, s3_delete, s3_list_files, s3_list_buckets, 
+    s3_create_bucket, s3_get_url, S3LiteState,
+};
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -99,11 +105,15 @@ pub fn run() {
     // Clone for use in the setup closure so that the original value remains available.
     let trend_spike_service_for_setup = trend_spike_service.clone();
 
-    tauri::Builder::default()
+    register_s3_protocol(tauri::Builder::default())
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(move |app| {
             // Setup tray icon handlers
             tray::setup_tray_handler(&app.handle());
+
+            // Create S3LiteState in setup
+            let s3_state = S3LiteState::new(&app.handle());
+            app.manage(s3_state);
 
             // Explicitly start API server in production mode
             let sqlite_service = app.state::<SqliteService>();
@@ -264,7 +274,14 @@ pub fn run() {
             get_chrome_ws_status,
             send_message_to_chrome,
             get_chrome_ws_clients,
-            send_targeted_message_to_chrome
+            send_targeted_message_to_chrome,
+            // S3Lite commands
+            s3_upload,
+            s3_delete,
+            s3_list_files,
+            s3_list_buckets,
+            s3_create_bucket,
+            s3_get_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
