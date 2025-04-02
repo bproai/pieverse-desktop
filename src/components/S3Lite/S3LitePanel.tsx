@@ -25,6 +25,9 @@ const S3LitePanel: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [editingBucket, setEditingBucket] = useState<string | null>(null);
   const [newBucketValue, setNewBucketValue] = useState<string>('');
+  const [editingFile, setEditingFile] = useState<string | null>(null);
+  const [newFileName, setNewFileName] = useState<string>('');
+
 
   useEffect(() => {
     // Store the loadFiles function in the outer variable
@@ -291,6 +294,45 @@ const S3LitePanel: React.FC = () => {
     }
   };
 
+  const renameFile = async (oldKey: string, newKey: string) => {
+    if (!newKey || oldKey === newKey) {
+      setEditingFile(null);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log(`Renaming file from "${oldKey}" to "${newKey}"`);
+      
+      await core.invoke('s3_rename_file', {
+        bucket: currentBucket,
+        oldKey: oldKey,
+        newKey: newKey
+      });
+      
+      console.log('File renamed successfully');
+      await loadFiles();
+      setEditingFile(null);
+      
+      // If we're previewing the renamed file, update the preview URL
+      if (imagePreview && imagePreview.includes(oldKey)) {
+        previewImage(currentBucket, newKey);
+      }
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      alert(`Failed to rename file: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add a function to start editing a file name
+  const startEditingFile = (key: string) => {
+    setEditingFile(key);
+    setNewFileName(key);
+  };
+  
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Image Depot</h2>
@@ -441,7 +483,41 @@ const S3LitePanel: React.FC = () => {
                     )}
                     
                     <div className="p-2">
-                      <p className="font-medium truncate" title={file.key}>{file.key}</p>
+                      {editingFile === file.key ? (
+                        // Edit mode
+                        <div className="flex mb-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={newFileName}
+                            onChange={(e) => setNewFileName(e.target.value)}
+                            className="border p-1 rounded mr-2 flex-grow text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                renameFile(file.key, newFileName);
+                              } else if (e.key === 'Escape') {
+                                setEditingFile(null);
+                              }
+                            }}
+                          />
+                          <button 
+                            onClick={() => renameFile(file.key, newFileName)}
+                            className="bg-green-500 text-white px-2 py-1 rounded mr-1 text-xs"
+                          >
+                            Save
+                          </button>
+                          <button 
+                            onClick={() => setEditingFile(null)}
+                            className="bg-gray-500 text-white px-2 py-1 rounded text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        // View mode
+                        <p className="font-medium truncate" title={file.key}>{file.key}</p>
+                      )}
+                      
                       <p className="text-xs text-gray-500">
                         {file.size < 1024 * 1024 
                           ? `${(file.size / 1024).toFixed(2)} KB` 
@@ -450,12 +526,23 @@ const S3LitePanel: React.FC = () => {
                       </p>
                       
                       <div className="mt-2 flex justify-between">
-                        <button
-                          onClick={() => previewImage(file.bucket, file.key)}
-                          className="text-sm text-blue-500 hover:underline"
-                        >
-                          View
-                        </button>
+                        <div>
+                          <button
+                            onClick={() => previewImage(file.bucket, file.key)}
+                            className="text-sm text-blue-500 hover:underline mr-2"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditingFile(file.key);
+                            }}
+                            className="text-sm text-blue-500 hover:underline"
+                          >
+                            Rename
+                          </button>
+                        </div>
                         <button
                           onClick={() => deleteFile(file.key)}
                           className="text-sm text-red-500 hover:underline"

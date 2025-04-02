@@ -282,6 +282,58 @@ impl S3LiteState {
         
         Ok(())
     }
+
+    pub fn rename_file(&self, bucket: &str, old_key: &str, new_key: &str) -> Result<(), Box<dyn Error>> {
+        // Validate the new file name
+        if new_key.is_empty() {
+            return Err("New file name cannot be empty".into());
+        }
+        
+        let conn = self.get_connection()?;
+        
+        // Begin a transaction for atomicity
+        conn.execute("BEGIN TRANSACTION", [])?;
+        
+        // Try to execute all operations within the transaction
+        let result: Result<(), Box<dyn Error>> = (|| {
+            // Check if the new key already exists
+            let mut stmt = conn.prepare("SELECT 1 FROM s3_files WHERE bucket = ? AND key = ?")?;
+            let exists = stmt.exists(params![bucket, new_key])?;
+            
+            if exists {
+                return Err("A file with this name already exists".into());
+            }
+            
+            // Rename the file
+            conn.execute(
+                "UPDATE s3_files SET key = ? WHERE bucket = ? AND key = ?",
+                params![new_key, bucket, old_key],
+            )?;
+            
+            Ok(())
+        })();
+        
+        // Commit or rollback based on the result
+        if result.is_ok() {
+            conn.execute("COMMIT", [])?;
+        } else {
+            conn.execute("ROLLBACK", [])?;
+        }
+        
+        result
+    }
+}
+
+#[tauri::command]
+pub async fn s3_rename_file(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+    old_key: String,
+    new_key: String,
+) -> Result<(), String> {
+    // Rename the file
+    state.inner().rename_file(&bucket, &old_key, &new_key)
+        .map_err(|e| format!("Failed to rename file: {}", e))
 }
 
 #[tauri::command]
