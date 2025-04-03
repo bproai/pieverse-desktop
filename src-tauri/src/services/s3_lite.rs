@@ -130,35 +130,6 @@ impl S3LiteState {
         Ok(affected > 0)
     }
     
-    // List files in a bucket
-    pub fn list_files(&self, bucket: &str) -> Result<Vec<S3FileEntry>, Box<dyn Error>> {
-        let conn = self.get_connection()?;
-        
-        let mut stmt = conn.prepare(
-            "SELECT bucket, key, mime_type, size, created_at 
-             FROM s3_files 
-             WHERE bucket = ? 
-             ORDER BY created_at desc"
-        )?;
-            
-        let file_iter = stmt.query_map(params![bucket], |row| {
-            Ok(S3FileEntry {
-                bucket: row.get(0)?,
-                key: row.get(1)?,
-                mime_type: row.get(2)?,
-                size: row.get(3)?,
-                created_at: row.get(4)?,
-            })
-        })?;
-        
-        let mut files = Vec::new();
-        for file in file_iter {
-            files.push(file?);
-        }
-        
-        Ok(files)
-    }
-    
     // List all buckets
     pub fn list_buckets(&self) -> Result<Vec<String>, Box<dyn Error>> {
         let conn = self.get_connection()?;
@@ -324,6 +295,81 @@ impl S3LiteState {
         
         result
     }
+
+    pub fn list_files(&self, bucket: &str) -> Result<Vec<S3FileEntry>, Box<dyn Error>> {
+        let conn = self.get_connection()?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT bucket, key, mime_type, size, created_at 
+             FROM s3_files 
+             WHERE bucket = ? 
+             ORDER BY created_at DESC"
+        )?;
+            
+        let file_iter = stmt.query_map(params![bucket], |row| {
+            Ok(S3FileEntry {
+                bucket: row.get(0)?,
+                key: row.get(1)?,
+                mime_type: row.get(2)?,
+                size: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })?;
+        
+        let mut files = Vec::new();
+        for file in file_iter {
+            files.push(file?);
+        }
+        
+        Ok(files)
+    }
+    
+    // If you want to add a paginated version as an additional function
+    pub fn list_files_paginated(&self, bucket: &str, page: i64, page_size: i64) -> Result<Vec<S3FileEntry>, Box<dyn Error>> {
+        let conn = self.get_connection()?;
+        
+        let offset = page * page_size;
+        
+        let mut stmt = conn.prepare(
+            "SELECT bucket, key, mime_type, size, created_at 
+             FROM s3_files 
+             WHERE bucket = ? 
+             ORDER BY created_at DESC
+             LIMIT ? OFFSET ?"
+        )?;
+            
+        let file_iter = stmt.query_map(params![bucket, page_size, offset], |row| {
+            Ok(S3FileEntry {
+                bucket: row.get(0)?,
+                key: row.get(1)?,
+                mime_type: row.get(2)?,
+                size: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })?;
+        
+        let mut files = Vec::new();
+        for file in file_iter {
+            files.push(file?);
+        }
+        
+        Ok(files)
+    }
+
+    // Add this function to s3_lite.rs
+    pub fn get_file_count(&self, bucket: &str) -> Result<i64, Box<dyn Error>> {
+        let conn = self.get_connection()?;
+        
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM s3_files WHERE bucket = ?",
+            params![bucket],
+            |row| row.get(0)
+        )?;
+        
+        Ok(count)
+    }
+
+
 }
 
 #[tauri::command]
@@ -556,4 +602,27 @@ pub async fn s3_copy_image_to_clipboard(
         .map_err(|e| format!("Failed to set image to clipboard: {}", e))?;
     
     Ok(())
+}
+
+// Tauri command for the paginated version
+#[tauri::command]
+pub async fn s3_list_files_paginated(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+    page: i64,
+    page_size: i64,
+) -> Result<Vec<S3FileEntry>, String> {
+    state.list_files_paginated(&bucket, page, page_size)
+        .map_err(|e| format!("Failed to list files: {}", e))
+}
+
+
+// Add corresponding Tauri command
+#[tauri::command]
+pub async fn s3_get_file_count(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+) -> Result<i64, String> {
+    state.get_file_count(&bucket)
+        .map_err(|e| format!("Failed to get file count: {}", e))
 }

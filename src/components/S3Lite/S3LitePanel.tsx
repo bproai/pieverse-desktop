@@ -4,6 +4,7 @@ import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { save } from '@tauri-apps/plugin-dialog';
+import { RefreshCw } from 'lucide-react';
 
 interface S3FileEntry {
   bucket: string;
@@ -16,10 +17,15 @@ interface S3FileEntry {
 let currentBucketRef = '';
 let refreshFilesFunction: (() => Promise<void>) | null = null;
 
+const PAGE_SIZE = 50; // Number of files to display per page
+
 const S3LitePanel: React.FC = () => {
   const [buckets, setBuckets] = useState<string[]>([]);
   const [currentBucket, setCurrentBucket] = useState<string>('');
   const [files, setFiles] = useState<S3FileEntry[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalFiles, setTotalFiles] = useState<number>(0);
   const [newBucketName, setNewBucketName] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -69,43 +75,19 @@ const S3LitePanel: React.FC = () => {
     }, 5000); // 5 second polling interval
   };
 
-
-  useEffect(() => {
-    // Store the loadFiles function in the outer variable
-    refreshFilesFunction = loadFiles;
-    
-    // Set up visibility detection
-    const handleVisibilityChange = () => {
-      const newIsVisible = !document.hidden;
-      isVisible.current = newIsVisible;
-      
-      // If becoming visible and we have a current bucket, check if update needed
-      if (newIsVisible && currentBucket) {
-        checkForUpdateNeeded();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      refreshFilesFunction = null;
-    };
-  }, []);
-
   // Check if the files count in the database matches what's shown
   const checkForUpdateNeeded = async () => {
     if (!currentBucket) return;
     
     try {
-      // Get the current count from the database without updating the UI
-      const dbFiles = await core.invoke<S3FileEntry[]>('s3_list_files', {
+      // Get the current count from the database
+      const count = await core.invoke<number>('s3_get_file_count', {
         bucket: currentBucket
       });
       
       // If counts don't match, we need to refresh
-      if (dbFiles.length !== files.length) {
-        console.log(`File count mismatch detected. DB: ${dbFiles.length}, UI: ${files.length}. Refreshing...`);
+      if (count !== totalFiles) {
+        console.log(`File count mismatch detected. DB: ${count}, UI: ${totalFiles}. Refreshing...`);
         await loadFiles();
       }
     } catch (error) {
@@ -120,9 +102,17 @@ const S3LitePanel: React.FC = () => {
   useEffect(() => {
     if (currentBucket) {
       currentBucketRef = currentBucket;
+      setCurrentPage(0); // Reset to first page when changing buckets
       loadFiles();
     }
   }, [currentBucket]);
+  
+  // Additional effect to reload files when the page changes
+  useEffect(() => {
+    if (currentBucket) {
+      loadFiles();
+    }
+  }, [currentPage]);
   
   // Add a handler to close the menu when clicking outside
   useEffect(() => {
@@ -140,6 +130,27 @@ const S3LitePanel: React.FC = () => {
       };
     }
   }, [imageMenu.visible]);
+
+  // Navigation functions
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(0);
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(totalPages - 1);
+  };
 
   const loadBuckets = async () => {
     try {
@@ -164,15 +175,49 @@ const S3LitePanel: React.FC = () => {
     
     try {
       setLoading(true);
-      const result = await core.invoke<S3FileEntry[]>('s3_list_files', {
+  
+      // Get total count for pagination
+      const count = await core.invoke<number>('s3_get_file_count', {
         bucket: currentBucket
       });
+      
+      console.log(`Total files in bucket: ${count}`);
+      setTotalFiles(count);
+      
+      // Calculate total pages (minimum of 1 page if there are files)
+      const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+      setTotalPages(pages);
+      
+      console.log(`Total pages: ${pages}, Current page: ${currentPage}`);
+      
+      // Always default to page 0 if there are files but we're on an invalid page
+      if (count > 0 && (currentPage >= pages || currentPage < 0)) {
+        console.log(`Current page ${currentPage} is invalid, resetting to page 0`);
+        setCurrentPage(0);
+        return; // loadFiles will be called again due to the useEffect
+      }
+      
+      // Get paginated results - ensure we're passing the correct page number
+      const result = await core.invoke<S3FileEntry[]>('s3_list_files_paginated', {
+        bucket: currentBucket,
+        page: currentPage,
+        pageSize: PAGE_SIZE
+      });
+      
+      console.log(`Loaded page ${currentPage} with size ${PAGE_SIZE}, total files: ${count}, received: ${result.length} files`);
+      
       setFiles(result);
     } catch (error) {
       console.error('Error loading files:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to reload and show the newest 50 files
+  const reloadNewestFiles = async () => {
+    setCurrentPage(0); // Reset to first page
+    await loadFiles();
   };
 
   const createBucket = async () => {
@@ -248,6 +293,7 @@ const S3LitePanel: React.FC = () => {
         mimeType: mimeType
       });
       console.log('File upload successful');
+      setCurrentPage(0); // Reset to first page to see the newly uploaded file
       await loadFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -263,10 +309,12 @@ const S3LitePanel: React.FC = () => {
         bucket: currentBucket,
         key: key
       });
-      await loadFiles();
+      
       if (imagePreview && imagePreview.includes(key)) {
         setImagePreview(null);
       }
+      
+      await loadFiles();
     } catch (error) {
       console.error('Error deleting file:', error);
     } finally {
@@ -289,12 +337,22 @@ const S3LitePanel: React.FC = () => {
   const getBucketStats = (bucket: string) => {
     if (bucket !== currentBucket) return null;
     
-    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-    const formattedSize = totalSize < 1024 * 1024 
-      ? `${(totalSize / 1024).toFixed(2)} KB` 
-      : `${(totalSize / (1024 * 1024)).toFixed(2)} MB`;
+    // For the current bucket, we have the total file count
+    if (bucket === currentBucket && totalFiles > 0) {
+      // Calculate total size from the currently loaded files (this is an approximation)
+      const avgFileSize = files.length > 0 
+        ? files.reduce((acc, file) => acc + file.size, 0) / files.length 
+        : 0;
+      const estimatedTotalSize = avgFileSize * totalFiles;
       
-    return `${files.length} files, ${formattedSize}`;
+      const formattedSize = estimatedTotalSize < 1024 * 1024 
+        ? `${(estimatedTotalSize / 1024).toFixed(2)} KB` 
+        : `${(estimatedTotalSize / (1024 * 1024)).toFixed(2)} MB`;
+        
+      return `${totalFiles} files, ~${formattedSize}`;
+    }
+    
+    return null;
   };
 
   const renameBucket = async (oldName: string, newName: string) => {
@@ -477,7 +535,6 @@ const S3LitePanel: React.FC = () => {
   };
 
   // Copy image to clipboard
-  // Updated copyImage function in S3LitePanel.tsx
   const copyImage = async (file: S3FileEntry) => {
     if (!file) return;
     try {
@@ -499,10 +556,6 @@ const S3LitePanel: React.FC = () => {
     }
   };
 
-  
-  
-
-
   // Handle context menu item click
   const handleMenuItemClick = async (action: string) => {
     const file = imageMenu.file;
@@ -511,17 +564,15 @@ const S3LitePanel: React.FC = () => {
     if (action === 'download') {
       await downloadImage(file.bucket, file.key);
     } else if (action === 'copyImage') {
-      await copyImage(file); // This function fetches the image and writes it to the clipboard.
+      await copyImage(file);
     } else if (action === 'copyUrl') {
-      await copyImageUrl(file); // This function copies the S3 URL to the clipboard.
+      await copyImageUrl(file);
     }
     
     // Close the menu after the action
     setImageMenu(prev => ({ ...prev, visible: false }));
   };
   
-  
-
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Image Depot</h2>
@@ -638,7 +689,7 @@ const S3LitePanel: React.FC = () => {
               
               <button
                 onClick={exportBucketAsZip}
-                disabled={loading || files.filter(f => f.mime_type.startsWith('image/')).length === 0}
+                disabled={loading || totalFiles === 0}
                 className="w-full bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
               >
                 Export Images as ZIP
@@ -649,13 +700,69 @@ const S3LitePanel: React.FC = () => {
         
         {/* Right panel - Files list */}
         <div className="w-full md:w-2/3 bg-gray-100 p-4 rounded-md">
-          <h3 className="text-lg font-semibold mb-2">
-            {currentBucket ? `Files in "${currentBucket}"` : 'Select a bucket'}
-          </h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold">
+              {currentBucket ? `Files in "${currentBucket}"` : 'Select a bucket'}
+            </h3>
+            
+            {/* Pagination Controls */}
+            {currentBucket && totalFiles > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={reloadNewestFiles}
+                  disabled={loading}
+                  className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+                  title="Reload newest files"
+                >
+                  <RefreshCw size={16} />
+                </button>
+                
+                <button
+                  onClick={goToFirstPage}
+                  disabled={currentPage === 0 || loading}
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  ⏮
+                </button>
+                
+                <button
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 0 || loading}
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  ◀
+                </button>
+                
+                <span className="text-sm">
+                  Page {currentPage + 1} of {totalPages || 1}
+                </span>
+                
+                <button
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages - 1 || loading}
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  ▶
+                </button>
+                
+                <button
+                  onClick={goToLastPage}
+                  disabled={currentPage >= totalPages - 1 || loading}
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  ⏭
+                </button>
+              </div>
+            )}
+          </div>
           
           {currentBucket ? (
             files.length === 0 ? (
-              <p className="text-gray-600">No files in this bucket.</p>
+              <p className="text-gray-600">
+                {totalFiles > 0 
+                  ? `No files on this page. Total files: ${totalFiles}`
+                  : 'No files in this bucket.'}
+              </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {files.map(file => (

@@ -92,7 +92,8 @@ use services::chrome_extension_ws::{
 // Import the S3Lite functions separately
 use services::s3_lite::{
     register_s3_protocol, s3_upload, s3_delete, s3_list_files, s3_list_buckets, 
-    s3_create_bucket, s3_get_url, S3LiteState, s3_rename_bucket, s3_export_bucket_as_zip, s3_rename_file, s3_download_image, s3_copy_image_to_clipboard,
+    s3_create_bucket, s3_get_url, S3LiteState, s3_rename_bucket, s3_export_bucket_as_zip, s3_rename_file, s3_download_image, s3_copy_image_to_clipboard,s3_list_files_paginated,
+    s3_get_file_count,
 };
 
 
@@ -287,6 +288,8 @@ pub fn run() {
             s3_rename_file,
             s3_download_image,
             s3_copy_image_to_clipboard,
+            s3_list_files_paginated,
+            s3_get_file_count,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
