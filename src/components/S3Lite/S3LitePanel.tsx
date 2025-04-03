@@ -27,7 +27,14 @@ const S3LitePanel: React.FC = () => {
   const [newBucketValue, setNewBucketValue] = useState<string>('');
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState<string>('');
-
+  
+  // Custom context menu state
+  const [imageMenu, setImageMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    file: null as S3FileEntry | null
+  });
 
   useEffect(() => {
     // Store the loadFiles function in the outer variable
@@ -48,28 +55,34 @@ const S3LitePanel: React.FC = () => {
       loadFiles();
     }
   }, [currentBucket]);
+  
+  // Add a handler to close the menu when clicking outside
+  useEffect(() => {
+    if (imageMenu.visible) {
+      const handleClickOutside = () => {
+        setImageMenu(prev => ({ ...prev, visible: false }));
+      };
+      
+      // Add the global click listener
+      document.addEventListener('click', handleClickOutside);
+      
+      // Clean up
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [imageMenu.visible]);
 
   const loadBuckets = async () => {
     try {
       console.log('Loading buckets...');
       setLoading(true);
       
-      // Check if we're running in Tauri
-      if (true/*||window.__TAURI__*/) {
-        const result = await core.invoke<string[]>('s3_list_buckets');
-        console.log('Buckets loaded:', result);
-        setBuckets(result);
-        if (result.length > 0 && !currentBucket) {
-          setCurrentBucket(result[0]);
-        }
-      } else {
-        // Browser fallback - mock data
-        console.log('Running in browser, using mock data');
-        const mockBuckets = ['mock-bucket-1', 'mock-bucket-2'];
-        setBuckets(mockBuckets);
-        if (!currentBucket) {
-          setCurrentBucket(mockBuckets[0]);
-        }
+      const result = await core.invoke<string[]>('s3_list_buckets');
+      console.log('Buckets loaded:', result);
+      setBuckets(result);
+      if (result.length > 0 && !currentBucket) {
+        setCurrentBucket(result[0]);
       }
     } catch (error) {
       console.error('Error loading buckets:', error);
@@ -166,7 +179,7 @@ const S3LitePanel: React.FC = () => {
         dataBase64: base64Data,
         mimeType: mimeType
       });
-      console.log('File upload succesful:');
+      console.log('File upload successful');
       await loadFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -226,10 +239,9 @@ const S3LitePanel: React.FC = () => {
       setLoading(true);
       console.log(`Renaming bucket from "${oldName}" to "${newName}"`);
       
-      // Fix parameter names to match Rust backend
       await core.invoke('s3_rename_bucket', {
-        oldName: oldName,  // Changed from oldName to old_name
-        newName: newName   // Changed from newName to new_name
+        oldName: oldName,
+        newName: newName
       });
       
       console.log('Bucket renamed successfully');
@@ -250,7 +262,6 @@ const S3LitePanel: React.FC = () => {
     }
   };
   
-  // Add a function to start editing a bucket name
   const startEditingBucket = (bucket: string) => {
     setEditingBucket(bucket);
     setNewBucketValue(bucket);
@@ -281,7 +292,7 @@ const S3LitePanel: React.FC = () => {
       // Call backend to export the bucket
       await core.invoke('s3_export_bucket_as_zip', {
         bucket: currentBucket,
-        exportPath: savePath // Make sure to use snake_case to match your Rust backend
+        exportPath: savePath
       });
       
       console.log('Bucket exported successfully');
@@ -326,11 +337,121 @@ const S3LitePanel: React.FC = () => {
     }
   };
   
-  // Add a function to start editing a file name
   const startEditingFile = (key: string) => {
     setEditingFile(key);
     setNewFileName(key);
   };
+
+  // Download image function
+  const downloadImage = async (bucket: string, key: string) => {
+    try {
+      setLoading(true);
+      
+      // Ask user where to save the file
+      const savePath = await save({
+        filters: [{
+          name: 'Images',
+          extensions: [key.split('.').pop() || 'jpg']
+        }],
+        defaultPath: key
+      });
+      
+      if (!savePath) {
+        setLoading(false);
+        return;
+      }
+      
+      // Download the file
+      await core.invoke('s3_download_image', {
+        bucket,
+        key,
+        savePath
+      });
+      
+      console.log('Image downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      alert(`Failed to download image: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
+  // Custom context menu handler
+  const handleImageContextMenu = (e: React.MouseEvent, file: S3FileEntry) => {
+    e.preventDefault(); // Prevent default browser menu
+    e.stopPropagation(); // Stop event propagation
+    
+    // Show our custom menu at the cursor position
+    setImageMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      file: file
+    });
+    
+    console.log("Custom context menu opened for:", file.key);
+  };
+  
+  // Copy image URL to clipboard
+  const copyImageUrl = async (file: S3FileEntry) => {
+    if (!file) return;
+    
+    try {
+      await navigator.clipboard.writeText(`s3://${file.bucket}/${file.key}`);
+      console.log("Copied to clipboard:", `s3://${file.bucket}/${file.key}`);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+    }
+    
+    // Close the menu
+    setImageMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  // Copy image to clipboard
+  // Updated copyImage function in S3LitePanel.tsx
+  const copyImage = async (file: S3FileEntry) => {
+    if (!file) return;
+    try {
+      setLoading(true);
+      
+      // Invoke the native Tauri command to copy the image to clipboard
+      await core.invoke('s3_copy_image_to_clipboard', {
+        bucket: file.bucket,
+        key: file.key
+      });
+      
+      console.log("Image copied to clipboard via native command");
+    } catch (error) {
+      console.error("Failed to copy image to clipboard:", error);
+      alert("Failed to copy image to clipboard. This feature may not be supported in your environment.");
+    } finally {
+      setLoading(false);
+      setImageMenu(prev => ({ ...prev, visible: false }));
+    }
+  };
+
+  
+  
+
+
+  // Handle context menu item click
+  const handleMenuItemClick = async (action: string) => {
+    const file = imageMenu.file;
+    if (!file) return;
+    
+    if (action === 'download') {
+      await downloadImage(file.bucket, file.key);
+    } else if (action === 'copyImage') {
+      await copyImage(file); // This function fetches the image and writes it to the clipboard.
+    } else if (action === 'copyUrl') {
+      await copyImageUrl(file); // This function copies the S3 URL to the clipboard.
+    }
+    
+    // Close the menu after the action
+    setImageMenu(prev => ({ ...prev, visible: false }));
+  };
+  
   
 
   return (
@@ -473,6 +594,7 @@ const S3LitePanel: React.FC = () => {
                       <div 
                         className="h-32 overflow-hidden bg-gray-200 cursor-pointer"
                         onClick={() => previewImage(file.bucket, file.key)}
+                        onContextMenu={(e) => handleImageContextMenu(e, file)}
                       >
                         <img 
                           src={`s3://${file.bucket}/${file.key}`}
@@ -538,9 +660,15 @@ const S3LitePanel: React.FC = () => {
                               e.stopPropagation();
                               startEditingFile(file.key);
                             }}
-                            className="text-sm text-blue-500 hover:underline"
+                            className="text-sm text-blue-500 hover:underline mr-2"
                           >
                             Rename
+                          </button>
+                          <button
+                            onClick={() => downloadImage(file.bucket, file.key)}
+                            className="text-sm text-blue-500 hover:underline"
+                          >
+                            Download
                           </button>
                         </div>
                         <button
@@ -563,21 +691,157 @@ const S3LitePanel: React.FC = () => {
       
       {/* Image preview modal */}
       {imagePreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Extract file info from the preview URL
+            if (imagePreview.startsWith('s3://')) {
+              const parts = imagePreview.replace('s3://', '').split('/');
+              if (parts.length >= 2) {
+                const bucket = parts[0];
+                const key = parts.slice(1).join('/');
+                // Create a temporary target object for the context menu
+                setImageMenu({
+                  visible: true,
+                  x: e.clientX,
+                  y: e.clientY,
+                  file: { bucket, key, mime_type: '', size: 0, created_at: '' }
+                });
+                console.log("Modal context menu opened for:", bucket, key);
+              }
+            }
+          }}
+        >
           <div className="relative max-w-3xl max-h-screen p-4">
-            <button
-              onClick={() => setImagePreview(null)}
-              className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md"
-            >
-              ✕
-            </button>
+            <div className="absolute top-2 right-2 flex">
+              <button
+                onClick={() => {
+                  // Extract file info from the preview URL
+                  if (imagePreview.startsWith('s3://')) {
+                    const parts = imagePreview.replace('s3://', '').split('/');
+                    if (parts.length >= 2) {
+                      const bucket = parts[0];
+                      const key = parts.slice(1).join('/');
+                      downloadImage(bucket, key);
+                    }
+                  }
+                }}
+                className="bg-blue-500 text-white rounded-full p-2 shadow-md mr-2"
+                title="Download"
+              >
+                ↓
+              </button>
+              <button
+                onClick={() => setImagePreview(null)}
+                className="bg-white rounded-full p-2 shadow-md"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
             <img 
               src={imagePreview} 
               alt="Preview" 
               className="max-w-full max-h-[80vh] object-contain bg-white p-2 rounded"
+              onError={(e) => {
+                console.error(`Failed to load preview: ${imagePreview}`);
+                const target = e.target as HTMLImageElement;
+                target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3QgZmlsbD0iI2VlZSIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiLz48dGV4dCBmaWxsPSIjYWFhIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZHk9Ii4zNWVtIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI1MCIgeT0iNTAiPkltYWdlIExvYWQgRXJyb3I8L3RleHQ+PC9zdmc+';
+              }}
             />
           </div>
         </div>
+      )}
+      
+      {/* Custom context menu */}
+      {imageMenu.visible && (
+        <>
+          {/* Invisible overlay to detect clicks outside */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 998
+            }}
+            onClick={() => setImageMenu(prev => ({ ...prev, visible: false }))}
+          />
+          
+          {/* The actual menu */}
+          <div
+            style={{
+              position: 'fixed',
+              zIndex: 999,
+              left: imageMenu.x,
+              top: imageMenu.y,
+              backgroundColor: 'white',
+              borderRadius: '4px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button 
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: '#f0f0f0',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                onClick={() => handleMenuItemClick('download')}
+              >
+                <span style={{ marginRight: '8px' }}>💾</span>
+                Download Image
+              </button>
+
+              <button 
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: '#f0f0f0',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                onClick={() => handleMenuItemClick('copyImage')}
+              >
+                <span style={{ marginRight: '8px' }}>📋</span>
+                Copy Image to Clipboard
+              </button>
+
+              <button 
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: '#f0f0f0',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                onClick={() => handleMenuItemClick('copyUrl')}
+              >
+                <span style={{ marginRight: '8px' }}>📋</span>
+                Copy Image URL
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

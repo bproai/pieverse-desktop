@@ -10,6 +10,8 @@ use zip::{ZipWriter, write::FileOptions};
 use std::path::Path;
 use std::fs::File;
 use std::io::Write;
+use std::borrow::Cow;
+use image::GenericImageView;
 
 pub struct S3LiteState {
     db_path: String,
@@ -484,4 +486,74 @@ pub async fn s3_rename_bucket(
     // Rename the bucket
     state.inner().rename_bucket(&old_name, &new_name)
         .map_err(|e| format!("Failed to rename bucket: {}", e))
+}
+
+#[tauri::command]
+pub async fn s3_download_image(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+    key: String,
+    save_path: String,
+) -> Result<(), String> {
+    // Validate inputs
+    if bucket.is_empty() || key.is_empty() || save_path.is_empty() {
+        return Err("Invalid parameters".into());
+    }
+    
+    // Get the file data from the S3Lite database
+    let file_data = match state.inner().get_file(&bucket, &key) {
+        Ok(Some((data, _))) => data,
+        Ok(None) => return Err(format!("File not found: {}/{}", bucket, key)),
+        Err(e) => return Err(format!("Failed to get file: {}", e)),
+    };
+    
+    // Write the file to disk
+    match std::fs::write(&save_path, &file_data) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to write file: {}", e)),
+    }
+}
+
+
+#[tauri::command]
+pub async fn s3_copy_image_to_clipboard(
+    state: State<'_, S3LiteState>,
+    bucket: String,
+    key: String,
+) -> Result<(), String> {
+    // Validate inputs
+    if bucket.is_empty() || key.is_empty() {
+        return Err("Invalid parameters".into());
+    }
+    
+    // Get the file data from the S3Lite database
+    let file_data = match state.inner().get_file(&bucket, &key) {
+        Ok(Some((data, _))) => data,
+        Ok(None) => return Err(format!("File not found: {}/{}", bucket, key)),
+        Err(e) => return Err(format!("Failed to get file: {}", e)),
+    };
+    
+    // Decode the image data using the image crate
+    let img = image::load_from_memory(&file_data)
+        .map_err(|e| format!("Failed to decode image: {}", e))?;
+    
+    // Convert the image to BGRA8 format required by arboard
+    let img = img.to_rgba8();
+    let (width, height) = img.dimensions();
+    let raw_pixels = img.into_raw();
+    
+    // Create the ImageData structure for arboard
+    let image_data = arboard::ImageData {
+        width: width as usize,
+        height: height as usize,
+        bytes: Cow::Owned(raw_pixels),
+    };
+    
+    // Initialize the clipboard and set the image
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Clipboard initialization failed: {}", e))?;
+    clipboard.set_image(image_data)
+        .map_err(|e| format!("Failed to set image to clipboard: {}", e))?;
+    
+    Ok(())
 }
