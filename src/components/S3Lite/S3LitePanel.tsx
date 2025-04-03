@@ -1,5 +1,5 @@
 // src/components/S3Lite/S3LitePanel.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { core } from '@tauri-apps/api';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
@@ -27,7 +27,9 @@ const S3LitePanel: React.FC = () => {
   const [newBucketValue, setNewBucketValue] = useState<string>('');
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState<string>('');
-  
+  const isVisible = useRef(true);
+  const refreshIntervalRef = useRef<number | null>(null);
+
   // Custom context menu state
   const [imageMenu, setImageMenu] = useState({
     visible: false,
@@ -40,10 +42,76 @@ const S3LitePanel: React.FC = () => {
     // Store the loadFiles function in the outer variable
     refreshFilesFunction = loadFiles;
     
+    // Start polling when component mounts
+    startPollingForUpdates();
+    
+    // Clean up when component unmounts
     return () => {
+      if (refreshIntervalRef.current !== null) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
       refreshFilesFunction = null;
     };
   }, []);
+
+  const startPollingForUpdates = () => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current !== null) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    // Check every 5 seconds for updates
+    refreshIntervalRef.current = window.setInterval(() => {
+      if (currentBucket) {
+        checkForUpdateNeeded();
+      }
+    }, 5000); // 5 second polling interval
+  };
+
+
+  useEffect(() => {
+    // Store the loadFiles function in the outer variable
+    refreshFilesFunction = loadFiles;
+    
+    // Set up visibility detection
+    const handleVisibilityChange = () => {
+      const newIsVisible = !document.hidden;
+      isVisible.current = newIsVisible;
+      
+      // If becoming visible and we have a current bucket, check if update needed
+      if (newIsVisible && currentBucket) {
+        checkForUpdateNeeded();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      refreshFilesFunction = null;
+    };
+  }, []);
+
+  // Check if the files count in the database matches what's shown
+  const checkForUpdateNeeded = async () => {
+    if (!currentBucket) return;
+    
+    try {
+      // Get the current count from the database without updating the UI
+      const dbFiles = await core.invoke<S3FileEntry[]>('s3_list_files', {
+        bucket: currentBucket
+      });
+      
+      // If counts don't match, we need to refresh
+      if (dbFiles.length !== files.length) {
+        console.log(`File count mismatch detected. DB: ${dbFiles.length}, UI: ${files.length}. Refreshing...`);
+        await loadFiles();
+      }
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+    }
+  };
 
   useEffect(() => {
     loadBuckets();
@@ -505,6 +573,9 @@ const S3LitePanel: React.FC = () => {
                             value={newBucketValue}
                             onChange={(e) => setNewBucketValue(e.target.value)}
                             className="border p-1 rounded mr-2 flex-grow"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            spellCheck="false"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
