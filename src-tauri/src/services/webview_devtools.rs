@@ -39,8 +39,8 @@ pub fn open_webview_devtools(app: AppHandle) -> Result<(), String> {
     let state = app.state::<WebViewDevToolsState>();
     
     if let Some(window) = app.get_webview_window("main") {
-        #[cfg(any(debug_assertions, feature = "devtools"))]
-        {
+        // #[cfg(any(debug_assertions, feature = "devtools"))]
+        // {
             // Fix: open_devtools() returns () not Result
             window.open_devtools();
             // Update state
@@ -48,11 +48,11 @@ pub fn open_webview_devtools(app: AppHandle) -> Result<(), String> {
                 *enabled = true;
             }
             Ok(())
-        }
-        #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        {
-            Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        }
+        // }
+        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
+        // {
+        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
+        // }
     } else {
         Err("Main window not found".into())
     }
@@ -64,8 +64,8 @@ pub fn close_webview_devtools(app: AppHandle) -> Result<(), String> {
     let state = app.state::<WebViewDevToolsState>();
     
     if let Some(window) = app.get_webview_window("main") {
-        #[cfg(any(debug_assertions, feature = "devtools"))]
-        {
+        // #[cfg(any(debug_assertions, feature = "devtools"))]
+        // {
             // Fix: close_devtools() returns () not Result
             window.close_devtools();
             // Update state
@@ -73,11 +73,11 @@ pub fn close_webview_devtools(app: AppHandle) -> Result<(), String> {
                 *enabled = false;
             }
             Ok(())
-        }
-        #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        {
-            Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        }
+        // }
+        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
+        // {
+        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
+        // }
     } else {
         Err("Main window not found".into())
     }
@@ -88,14 +88,14 @@ pub fn close_webview_devtools(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn is_webview_devtools_open(app: AppHandle) -> Result<bool, String> {
     if let Some(window) = app.get_webview_window("main") {
-        #[cfg(any(debug_assertions, feature = "devtools"))]
-        {
+        // #[cfg(any(debug_assertions, feature = "devtools"))]
+        // {
             Ok(window.is_devtools_open())
-        }
-        #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        {
-            Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        }
+        // }
+        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
+        // {
+        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
+        // }
     } else {
         Err("Main window not found".into())
     }
