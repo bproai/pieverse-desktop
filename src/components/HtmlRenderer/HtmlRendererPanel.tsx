@@ -1,7 +1,7 @@
 // src/components/HtmlRenderer/HtmlRendererPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput, ActionIcon, Popover } from '@mantine/core';
-import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw, Trash } from 'lucide-react';
+import { Card, Text, Button, Group, Tabs, Divider, Badge, Select, Loader, TextInput, ActionIcon, Popover, Switch } from '@mantine/core';
+import { FileText, Upload, Settings, MousePointer2, Menu as MenuIcon, MessageSquare, Database, ChevronDown, Search, X, RefreshCw, Trash, ToggleLeft } from 'lucide-react';
 import { open, confirm } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { core } from '@tauri-apps/api';
@@ -31,6 +31,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
   const [rendererActiveTab, setRendererActiveTab] = useState("input");
   const [selectedQAUrl, setSelectedQAUrl] = useState<string>('');
   const [currentS3Bucket, setCurrentS3Bucket] = useState<string>('');
+  // Add state to track whether we're showing question or answer
+  const [showQuestion, setShowQuestion] = useState<boolean>(false);
 
   // Check for new records periodically
   useEffect(() => {
@@ -175,7 +177,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
             if (uniqueData.length > 0) {
               const firstItem = uniqueData[0];
               setSelectedQaId(firstItem.answer_id);
-              setHtmlContent(firstItem.answer);
+              // Set content based on toggle state
+              setHtmlContent(showQuestion ? firstItem.question : firstItem.answer);
               setRendererActiveTab("output"); // Switch inner HtmlRenderer tab to "output"
             }
             
@@ -299,7 +302,8 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     
     const selectedItem = qaData.find(item => item.answer_id === id);
     if (selectedItem) {
-      setHtmlContent(selectedItem.answer);
+      // Set content based on the toggle state
+      setHtmlContent(showQuestion ? selectedItem.question : selectedItem.answer);
       setSelectedQAUrl(selectedItem.url || ''); // Set URL from the selected item
       // Switch inner tab to "output" if it's currently "input"
       if (rendererActiveTab === "input") {
@@ -308,6 +312,18 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
     }
   };
   
+  // New function to handle the toggle change
+  const handleToggleChange = (checked: boolean) => {
+    setShowQuestion(checked);
+    
+    // If we have a selected item, update the content based on the new toggle state
+    if (selectedQaId) {
+      const selectedItem = qaData.find(item => item.answer_id === selectedQaId);
+      if (selectedItem) {
+        setHtmlContent(checked ? selectedItem.question : selectedItem.answer);
+      }
+    }
+  };
 
   // Create select options from the QA data
   const getSelectOptions = () => {
@@ -373,11 +389,11 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         if (nextItem) {
           // Select the next item
           setSelectedQaId(nextItem.answer_id);
-          setHtmlContent(nextItem.answer);
+          setHtmlContent(showQuestion ? nextItem.question : nextItem.answer);
         } else if (prevItem) {
           // If no next item, select the previous item
           setSelectedQaId(prevItem.answer_id);
-          setHtmlContent(prevItem.answer);
+          setHtmlContent(showQuestion ? prevItem.question : prevItem.answer);
         } else {
           // If no items left, clear selection
           setSelectedQaId(null);
@@ -538,6 +554,25 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
               </Button>
             </Group>
             
+            {/* Add the toggle switch for Question/Answer display */}
+            {selectedQaId && (
+              <Group mb="md" position="left">
+                <Switch
+                  label={showQuestion ? "Showing Question" : "Showing Answer"}
+                  checked={showQuestion}
+                  onChange={(event) => handleToggleChange(event.currentTarget.checked)}
+                  onLabel="Q"
+                  offLabel="A" 
+                  size="md"
+                  styles={{
+                    label: {
+                      color: isDark ? '#c1c2c5' : '#212529'
+                    }
+                  }}
+                />
+              </Group>
+            )}
+            
             {/* New Records Notification */}
             {hasNewRecords && (
               <Group mb="md" position="center">
@@ -632,8 +667,6 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
           </div>
         )}
         
-        
-        
         {qaAnswersLoaded && qaData.length === 0 && isFiltering && (
           <Text color="dimmed" align="center" size="sm" mt="md" mb="md">
             No results found for "{filterText}". Try a different search term.
@@ -656,37 +689,28 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
         onChange={setActiveTab}
         style={{ flex: 1, display: 'flex', flexDirection: 'column' }} // Add proper styling
       >
-  <Tabs.List>
-    <Tabs.Tab value="preview" icon={<FileText size={16} />}>
-      Preview
-    </Tabs.Tab>
-    <Tabs.Tab value="help" icon={<Settings size={16} />}>
-      Help
-    </Tabs.Tab>
-  </Tabs.List>
-  
-  <Tabs.Panel value="preview" pt="xs">
-    <HtmlRenderer 
-      content={htmlContent} 
-      darkMode={isDark}
-      onContentChange={handleContentChange}
-      activeTab={rendererActiveTab}
-      setActiveTab={setRendererActiveTab}
-      url={selectedQAUrl} // Pass the URL
-      currentBucket={currentS3Bucket}
-    />
-  </Tabs.Panel>
-  
-  <Tabs.Panel value="help" pt="xs">
-    <HtmlRenderer 
-      content={htmlContent} 
-      darkMode={isDark}
-      onContentChange={handleContentChange}
-      currentBucket={currentS3Bucket}
-    />
-  </Tabs.Panel>
-  
-  <Tabs.Panel value="help" pt="xs">
+        <Tabs.List>
+          <Tabs.Tab value="preview" icon={<FileText size={16} />}>
+            Preview
+          </Tabs.Tab>
+          <Tabs.Tab value="help" icon={<Settings size={16} />}>
+            Help
+          </Tabs.Tab>
+        </Tabs.List>
+        
+        <Tabs.Panel value="preview" pt="xs">
+          <HtmlRenderer 
+            content={htmlContent} 
+            darkMode={isDark}
+            onContentChange={handleContentChange}
+            activeTab={rendererActiveTab}
+            setActiveTab={setRendererActiveTab}
+            url={selectedQAUrl} // Pass the URL
+            currentBucket={currentS3Bucket}
+          />
+        </Tabs.Panel>
+        
+        <Tabs.Panel value="help" pt="xs">
           <Card 
             shadow="sm" 
             padding="lg" 
@@ -724,6 +748,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Select an answer from the dropdown to load it
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Toggle between viewing the question or answer using the switch
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Use the search box to filter answers by keywords
@@ -843,6 +870,9 @@ export const HtmlRendererPanel: React.FC<HtmlRendererPanelProps> = ({ isDark }) 
                   </li>
                   <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
                     Refresh: Update the database contents with latest entries
+                  </li>
+                  <li className="text-sm" style={{ color: isDark ? '#ADB5BD' : '#6c757d' }}>
+                    Toggle: Switch between viewing the question or answer content
                   </li>
                 </ul>
               </div>
