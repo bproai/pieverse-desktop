@@ -44,3 +44,6 @@ pub mod mcp_client_service;
 pub mod chrome_extension_ws;
 
 pub mod s3_lite; 
+
+// WebView2 DevTools service
+pub mod webview_devtools;

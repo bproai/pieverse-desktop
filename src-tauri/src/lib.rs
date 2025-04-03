@@ -96,6 +96,12 @@ use services::s3_lite::{
     s3_get_file_count,
 };
 
+use services::webview_devtools::{
+    open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
+    inject_console_logger, execute_javascript, is_console_logger_injected,
+    WebViewDevToolsState,
+};
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -111,6 +117,13 @@ pub fn run() {
         .setup(move |app| {
             // Setup tray icon handlers
             tray::setup_tray_handler(&app.handle());
+
+            // Instead of creating a new window, get the existing main window and enable DevTools
+            // if let Some(window) = app.get_webview_window("main") {
+            //     // Enable DevTools on the existing window
+            //     window.open_devtools();
+            //     println!("DevTools opened successfully");
+            // }
 
             // Create S3LiteState in setup
             let s3_state = S3LiteState::new(&app.handle());
@@ -169,6 +182,7 @@ pub fn run() {
         .manage(ClaudeMcpState::new())
         .manage(PuppeteerMcpState::new())
         .manage(ChromeExtWebSocketState::new())
+        .manage(WebViewDevToolsState::new())
         .invoke_handler(tauri::generate_handler![
             // MongoDB commands
             start_mongodb,
@@ -290,6 +304,10 @@ pub fn run() {
             s3_copy_image_to_clipboard,
             s3_list_files_paginated,
             s3_get_file_count,
+            // WebView DevTools command
+            open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
+            inject_console_logger, execute_javascript, is_console_logger_injected,
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

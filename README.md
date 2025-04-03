@@ -304,6 +304,48 @@ To use the VS Code integration features:
 
 The VS Code integration uses a WebSocket connection to communicate between PieVerse and VS Code, allowing for seamless interaction between the two applications.
 
+## React DevTools Integration
+
+The application includes proper integration with React DevTools for component debugging:
+
+```bash
+# Install React DevTools globally (one-time setup)
+npm install -g react-devtools
+
+# Start React DevTools in a separate terminal
+react-devtools
+
+# Start PieVerse in dev mode - it will automatically connect
+npm run tauri dev
+```
+
+A custom Vite plugin automatically injects the DevTools connection script during development. This approach works perfectly with Tauri v2, doesn't require manual intervention, and keeps development tooling separate from application code.
+
+See the [Development](#development) section for more details on the development environment.
+
+## WebView2 DevTools
+
+PieVerse Desktop includes built-in WebView2 DevTools for deep inspection and debugging of the application:
+
+- **Access Methods**: 
+  - Press `F12` while the app is in focus
+  - Right-click anywhere in the app and select "Inspect Element"
+  - DevTools automatically enabled in both development and production builds
+
+- **Available Tools**:
+  - **Console**: View logs, warnings, errors, and execute JavaScript
+  - **Elements**: Inspect and modify HTML/CSS in real-time
+  - **Network**: Monitor API calls and resource loading
+  - **Sources**: Debug JavaScript with breakpoints and step execution
+  - **Application**: Inspect storage, caches, and web resources
+
+- **Integration with React DevTools**: 
+  - Use WebView2 DevTools for general web debugging
+  - Use React DevTools for component-specific inspection
+  - Both tools complement each other for complete debugging coverage
+
+WebView2 DevTools provides a full browser debugging experience directly within your Tauri application - no need for external tools or browser extensions.
+
 ### MCP Server
 Although named the "Claude MCP Server," this component is actually a generic MCP server that supports various tool interactions via the MCP protocol. Its features include:
 - **Flexible Configuration:** Customize allowed directories and server port.

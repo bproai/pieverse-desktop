@@ -1,7 +1,7 @@
 // src/App.tsx
 import React from 'react';
 import { Tabs, ActionIcon, MantineProvider } from '@mantine/core';
-import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers, Image } from 'lucide-react';
+import { Database, Terminal, Book, Sun, Moon, Settings, TrendingUp, FileText, Code as CodeIcon, Monitor, FolderTree, BookOpen, Brain, Brackets, HardDrive, Server, User, Layers, Image, PanelRight } from 'lucide-react';
 import { Notifications } from '@mantine/notifications';
 import { MongoDBPanel } from './components/MongoDB';
 import MySQLPanel from './components/MySQL/MySQLPanel';
@@ -26,6 +26,7 @@ import { ContextBuilderPanel } from './components/ContextBuilder';
 import S3LitePanel from './components/S3Lite';
 import { useEffect } from 'react';
 import { setupNativeMenu } from './systemMenu';
+import { WebView2DevToolsPanel } from './components/WebView2DevTools';
 
 function App() {
   const [isDark, setIsDark] = React.useState(false);
@@ -129,6 +130,10 @@ function App() {
                   Signals
                 </Tabs.Tab>
                 )}
+                {/* Add the new WebView2 DevTools tab */}
+                <Tabs.Tab value="webview-devtools" leftSection={<PanelRight size={16} />}>
+                  WebView DevTools
+                </Tabs.Tab>
                 {isDevMode && (
                   <Tabs.Tab value="chrome-debugger" leftSection={<Monitor size={16} />}>
                     Chrome Debugger
@@ -219,6 +224,9 @@ function App() {
               </Tabs.Panel>
               )}
 
+              <Tabs.Panel value="webview-devtools" className="p-4">
+                <WebView2DevToolsPanel />
+              </Tabs.Panel>
               {isDevMode && (
                 <Tabs.Panel value="chrome-debugger" className="p-4">
                   <ChromeDebuggerPanel />
