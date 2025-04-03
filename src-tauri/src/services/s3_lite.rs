@@ -138,7 +138,7 @@ impl S3LiteState {
             "SELECT bucket, key, mime_type, size, created_at 
              FROM s3_files 
              WHERE bucket = ? 
-             ORDER BY key"
+             ORDER BY created_at desc"
         )?;
             
         let file_iter = stmt.query_map(params![bucket], |row| {

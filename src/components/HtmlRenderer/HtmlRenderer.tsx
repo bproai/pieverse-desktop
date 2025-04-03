@@ -630,6 +630,17 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     }
   };
 
+  const generateTimestamp = (): string => {
+    const now = new Date();
+    return now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') + '_' +
+      String(now.getHours()).padStart(2, '0') +
+      String(now.getMinutes()).padStart(2, '0') +
+      String(now.getSeconds()).padStart(2, '0');
+  };
+  
+
   const saveImageToBucket = async () => {
     if (!imageMenu.image || !currentBucket) return;
     
@@ -714,10 +725,23 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       }
       
       // Ensure the filename has a valid extension
-      if (!fileName.match(/\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i)) {
-        // If no valid extension, add .png as default
-        fileName += '.png';
-      }
+    // Check if the filename is "generated_image" (ignoring extensions)
+    // If so, add a timestamp suffix (YYYYMMDD_HHMMSS)
+    if (fileName.match(/^generated_image(\.[a-zA-Z0-9]+)?$/)) {
+      // Extract extension if present
+      const extension = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
+      // Generate timestamp
+      const timestamp = generateTimestamp();
+      // Create new filename with timestamp
+      fileName = `generated_image_${timestamp}${extension}`;
+      console.log(`Added timestamp to generated_image: ${fileName}`);
+    }
+    
+    // Ensure the filename has a valid extension
+    if (!fileName.match(/\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i)) {
+      // If no valid extension, add .png as default
+      fileName += '.png';
+    }
       
       // // Prompt user to confirm or change the filename
       // const userFileName = await save({

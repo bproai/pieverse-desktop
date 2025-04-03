@@ -85,11 +85,12 @@ function App() {
                 <Tabs.Tab value="prompts" leftSection={<Book size={16} />}>
                   Prompt Builder
                 </Tabs.Tab>
-                <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
-                  Connect Settings
-                </Tabs.Tab>
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
                   Document Renderer
+                </Tabs.Tab>
+
+                <Tabs.Tab value="s3lite" leftSection={<Image size={16} />}>
+                  Image Depot
                 </Tabs.Tab>
 
                 <Tabs.Tab value="references" leftSection={<BookOpen size={16} />}>
@@ -103,10 +104,6 @@ function App() {
                   LLM Rules
                 </Tabs.Tab>
                 
-                <Tabs.Tab value="s3lite" leftSection={<Image size={16} />}>
-                  Image Depot
-                </Tabs.Tab>
-
                 {isDevMode && (
                 <Tabs.Tab value="mongodb" leftSection={<Database size={16} />}>
                   MongoDB
@@ -160,18 +157,23 @@ function App() {
                   MCP Client
                 </Tabs.Tab>
                 )}
+                <Tabs.Tab value="api" leftSection={<Settings size={16} />}>
+                  Connect Settings
+                </Tabs.Tab>
+
               </Tabs.List>
 
               <Tabs.Panel value="prompts" className="p-4">
                 <PromptsManager backend={promptsBackend} onBackendChange={setPromptsBackend} />
               </Tabs.Panel>
 
-              <Tabs.Panel value="api" className="p-4">
-                <APISettings />
-              </Tabs.Panel>
 
               <Tabs.Panel value="htmlrenderer" className="p-4">
                 <HtmlRendererPanel isDark={isDark} />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="s3lite" className="p-4">
+                <S3LitePanel />
               </Tabs.Panel>
 
               <Tabs.Panel value="references" className="p-4">
@@ -186,9 +188,6 @@ function App() {
                 <LLMRulesPanel />
               </Tabs.Panel>
               
-              <Tabs.Panel value="s3lite" className="p-4">
-                <S3LitePanel />
-              </Tabs.Panel>
 
               {isDevMode && (
               <Tabs.Panel value="mongodb" className="p-4">
@@ -250,6 +249,10 @@ function App() {
                 <MCPClientPanel />
               </Tabs.Panel>                
               )}
+              <Tabs.Panel value="api" className="p-4">
+                <APISettings />
+              </Tabs.Panel>
+
             </Tabs>           
           </main>
 
