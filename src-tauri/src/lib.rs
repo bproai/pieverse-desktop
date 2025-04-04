@@ -1,5 +1,4 @@
 // src-tauri/src/lib.rs
-extern crate objc;
 
 mod services;
 mod tray;

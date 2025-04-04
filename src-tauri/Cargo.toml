@@ -44,8 +44,6 @@ reqwest = { version = "0.11", features = ["json", "multipart"] }
 # WebRTC utilities (these don't directly implement WebRTC, it's done in the browser)
 uuid = { version = "1.4", features = ["v4", "serde"] }
 url = "2.4"
-cocoa = "0.24"
-objc = "0.2"
 regex = "1.9.5"
 tauri-plugin-clipboard-manager = "2"
 tokio-tungstenite = "0.21.0"
