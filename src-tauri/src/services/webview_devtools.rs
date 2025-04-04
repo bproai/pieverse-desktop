@@ -39,20 +39,12 @@ pub fn open_webview_devtools(app: AppHandle) -> Result<(), String> {
     let state = app.state::<WebViewDevToolsState>();
     
     if let Some(window) = app.get_webview_window("main") {
-        // #[cfg(any(debug_assertions, feature = "devtools"))]
-        // {
-            // Fix: open_devtools() returns () not Result
-            window.open_devtools();
-            // Update state
-            if let Ok(mut enabled) = state.enabled.lock() {
-                *enabled = true;
-            }
-            Ok(())
-        // }
-        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        // {
-        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        // }
+        window.open_devtools();
+        // Update state
+        if let Ok(mut enabled) = state.enabled.lock() {
+            *enabled = true;
+        }
+        Ok(())
     } else {
         Err("Main window not found".into())
     }
@@ -64,41 +56,62 @@ pub fn close_webview_devtools(app: AppHandle) -> Result<(), String> {
     let state = app.state::<WebViewDevToolsState>();
     
     if let Some(window) = app.get_webview_window("main") {
-        // #[cfg(any(debug_assertions, feature = "devtools"))]
-        // {
-            // Fix: close_devtools() returns () not Result
-            window.close_devtools();
-            // Update state
-            if let Ok(mut enabled) = state.enabled.lock() {
-                *enabled = false;
-            }
-            Ok(())
-        // }
-        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        // {
-        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        // }
+        window.close_devtools();
+        // Update state
+        if let Ok(mut enabled) = state.enabled.lock() {
+            *enabled = false;
+        }
+        Ok(())
     } else {
         Err("Main window not found".into())
     }
 }
 
-
 // Check if DevTools are open
 #[tauri::command]
 pub fn is_webview_devtools_open(app: AppHandle) -> Result<bool, String> {
     if let Some(window) = app.get_webview_window("main") {
-        // #[cfg(any(debug_assertions, feature = "devtools"))]
-        // {
-            Ok(window.is_devtools_open())
-        // }
-        // #[cfg(not(any(debug_assertions, feature = "devtools")))]
-        // {
-        //     Err("DevTools are only available in debug mode or when the 'devtools' feature is enabled.".into())
-        // }
+        Ok(window.is_devtools_open())
     } else {
         Err("Main window not found".into())
     }
+}
+
+// Receive console logs directly via IPC
+#[tauri::command]
+pub fn receive_console_log(
+    app: AppHandle,
+    level: String,
+    args: Vec<String>,
+    source: Option<String>,
+    line_number: Option<u32>,
+    column_number: Option<u32>,
+    timestamp: i64
+) -> Result<(), String> {
+    println!("Received console log: {} - {}", level, args.join(" "));
+    
+    // Create message object
+    let message = ConsoleMessage {
+        level,
+        args,
+        source,
+        line_number,
+        column_number,
+        timestamp
+    };
+    
+    // Emit to frontend
+    app.emit("webview-console", message).map_err(|e| format!("Failed to emit event: {}", e))?;
+    
+    Ok(())
+}
+
+// Ready event handler
+#[tauri::command]
+pub fn console_logger_ready(app: AppHandle) -> Result<(), String> {
+    println!("Console logger reported ready");
+    let _ = app.emit("webview-console-logger-ready", {});
+    Ok(())
 }
 
 // Inject a console logger script that will emit events for all console logs
@@ -114,8 +127,7 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
     }
     
     if let Some(window) = app.get_webview_window("main") {
-        // Create a script that will override console methods and emit events
-        // Update the script in the inject_console_logger function
+        // Create a script that will override console methods and use direct Tauri API
         let script = r#"
         (function() {
             // Check if logger is already injected
@@ -136,8 +148,9 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
             window.__TAURI_WEBVIEW_DEVTOOLS_INJECTED__ = true;
             originalConsole.log('🔧 WebView DevTools console logger initializing...');
             
-            // Initialize a buffer to store messages
+            // Buffer to store messages before Tauri API is available
             const messageBuffer = [];
+            let isProcessingBuffer = false;
             
             // Function to extract caller info from stack trace
             function getCallerInfo() {
@@ -186,47 +199,86 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
                 });
             }
             
-            // Custom event for console messages
-            const CONSOLE_EVENT = 'console-message';
-            const READY_EVENT = 'console-logger-ready';
-            
-            // Function to emit an event (adapted for Tauri 2)
-            async function emitEvent(eventName, payload) {
-                try {
-                    // First, try with direct DOM event if available
-                    const event = new CustomEvent(`tauri://${eventName}`, { 
-                        detail: payload 
-                    });
-                    window.dispatchEvent(event);
-                    return true;
-                } catch (e) {
-                    originalConsole.error("Failed to emit event:", e);
+            // Attempt to send message via Tauri API
+            function sendViaTauriInvoke(level, args, source, lineNumber, columnNumber) {
+                if (typeof window.__TAURI__ !== 'undefined' && 
+                    typeof window.__TAURI__.core.invoke === 'function') {
+                    try {
+                        window.__TAURI__.core.invoke('receive_console_log', {
+                            level,
+                            args,
+                            source,
+                            line_number: lineNumber,
+                            column_number: columnNumber,
+                            timestamp: Date.now()
+                        }).catch(e => {
+                            originalConsole.error('Failed to invoke receive_console_log:', e);
+                            // Buffer the message if invoke fails
+                            bufferMessage(level, args, source, lineNumber, columnNumber);
+                        });
+                        return true;
+                    } catch (e) {
+                        originalConsole.error('Error invoking receive_console_log:', e);
+                        // Buffer the message if invoke throws
+                        bufferMessage(level, args, source, lineNumber, columnNumber);
+                        return false;
+                    }
+                } else {
+                    // Buffer the message if Tauri API is not available
+                    bufferMessage(level, args, source, lineNumber, columnNumber);
                     return false;
                 }
             }
             
-            // Process any buffered messages
-            function processBufferedMessages() {
-                if (messageBuffer.length > 0) {
-                    originalConsole.log(`Processing ${messageBuffer.length} buffered messages`);
-                    
-                    // Process all buffered messages
-                    for (const msg of messageBuffer) {
-                        emitEvent(msg.eventName, msg.payload);
-                    }
-                    messageBuffer.length = 0;
+            // Add message to buffer
+            function bufferMessage(level, args, source, lineNumber, columnNumber) {
+                messageBuffer.push({
+                    level,
+                    args,
+                    source,
+                    line_number: lineNumber,
+                    column_number: columnNumber,
+                    timestamp: Date.now()
+                });
+                
+                if (messageBuffer.length === 1) {
+                    // Start processing buffer on first message
+                    processMessageBuffer();
                 }
             }
             
-            // Try to emit an event or buffer it for later
-            function tryEmitEvent(eventName, payload) {
-                // Always buffer messages
-                messageBuffer.push({ eventName, payload });
+            // Process buffered messages when Tauri API becomes available
+            function processMessageBuffer() {
+                if (isProcessingBuffer) return;
+                isProcessingBuffer = true;
                 
-                // Every 5 messages, try to process the buffer
-                if (messageBuffer.length % 5 === 0 || messageBuffer.length === 1) {
-                    processBufferedMessages();
-                }
+                const checkInterval = setInterval(() => {
+                    // Check if Tauri API is available now
+                    if (typeof window.__TAURI__ !== 'undefined' && 
+                        typeof window.__TAURI__.core.invoke === 'function') {
+                        
+                        // Process all buffered messages
+                        while (messageBuffer.length > 0) {
+                            const msg = messageBuffer.shift();
+                            try {
+                                window.__TAURI__.core.invoke('receive_console_log', msg).catch(e => {
+                                    originalConsole.error('Failed to send buffered message:', e);
+                                });
+                            } catch (e) {
+                                originalConsole.error('Error sending buffered message:', e);
+                            }
+                        }
+                        
+                        clearInterval(checkInterval);
+                        isProcessingBuffer = false;
+                    }
+                }, 100);
+                
+                // Stop checking after 10 seconds to avoid memory leaks
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    isProcessingBuffer = false;
+                }, 10000);
             }
             
             // Override console methods
@@ -238,15 +290,8 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
                     // Convert arguments to strings
                     const stringArgs = stringifyArgs(arguments);
                     
-                    // Try to emit the event
-                    tryEmitEvent(CONSOLE_EVENT, {
-                        level,
-                        args: stringArgs,
-                        source,
-                        line_number: line,
-                        column_number: column,
-                        timestamp: Date.now()
-                    });
+                    // Send via Tauri or buffer
+                    sendViaTauriInvoke(level, stringArgs, source, line, column);
                     
                     // Call original method
                     originalConsole[level].apply(console, arguments);
@@ -255,14 +300,13 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
             
             // Capture uncaught errors
             window.addEventListener('error', function(event) {
-                tryEmitEvent(CONSOLE_EVENT, {
-                    level: 'error',
-                    args: [`Uncaught ${event.error}: ${event.message}`],
-                    source: event.filename,
-                    line_number: event.lineno,
-                    column_number: event.colno,
-                    timestamp: Date.now()
-                });
+                sendViaTauriInvoke(
+                    'error',
+                    [`Uncaught ${event.error}: ${event.message}`],
+                    event.filename || 'unknown',
+                    event.lineno || 0,
+                    event.colno || 0
+                );
             });
             
             // Capture unhandled promise rejections
@@ -272,21 +316,31 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
                     message += `: ${event.reason.message || event.reason}`;
                 }
                 
-                tryEmitEvent(CONSOLE_EVENT, {
-                    level: 'error',
-                    args: [message],
-                    source: 'promise',
-                    line_number: 0,
-                    column_number: 0,
-                    timestamp: Date.now()
-                });
+                sendViaTauriInvoke(
+                    'error',
+                    [message],
+                    'promise',
+                    0,
+                    0
+                );
             });
             
-            // Emit ready event
-            tryEmitEvent(READY_EVENT, { timestamp: Date.now() });
+            // Send ready event
+            sendViaTauriInvoke(
+                'info',
+                ['Console logger ready'],
+                'system',
+                0,
+                0
+            );
             
-            // Set up an interval to periodically process buffered messages
-            setInterval(processBufferedMessages, 1000);
+            // Also try the dedicated ready function if Tauri is available
+            if (typeof window.__TAURI__ !== 'undefined' && 
+                typeof window.__TAURI__.core.invoke === 'function') {
+                window.__TAURI__.core.invoke('console_logger_ready').catch(e => {
+                    originalConsole.error('Failed to invoke console_logger_ready:', e);
+                });
+            }
             
             // Log success message
             originalConsole.log('🔧 WebView DevTools console logger injected and ready');
@@ -301,9 +355,6 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
                     *injected = true;
                 }
                 
-                // Set up an event listener for console messages
-                setup_console_listener(&app, window);
-                
                 Ok(())
             },
             Err(e) => Err(format!("Failed to inject console logger: {}", e))
@@ -312,29 +363,6 @@ pub fn inject_console_logger(app: AppHandle) -> Result<(), String> {
         Err("Main window not found".into())
     }
 }
-
-// Helper function to set up event listener for console messages
-fn setup_console_listener(app: &AppHandle, window: tauri::WebviewWindow) {
-    // Clone app handle for use in listener
-    let app_clone = app.clone();
-    
-    // Listen for console messages events
-    let _listener = window.listen("console-message", move |event| {
-        // Forward the event to the app
-        let payload = event.payload();
-        let _ = app_clone.emit("webview-console", payload);
-    });
-    
-    // Also listen for the ready event
-    let app_clone2 = app.clone();
-    let _ready_listener = window.listen("console-logger-ready", move |_| {
-        let _ = app_clone2.emit("webview-console-logger-ready", {});
-    });
-    
-    // Log that listeners were set up
-    println!("Console message listeners set up successfully");
-}
-
 
 // Execute JavaScript in the WebView
 #[tauri::command]
@@ -352,9 +380,6 @@ pub fn execute_javascript(app: AppHandle, javascript: String) -> Result<(), Stri
 // Get console logger status
 #[tauri::command]
 pub fn is_console_logger_injected(app: AppHandle) -> Result<bool, String> {
-    // Since we're having persistent lifetime issues, let's take a different approach
-    // Copy the value directly instead of dealing with references and locks across function boundaries
-    
     let result = app.state::<WebViewDevToolsState>()
         .console_logger_injected
         .lock()

@@ -99,8 +99,9 @@ use services::s3_lite::{
 use services::webview_devtools::{
     open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
     inject_console_logger, execute_javascript, is_console_logger_injected,
-    WebViewDevToolsState,
+    receive_console_log, console_logger_ready, WebViewDevToolsState,
 };
+
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -306,7 +307,8 @@ pub fn run() {
             s3_get_file_count,
             // WebView DevTools command
             open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
-            inject_console_logger, execute_javascript, is_console_logger_injected,
+    inject_console_logger, execute_javascript, is_console_logger_injected,
+    receive_console_log, console_logger_ready,
 
         ])
         .run(tauri::generate_context!())

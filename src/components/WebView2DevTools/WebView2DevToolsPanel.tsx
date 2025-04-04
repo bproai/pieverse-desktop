@@ -35,6 +35,7 @@ import { core } from '@tauri-apps/api';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { invokeCommand, listenToEvent } from '../../utils/tauri-utils';
 
 // Interfaces
 interface ConsoleMessage {
@@ -71,25 +72,26 @@ const WebView2DevToolsPanel: React.FC = () => {
   const consoleEndRef = useRef<HTMLDivElement | null>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
 
+  // Use a lastMessage ref instead of a set to track only the most recent message
+  const lastMessage = useRef<string | null>(null);
+
   // Check if DevTools are open
   const checkDevToolsStatus = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const isOpen = await core.invoke('is_webview_devtools_open');
-      setDevToolsOpen(isOpen as boolean);
+      const isOpen = await invokeCommand<boolean>('is_webview_devtools_open');
+      setDevToolsOpen(isOpen);
       
-      // Also check console logger status
-      const isInjected = await core.invoke('is_console_logger_injected');
-      setConsoleLoggerActive(isInjected as boolean);
+      const isInjected = await invokeCommand<boolean>('is_console_logger_injected');
+      setConsoleLoggerActive(isInjected);
       
       if (isInjected && messages.length === 0) {
-        // Add an informational message
         addSystemMessage('info', 'Console logger is active and capturing messages');
       }
       
-      return isOpen as boolean;
+      return isOpen;
     } catch (err) {
       console.error('Failed to check DevTools status:', err);
       setError(`${err}`);
@@ -105,10 +107,9 @@ const WebView2DevToolsPanel: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      await core.invoke('open_webview_devtools');
+      await invokeCommand('open_webview_devtools');
       setDevToolsOpen(true);
       
-      // Add a message indicating DevTools were opened
       addSystemMessage('info', 'DevTools opened successfully');
     } catch (err) {
       console.error('Failed to open DevTools:', err);
@@ -124,10 +125,9 @@ const WebView2DevToolsPanel: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      await core.invoke('close_webview_devtools');
+      await invokeCommand('close_webview_devtools');
       setDevToolsOpen(false);
       
-      // Add a message indicating DevTools were closed
       addSystemMessage('info', 'DevTools closed');
     } catch (err) {
       console.error('Failed to close DevTools:', err);
@@ -156,11 +156,13 @@ const WebView2DevToolsPanel: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      await core.invoke('inject_console_logger');
+      console.log("Injecting console logger...");
+      await invokeCommand('inject_console_logger');
+      
+      // console.log("Console logger injection successful");
       setConsoleLoggerActive(true);
       
-      // Add a message indicating logger was injected
-      addSystemMessage('info', 'Console logger injected successfully');
+      // addSystemMessage('info', 'Console logger injected successfully');
     } catch (err) {
       console.error('Failed to inject console logger:', err);
       setError(`${err}`);
@@ -177,9 +179,19 @@ const WebView2DevToolsPanel: React.FC = () => {
         unlistenRefs.current.forEach(unlisten => unlisten());
         unlistenRefs.current = [];
         
-        // Listen for console messages
-        const unlisten1 = await listen<RawConsoleMessage>('webview-console', (event) => {
-          const rawMessage = event.payload;
+        console.log("Setting up webview-console event listener");
+        
+        // Listen for console messages from the Rust backend
+        const unlisten1 = await listenToEvent<RawConsoleMessage>('webview-console', (rawMessage) => {
+          // console.log("Received webview-console event:", rawMessage);
+          const messageKey = `${rawMessage.timestamp}-${rawMessage.level}-${rawMessage.args.join('')}`;
+          // Skip if we've already processed this message
+          if (lastMessage.current === messageKey) {
+            return;
+          }
+          
+          // Update the last message reference
+          lastMessage.current = messageKey;     
           
           const newMessage: ConsoleMessage = {
             id: `console-${rawMessage.timestamp}-${Math.random().toString(36).substring(2, 9)}`,
@@ -195,8 +207,10 @@ const WebView2DevToolsPanel: React.FC = () => {
         });
         
         // Listen for ready event
-        const unlisten2 = await listen('webview-console-logger-ready', () => {
-          addSystemMessage('info', 'Console logger connected successfully');
+        console.log("Setting up webview-console-logger-ready event listener");
+        const unlisten2 = await listenToEvent('webview-console-logger-ready', () => {
+          // console.log("Console logger ready event received");
+          // addSystemMessage('info', 'Console logger connected successfully');
         });
         
         // Store unlisteners for cleanup
@@ -206,6 +220,7 @@ const WebView2DevToolsPanel: React.FC = () => {
         setError(`Failed to setup event listeners: ${err}`);
       }
     };
+    
     
     // Set up listeners
     setupListeners();
@@ -270,7 +285,7 @@ const WebView2DevToolsPanel: React.FC = () => {
       
       addSystemMessage('command', `Executing: ${code}`);
       
-      await core.invoke('execute_javascript', { javascript: code });
+      await invokeCommand('execute_javascript', { javascript: code });
     } catch (err) {
       console.error('Failed to execute JavaScript:', err);
       setError(`Failed to execute JavaScript: ${err}`);
@@ -712,7 +727,7 @@ const WebView2DevToolsPanel: React.FC = () => {
                       If you encounter issues with the WebView2 DevTools:
                     </Text>
                     <ul className="list-disc pl-5 mt-2 space-y-2 text-sm">
-                      <li>Make sure the <code>devtools</code> feature is enabled in your <code>Cargo.toml</code> file</li>
+                      {/* <li>Make sure the <code>devtools</code> feature is enabled in your <code>Cargo.toml</code> file</li> */}
                       <li>Click <strong>Refresh Status</strong> to update the DevTools connection status</li>
                       <li>Try reopening the DevTools window if it becomes unresponsive</li>
                       <li>If the console logger stops working, try reinjecting it</li>
