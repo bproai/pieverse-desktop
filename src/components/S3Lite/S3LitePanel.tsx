@@ -14,7 +14,7 @@ interface S3FileEntry {
   created_at: string;
 }
 
-let currentBucketRef = '';
+let currentBucketValue = '';
 let refreshFilesFunction: (() => Promise<void>) | null = null;
 
 const PAGE_SIZE = 50; // Number of files to display per page
@@ -35,6 +35,10 @@ const S3LitePanel: React.FC = () => {
   const [newFileName, setNewFileName] = useState<string>('');
   const isVisible = useRef(true);
   const refreshIntervalRef = useRef<number | null>(null);
+  const currentBucketRef = useRef('');
+  const totalFilesRef = useRef<number>(0);
+
+
 
   // Custom context menu state
   const [imageMenu, setImageMenu] = useState({
@@ -62,32 +66,30 @@ const S3LitePanel: React.FC = () => {
   }, []);
 
   const startPollingForUpdates = () => {
-    // Clear any existing interval
     if (refreshIntervalRef.current !== null) {
       clearInterval(refreshIntervalRef.current);
     }
     
-    // Check every 5 seconds for updates
     refreshIntervalRef.current = window.setInterval(() => {
-      if (currentBucket) {
+      if (currentBucketRef.current) { // Use the ref value
         checkForUpdateNeeded();
       }
-    }, 5000); // 5 second polling interval
+    }, 5000);
   };
 
   // Check if the files count in the database matches what's shown
   const checkForUpdateNeeded = async () => {
-    if (!currentBucket) return;
+    const bucketName = currentBucketRef.current;
+    if (!bucketName) return;
     
     try {
-      // Get the current count from the database
       const count = await core.invoke<number>('s3_get_file_count', {
-        bucket: currentBucket
+        bucket: bucketName // Use the ref value
       });
       
-      // If counts don't match, we need to refresh
-      if (count !== totalFiles) {
-        console.log(`File count mismatch detected. DB: ${count}, UI: ${totalFiles}. Refreshing...`);
+      // Compare with state and update if needed
+      if (count !== totalFilesRef.current) {
+        console.log(`File count mismatch detected. DB: ${count}, UI: ${totalFilesRef.current}. Refreshing...`);
         await loadFiles();
       }
     } catch (error) {
@@ -101,7 +103,8 @@ const S3LitePanel: React.FC = () => {
 
   useEffect(() => {
     if (currentBucket) {
-      currentBucketRef = currentBucket;
+      currentBucketRef.current = currentBucket;
+      currentBucketValue = currentBucket;
       setCurrentPage(0); // Reset to first page when changing buckets
       loadFiles();
     }
@@ -183,6 +186,8 @@ const S3LitePanel: React.FC = () => {
       
       console.log(`Total files in bucket: ${count}`);
       setTotalFiles(count);
+      totalFilesRef.current = count; 
+      console.log("Set total files to:", count, "current state value:", totalFiles); // This will still show the old value!
       
       // Calculate total pages (minimum of 1 page if there are files)
       const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
@@ -1026,7 +1031,7 @@ const S3LitePanel: React.FC = () => {
 };
 
 export const getCurrentBucket = () => {
-  return currentBucketRef;
+  return currentBucketValue;
 };
 
 export const refreshCurrentBucket = async () => {
