@@ -96,7 +96,7 @@ pub async fn take_screenshot_to_clipboard(_window: Window) -> Result<bool, Strin
                 Add-Type -AssemblyName System.Drawing
                 
                 # Press Alt+PrintScreen to capture active window
-                [System.Windows.Forms.SendKeys]::SendWait("%{PRTSC}")
+                [System.Windows.Forms.SendKeys]::SendWait("%{{PRTSC}}")
                 
                 # Wait for clipboard to be updated
                 Start-Sleep -Milliseconds 500
