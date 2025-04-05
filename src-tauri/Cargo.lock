@@ -3,6 +3,53 @@
 version = 4
 
 [[package]]
+name = "Pieverse"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "arboard 1.2.1",
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.21.7",
+ "chrono",
+ "dirs 5.0.1",
+ "futures",
+ "futures-util",
+ "hyper 0.14.32",
+ "image 0.24.9",
+ "mcp-client",
+ "mongodb",
+ "once_cell",
+ "pyo3",
+ "regex",
+ "reqwest 0.11.27",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-shell",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
+ "tower 0.4.13",
+ "tower-http",
+ "url",
+ "urlencoding",
+ "uuid",
+ "walkdir",
+ "zip",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4174,53 +4221,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67eabc2ef2a60eb7faa00097bd1ffdb5bd28e62bf39990626a582201b7a754e5"
 dependencies = [
  "siphasher 1.0.1",
-]
-
-[[package]]
-name = "pieverse"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "arboard 1.2.1",
- "async-stream",
- "async-trait",
- "axum",
- "base64 0.21.7",
- "chrono",
- "dirs 5.0.1",
- "futures",
- "futures-util",
- "hyper 0.14.32",
- "image 0.24.9",
- "mcp-client",
- "mongodb",
- "once_cell",
- "pyo3",
- "regex",
- "reqwest 0.11.27",
- "rusqlite",
- "serde",
- "serde_json",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-shell",
- "thiserror 1.0.69",
- "time",
- "tokio",
- "tokio-stream",
- "tokio-tungstenite",
- "tower 0.4.13",
- "tower-http",
- "url",
- "urlencoding",
- "uuid",
- "walkdir",
- "zip",
 ]
 
 [[package]]
