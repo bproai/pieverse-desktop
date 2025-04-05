@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "πeVerse",
+  "productName": "PieVerse",
   "version": "1.0.0",
   "identifier": "com.pieverse.app",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "πeVerse",
+        "title": "PieVerse",
         "width": 800,
         "height": 600,
         "decorations": true,
@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; media-src 'self' microphone: https: mediadevices: blob: asset:; connect-src 'self' http://localhost:3030 https://www.google.com https://*.googleapis.com https://speech.googleapis.com wss://*.speech.googleapis.com https: mediadevices: ipc: tauri:; img-src 'self' data: asset: s3: http://s3.localhost https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:;"      
+      "csp": "default-src 'self'; media-src 'self' microphone: https: mediadevices: blob: asset:; connect-src 'self' http://localhost:3030 https://www.google.com https://*.googleapis.com https://speech.googleapis.com wss://*.speech.googleapis.com https: mediadevices: ipc: tauri:; img-src 'self' data: asset: s3: tauri: tauri://localhost http://tauri.localhost https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:;"      
     },
     "trayIcon": {
       "iconPath": "icons/256x256.png",
@@ -48,7 +48,8 @@
     "protocol": {
       "asset": true,
       "assetScope": ["**"],
-      "s3": true
+      "s3": true,
+      "tauri": true
     },
     "webview": {
       "allowedMediaPermissions": ["microphone", "audioCapture", "audioOutput"],
