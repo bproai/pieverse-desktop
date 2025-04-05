@@ -414,6 +414,9 @@ pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             let path = path.strip_prefix("localhost/").unwrap_or(path);
             
             let parts: Vec<&str> = path.split('/').collect();
+            println!("S3 URI parts: {}, {:?}", uri, parts);
+
+
             if parts.len() < 2 {
                 return Response::builder()
                     .status(404)
