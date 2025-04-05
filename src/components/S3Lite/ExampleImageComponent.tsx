@@ -61,9 +61,9 @@ const ExampleImageComponent: React.FC<ExampleImageProps> = ({ bucketName }) => {
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {images.map(image => (
         <div key={image.key} className="border rounded-md overflow-hidden p-2">
-          {/* Using the s3:// protocol to display the image */}
+          {/* Using the tauri:// protocol to display the image */}
           <img 
-            src={`s3://${bucketName}/${image.key}`} 
+            src={`tauri://${bucketName}/${image.key}`} 
             alt={image.key}
             className="w-full h-48 object-contain bg-gray-100"
           />

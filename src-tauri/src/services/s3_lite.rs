@@ -404,10 +404,10 @@ pub async fn s3_export_bucket_as_zip(
 // Updated to use Response instead of ResponseBuilder
 pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
     builder.register_uri_scheme_protocol(
-        "s3",
+        "tauri",
         |context: UriSchemeContext<R>, request: tauri::http::Request<Vec<u8>>| -> Response<Vec<u8>> {
             let uri = request.uri().to_string();
-            let path = uri.strip_prefix("s3://").unwrap_or(&uri);
+            let path = uri.strip_prefix("tauri://").unwrap_or(&uri);
             let parts: Vec<&str> = path.split('/').collect();
             if parts.len() < 2 {
                 return Response::builder()
@@ -508,7 +508,7 @@ pub async fn s3_create_bucket(
 
 #[tauri::command]
 pub fn s3_get_url(bucket: String, key: String) -> String {
-    format!("s3://{}/{}", bucket, key)
+    format!("tauri://{}/{}", bucket, key)
 }
 
 

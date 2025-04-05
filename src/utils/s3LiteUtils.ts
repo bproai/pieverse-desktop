@@ -102,10 +102,10 @@ export async function deleteImageFromS3Lite(bucket: string, key: string): Promis
  * Get the full URL for an S3Lite image
  * @param bucket The bucket name
  * @param key The file key (filename)
- * @returns The full s3:// URL
+ * @returns The full tauri:// URL
  */
 export function getS3LiteImageUrl(bucket: string, key: string): string {
-  return `s3://${bucket}/${key}`;
+  return `tauri://${bucket}/${key}`;
 }
 
 /**
