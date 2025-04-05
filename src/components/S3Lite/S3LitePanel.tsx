@@ -890,8 +890,8 @@ const S3LitePanel: React.FC = () => {
             e.preventDefault();
             e.stopPropagation();
             // Extract file info from the preview URL
-            if (imagePreview.startsWith('s://')) {
-              const parts = imagePreview.replace('s://', '').split('/');
+            if (imagePreview.startsWith('s3://')) {
+              const parts = imagePreview.replace('s3://', '').split('/');
               if (parts.length >= 2) {
                 const bucket = parts[0];
                 const key = parts.slice(1).join('/');
@@ -912,8 +912,8 @@ const S3LitePanel: React.FC = () => {
               <button
                 onClick={() => {
                   // Extract file info from the preview URL
-                  if (imagePreview.startsWith('s://')) {
-                    const parts = imagePreview.replace('s://', '').split('/');
+                  if (imagePreview.startsWith('s3://')) {
+                    const parts = imagePreview.replace('s3://', '').split('/');
                     if (parts.length >= 2) {
                       const bucket = parts[0];
                       const key = parts.slice(1).join('/');
