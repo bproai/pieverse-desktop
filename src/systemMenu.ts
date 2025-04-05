@@ -32,7 +32,7 @@ export async function setupNativeMenu() {
       item: 'SelectAll',
     });
     
-    // Create app menu items for the πeVerse menu
+    // Create app menu items for the PieVerse menu
     const aboutItem = await MenuItem.new({
       id: 'about',
       text: 'About PieVerse',

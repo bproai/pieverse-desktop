@@ -5522,7 +5522,7 @@ index 8b18186..2926c31 100644
 +  "name": "pieverse",
    "version": "1.0.0",
 -  "description": "This template should help get you started developing with Tauri, React and Typescript in Vite.",
-+  "description": "πeVerse - Financial Data Analysis Tool",
++  "description": "PieVerse - Financial Data Analysis Tool",
    "main": "index.js",
    "scripts": {
 -    "test": "echo \"Error: no test specified\" && exit 1"
@@ -7886,7 +7886,7 @@ index 53d13cd..86e82e7 100644
 -description = "PiEVerse Desktop App"
 +name = "pieverse"
 +version = "1.0.0"
-+description = "πeVerse - Financial Data Analysis Tool"
++description = "PieVerse - Financial Data Analysis Tool"
  authors = ["you"]
  edition = "2021"
  
@@ -12902,7 +12902,7 @@ index a2ce5ac..f6f2b40 100644
 -  "productName": "pieverse-desktop",
 -  "version": "0.1.0",
 -  "identifier": "com.pieverse-desktop.app",
-+  "productName": "πeVerse",
++  "productName": "PieVerse",
 +  "version": "1.0.0",
 +  "identifier": "com.pieverse.app",
    "build": {
@@ -12913,7 +12913,7 @@ index a2ce5ac..f6f2b40 100644
      "windows": [
        {
 -        "title": "pieverse-desktop",
-+        "title": "πeVerse",
++        "title": "PieVerse",
          "width": 800,
 -        "height": 600
 +        "height": 600,

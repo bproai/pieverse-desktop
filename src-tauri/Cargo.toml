@@ -1,7 +1,7 @@
 [package]
 name = "pieverse"
 version = "1.0.0"
-description = "πeVerse - Financial Data Analysis Tool"
+description = "PieVerse - Financial Data Analysis Tool"
 authors = ["Yunpeng Brian Pan"]
 edition = "2021"
 
