@@ -687,7 +687,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
         if (imageMenu.image.src.startsWith('data:')) {
           // For data URLs, use the default name
           fileName = 'image.png';
-        } else if (imageMenu.image.src.startsWith('tauri://')) {
+        } else if (imageMenu.image.src.startsWith('s3://')) {
           // For tauri URLs, get the last part
           const s3Parts = imageMenu.image.src.split('/');
           if (s3Parts.length > 1) {
