@@ -270,7 +270,8 @@ const S3LitePanel: React.FC = () => {
       
       // Get filename for key
       const path = selected as string;
-      const fileName = path.split('/').pop() || path.split('\\').pop() || 'unnamed';
+      const segments = path.split(/[\/\\]/);
+      const fileName = segments[segments.length - 1] || 'unnamed';
       
       // Read file as binary
       const binaryData = await readFile(path);
