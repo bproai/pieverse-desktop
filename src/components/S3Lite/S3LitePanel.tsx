@@ -37,7 +37,7 @@ const S3LitePanel: React.FC = () => {
   const refreshIntervalRef = useRef<number | null>(null);
   const currentBucketRef = useRef('');
   const totalFilesRef = useRef<number>(0);
-
+  const [isWindows, setIsWindows] = useState(false);
 
 
   // Custom context menu state
@@ -47,6 +47,12 @@ const S3LitePanel: React.FC = () => {
     y: 0,
     file: null as S3FileEntry | null
   });
+
+  useEffect(() => {
+    // Simple browser-based platform detection
+    const userAgent = navigator.userAgent.toLowerCase();
+    setIsWindows(userAgent.indexOf('windows') !== -1);
+  }, []);
 
   useEffect(() => {
     // Store the loadFiles function in the outer variable
@@ -529,8 +535,8 @@ const S3LitePanel: React.FC = () => {
     if (!file) return;
     
     try {
-      await navigator.clipboard.writeText(`tauri://${file.bucket}/${file.key}`);
-      console.log("Copied to clipboard:", `tauri://${file.bucket}/${file.key}`);
+      await navigator.clipboard.writeText(`s3://${file.bucket}/${file.key}`);
+      console.log("Copied to clipboard:", `s3://${file.bucket}/${file.key}`);
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
     }
@@ -577,6 +583,7 @@ const S3LitePanel: React.FC = () => {
     // Close the menu after the action
     setImageMenu(prev => ({ ...prev, visible: false }));
   };
+
   
   return (
     <div className="p-4">
@@ -780,7 +787,10 @@ const S3LitePanel: React.FC = () => {
                         onContextMenu={(e) => handleImageContextMenu(e, file)}
                       >
                         <img 
-                          src={`tauri://${file.bucket}/${file.key}`}
+                          src={isWindows 
+                            ? `http://s3.localhost/${file.bucket}/${file.key}`
+                            : `s3://${file.bucket}/${file.key}`
+                          }
                           alt={file.key}
                           className="w-full h-full object-contain"
                         />
@@ -880,8 +890,8 @@ const S3LitePanel: React.FC = () => {
             e.preventDefault();
             e.stopPropagation();
             // Extract file info from the preview URL
-            if (imagePreview.startsWith('tauri://')) {
-              const parts = imagePreview.replace('tauri://', '').split('/');
+            if (imagePreview.startsWith('s://')) {
+              const parts = imagePreview.replace('s://', '').split('/');
               if (parts.length >= 2) {
                 const bucket = parts[0];
                 const key = parts.slice(1).join('/');
@@ -902,8 +912,8 @@ const S3LitePanel: React.FC = () => {
               <button
                 onClick={() => {
                   // Extract file info from the preview URL
-                  if (imagePreview.startsWith('tauri://')) {
-                    const parts = imagePreview.replace('tauri://', '').split('/');
+                  if (imagePreview.startsWith('s://')) {
+                    const parts = imagePreview.replace('s://', '').split('/');
                     if (parts.length >= 2) {
                       const bucket = parts[0];
                       const key = parts.slice(1).join('/');
