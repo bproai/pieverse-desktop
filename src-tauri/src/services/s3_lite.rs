@@ -408,6 +408,11 @@ pub fn register_s3_protocol<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         |context: UriSchemeContext<R>, request: tauri::http::Request<Vec<u8>>| -> Response<Vec<u8>> {
             let uri = request.uri().to_string();
             let path = uri.strip_prefix("s3://").unwrap_or(&uri);
+            
+            // Strip "localhost/" prefix on Windows
+            #[cfg(target_os = "windows")]
+            let path = path.strip_prefix("localhost/").unwrap_or(path);
+            
             let parts: Vec<&str> = path.split('/').collect();
             if parts.len() < 2 {
                 return Response::builder()
@@ -508,10 +513,16 @@ pub async fn s3_create_bucket(
 
 #[tauri::command]
 pub fn s3_get_url(bucket: String, key: String) -> String {
-    format!("s3://{}/{}", bucket, key)
+    #[cfg(target_os = "windows")]
+    {
+        format!("http://s3.localhost/{}/{}", bucket, key)
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        format!("s3://{}/{}", bucket, key)
+    }
 }
-
-
 
 // Add this Tauri command to your commands section
 #[tauri::command]
