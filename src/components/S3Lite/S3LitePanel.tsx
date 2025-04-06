@@ -33,7 +33,6 @@ const S3LitePanel: React.FC = () => {
   const [newBucketValue, setNewBucketValue] = useState<string>('');
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState<string>('');
-  const isVisible = useRef(true);
   const refreshIntervalRef = useRef<number | null>(null);
   const currentBucketRef = useRef('');
   const totalFilesRef = useRef<number>(0);
@@ -272,7 +271,7 @@ const S3LitePanel: React.FC = () => {
       const path = selected as string;
       const segments = path.split(/[\/\\]/);
       const fileName = segments[segments.length - 1] || 'unnamed';
-      
+
       // Read file as binary
       const binaryData = await readFile(path);
       

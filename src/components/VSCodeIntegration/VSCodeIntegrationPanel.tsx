@@ -28,6 +28,10 @@ import VSCodeChat from './VSCodeChat';
 import VSCodeDiagnosticsPanel from './VSCodeDiagnosticsPanel';
 import VSCodeTerminalPanel from './VSCodeTerminalPanel';
 import Editor, { loader } from '@monaco-editor/react';
+import { parseAiSuggestion } from './aiDiffParser';
+import { Clipboard } from 'lucide-react'; // Add to your existing lucide-react imports
+
+
 loader.config({
   paths: {
     vs: './monaco-editor/vs'
@@ -87,6 +91,329 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [statusInfo, setStatusInfo] = useState<string | null>(null);
 
   const [showNotifications, setShowNotifications] = useState<boolean>(true);
+
+
+  const handleParseSuggestion = () => {
+    setLoading(true);
+    
+    navigator.clipboard.readText().then(clipboardText => {
+      if (!clipboardText) {
+        showNotificationIfEnabled(
+          'Error',
+          'Clipboard is empty',
+          'red'
+        );
+        setLoading(false);
+        return;
+      }
+      
+      const parsedDiff = parseAiSuggestion(clipboardText);
+      
+      if (parsedDiff) {
+        // First, set what we already know
+        if (parsedDiff.description) {
+          setDescription(parsedDiff.description);
+        }
+        
+        // If we found a file path, try to load the original file
+        if (parsedDiff.filePath) {
+          setOriginalFile(parsedDiff.filePath);
+          
+          // Try to find and load the file content
+          findAndLoadFile(parsedDiff.filePath)
+            .then(fileContent => {
+              if (fileContent && parsedDiff.fromCode && parsedDiff.toCode) {
+                // Use the normalized approach to find the code block
+                const normalizedFileContent = normalizeCode(fileContent);
+                const normalizedFromCode = normalizeCode(parsedDiff.fromCode);
+                
+                if (normalizedFileContent.includes(normalizedFromCode)) {
+                  // Get the normalized position
+                  const normalizedStartIndex = normalizedFileContent.indexOf(normalizedFromCode);
+                  
+                  // Find the actual start of the code block in the original file
+                  // Look for the start of a statement (use, fn, struct, etc.)
+                  let actualStartIndex = findActualCodeStart(fileContent, normalizedFileContent, normalizedStartIndex);
+                  
+                  // Find the actual end of the statement (looking for appropriate end marker)
+                  let actualEndIndex = findActualCodeEnd(fileContent, actualStartIndex);
+                  
+                  // Replace the entire code block
+                  const updatedContent = 
+                    fileContent.substring(0, actualStartIndex) + '\n'+
+                    parsedDiff.toCode + 
+                    fileContent.substring(actualEndIndex);
+                  
+                  setSuggestedContent(updatedContent);
+                  
+                  showNotificationIfEnabled(
+                    'AI Suggestion Applied',
+                    'Found and replaced the code block. Click "Send Diff" to view in VS Code.',
+                    'green'
+                  );
+                } else {
+                  // Couldn't find the code block
+                  setSuggestedContent(parsedDiff.toCode);
+                  
+                  showNotificationIfEnabled(
+                    'Warning',
+                    'Could not find the code block to replace. Using suggested code only.',
+                    'yellow'
+                  );
+                }
+              } else {
+                // Either fileContent, fromCode or toCode is missing
+                setSuggestedContent(parsedDiff.toCode || fileContent || '');
+                
+                showNotificationIfEnabled(
+                  'File Loaded',
+                  'Original file loaded, but could not apply changes automatically.',
+                  'blue'
+                );
+              }
+            })
+            .catch(err => {
+              console.error('Error loading file:', err);
+              // Fall back to the parsed "to" code
+              if (parsedDiff.toCode) {
+                setSuggestedContent(parsedDiff.toCode);
+              }
+              
+              showNotificationIfEnabled(
+                'File Load Error',
+                `Could not load original file: ${err}. Using parsed content instead.`,
+                'yellow'
+              );
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        } else {
+          // No file path, just use the parsed content
+          if (parsedDiff.toCode) {
+            setSuggestedContent(parsedDiff.toCode);
+          }
+          
+          showNotificationIfEnabled(
+            'AI Suggestion Parsed',
+            'Suggestion has been parsed but no file path was detected. Using parsed content only.',
+            'blue'
+          );
+          
+          setLoading(false);
+        }
+      } else {
+        showNotificationIfEnabled(
+          'Parsing Failed',
+          'Could not detect an AI code suggestion pattern in clipboard.',
+          'yellow'
+        );
+        
+        setLoading(false);
+      }
+    }).catch(error => {
+      console.error('Failed to read clipboard:', error);
+      showNotificationIfEnabled(
+        'Clipboard Access Error',
+        `Unable to read clipboard: ${error}. Your browser may have denied permission.`,
+        'red'
+      );
+      
+      setLoading(false);
+    });
+  };
+  
+  // Function to normalize code by removing whitespace and comments
+  const normalizeCode = (code: string): string => {
+    return code
+      .replace(/\/\/.*$/gm, '') // Remove single-line comments
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+      .replace(/\s+/g, ''); // Remove all whitespace
+  };
+  
+  // Find the start of the code block
+  const findActualCodeStart = (originalText: string, normalizedText: string, normalizedIndex: number): number => {
+    // First get approximate position
+    let originalIndex = 0;
+    let normalizedCounter = 0;
+    
+    while (normalizedCounter < normalizedIndex && originalIndex < originalText.length) {
+      // Skip comments and whitespace
+      if (originalText.substr(originalIndex, 2) === '//') {
+        // Skip to end of line
+        while (originalIndex < originalText.length && originalText[originalIndex] !== '\n') {
+          originalIndex++;
+        }
+        continue;
+      }
+      
+      if (originalText.substr(originalIndex, 2) === '/*') {
+        // Skip to end of comment
+        while (originalIndex < originalText.length && 
+               (originalIndex + 1 >= originalText.length || 
+                originalText.substr(originalIndex, 2) !== '*/')) {
+          originalIndex++;
+        }
+        originalIndex += 2; // Skip the */
+        continue;
+      }
+      
+      // Skip whitespace
+      if (/\s/.test(originalText[originalIndex])) {
+        originalIndex++;
+        continue;
+      }
+      
+      originalIndex++;
+      normalizedCounter++;
+    }
+    
+    // Now look backward for the start of a statement
+    // Typical statement starters include: use, fn, struct, impl, etc.
+    // We'll also look for line break + indentation patterns
+    let startIndex = originalIndex;
+    
+    while (startIndex > 0) {
+      // If we hit a clear statement start marker like a semicolon followed by a newline
+      if (originalText[startIndex-1] === ';' && 
+          (startIndex === originalText.length || originalText[startIndex] === '\n')) {
+        // Move to the next line
+        while (startIndex < originalText.length && originalText[startIndex] !== '\n') {
+          startIndex++;
+        }
+        startIndex++; // Move past the newline
+        
+        // Skip any indentation
+        while (startIndex < originalText.length && /[ \t]/.test(originalText[startIndex])) {
+          startIndex++;
+        }
+        
+        return startIndex;
+      }
+      
+      // Look for common start patterns like "use " or "fn " at the beginning of a line
+      const lineStart = startIndex === 0 || originalText[startIndex-1] === '\n';
+      if (lineStart) {
+        // Check if this line starts a statement
+        const restOfLine = originalText.substring(startIndex, startIndex + 20); // Look ahead 20 chars
+        if (/^(use|fn|struct|enum|impl|trait|mod|pub|const|let|static)\b/.test(restOfLine)) {
+          return startIndex;
+        }
+      }
+      
+      startIndex--;
+    }
+    
+    return originalIndex; // Fallback to approximate position
+  };
+  
+  // Find the end of the code block
+  const findActualCodeEnd = (originalText: string, startIndex: number): number => {
+    let endIndex = startIndex;
+    let braceCount = 0;
+    
+    // First, determine what kind of statement we're looking at
+    const restOfText = originalText.substring(startIndex, startIndex + 20);
+    const isUseStatement = /^use\b/.test(restOfText);
+    
+    if (isUseStatement) {
+      // For use statements, look for the ending semicolon
+      while (endIndex < originalText.length) {
+        if (originalText[endIndex] === '{') {
+          braceCount++;
+        } else if (originalText[endIndex] === '}') {
+          braceCount--;
+        } else if (originalText[endIndex] === ';' && braceCount <= 0) {
+          // Found the ending semicolon
+          return endIndex + 1; // Include the semicolon
+        }
+        
+        endIndex++;
+      }
+    } else {
+      // For other statements, look for a balanced ending brace pattern
+      let foundOpenBrace = false;
+      
+      while (endIndex < originalText.length) {
+        if (originalText[endIndex] === '{') {
+          foundOpenBrace = true;
+          braceCount++;
+        } else if (originalText[endIndex] === '}') {
+          braceCount--;
+          if (foundOpenBrace && braceCount === 0) {
+            // Found the closing brace
+            // Look for a semicolon that might follow the closing brace
+            let semicolonIndex = endIndex + 1;
+            while (semicolonIndex < originalText.length && /\s/.test(originalText[semicolonIndex])) {
+              semicolonIndex++;
+            }
+            
+            if (semicolonIndex < originalText.length && originalText[semicolonIndex] === ';') {
+              return semicolonIndex + 1; // Include the semicolon
+            }
+            
+            return endIndex + 1; // Include the closing brace
+          }
+        } else if (!foundOpenBrace && originalText[endIndex] === ';') {
+          // This is a single-line statement without braces
+          return endIndex + 1; // Include the semicolon
+        }
+        
+        endIndex++;
+      }
+    }
+    
+    return endIndex;
+  };
+
+  const findAndLoadFile = async (filePath: string): Promise<string | null> => {
+    try {
+      let content = null;
+      
+      // First try the exact path
+      if (await exists(filePath)) {
+        content = await readTextFile(filePath);
+        return content;
+      }
+      
+      // If not found, try within the project path if we have one
+      if (projectPath) {
+        const fullPath = `${projectPath}/${filePath}`;
+        if (await exists(fullPath)) {
+          content = await readTextFile(fullPath);
+          setOriginalFile(fullPath); // Update with full path
+          return content;
+        }
+        
+        // Try src directory if it exists
+        const srcPath = `${projectPath}/src/${filePath}`;
+        if (await exists(srcPath)) {
+          content = await readTextFile(srcPath);
+          setOriginalFile(srcPath); // Update with full path
+          return content;
+        }
+      }
+      
+      // File not found in any expected location
+      return null;
+    } catch (error) {
+      console.error('Error finding/loading file:', error);
+      return null;
+    }
+  };
+  
+  // Add the keyboard shortcut hook
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+V or Cmd+Shift+V for "Parse AI Suggestion"
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'v') {
+        handleParseSuggestion();
+      }
+    };
+  
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     // Force a resize event when the connection panel visibility changes
@@ -632,14 +959,28 @@ const VSCodeIntegrationPanel: React.FC = () => {
                                 
                 {/* Button group with minimal margin to maximize editor space */}
                 <Group justify="space-between" mt="12px">
-                  <Button
-                    onClick={sendTestDiff}
-                    loading={loading}
-                    disabled={!status.isRunning}
-                    title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
-                  >
-                    Send Diff
-                  </Button>
+                    <Group>
+                      <Button 
+                        onClick={sendTestDiff}
+                        loading={loading}
+                        disabled={!status.isRunning}
+                        title={!status.isRunning ? "WebSocket server is not running. Start the server to enable this button." : ""}
+                      >
+                        Send Diff
+                      </Button>
+                      
+                      {/* Add the new button here */}
+                      <Button
+                        variant="outline"
+                        color="cyan"
+                        onClick={handleParseSuggestion}
+                        loading={loading}
+                        leftSection={<Clipboard size={14} />}
+                        title="Parse AI suggestion from clipboard and populate form (Ctrl+Shift+V)"
+                      >
+                        Parse AI Suggestion
+                      </Button>
+                  </Group>
                   
                   <Group gap="xs">
                     <Button
