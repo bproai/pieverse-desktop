@@ -70,3 +70,8 @@ src-tauri/src/python_scripts/db.sqlite
 src-tauri/.cargo/config.toml
 screenshot.png
 Layoff Radar.html
+README.md.orig
+lib3.patch
+lib4.patch
+src-tauri/src/lib.rs.rej
+src-tauri/src/lib.rs.orig

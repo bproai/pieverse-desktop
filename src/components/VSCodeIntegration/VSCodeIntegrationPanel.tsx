@@ -113,9 +113,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
       console.log("Starting to parse clipboard text");
       
       try {
-        // Try to directly use the unified diff with jsdiff
+        // Check if it's a unified diff
         if (clipboardText.match(/^---\s+a\/.*\n\+\+\+\s+b\/.*(\n@@.*@@.*)+/m)) {
-          console.log("Detected unified diff format, using jsdiff parser");
+          console.log("Detected unified diff format, using Unix patch");
           
           // Extract file path from the +++ line
           const filePathMatch = clipboardText.match(/\+\+\+\s+b\/([^\n]+)/);
@@ -126,89 +126,67 @@ const VSCodeIntegrationPanel: React.FC = () => {
             setOriginalFile(filePath);
             
             // Load the original file
-            findAndLoadFile(filePath)
-              .then(fileContent => {
-                if (!fileContent) {
-                  showNotificationIfEnabled(
-                    'Error',
-                    'Could not load the original file',
-                    'red'
-                  );
-                  setLoading(false);
-                  return;
-                }
+            const fileContent = await findAndLoadFile(filePath);
+            if (!fileContent) {
+              showNotificationIfEnabled(
+                'Error',
+                'Could not load the original file',
+                'red'
+              );
+              setLoading(false);
+              return;
+            }
+            
+            console.log("File loaded successfully, length:", fileContent.length);
+            
+            try {
+              // Apply the patch using our backend command
+              // We use -p1 by default which is standard for git-generated patches
+              const patchLevel = 1;
+              const result = await core.invoke('apply_unix_patch', { 
+                filePath,
+                diffContent: clipboardText,
+                stripLevel: patchLevel
+              });
+              
+              // If we got here, patch was successful
+              console.log("Patch applied successfully");
+              setSuggestedContent(result as string);
+              showNotificationIfEnabled(
+                'Success',
+                'Diff applied successfully',
+                'green'
+              );
+            } catch (patchError) {
+              console.error("Error applying patch:", patchError);
+              
+              // If the patch failed with -p1, try with -p0
+              try {
+                console.log("Trying alternative patch level -p0");
+                const result = await core.invoke('apply_unix_patch', { 
+                  filePath,
+                  diffContent: clipboardText,
+                  stripLevel: 0
+                });
                 
-                console.log("File loaded successfully, length:", fileContent.length);
-                
-                try {
-                  // Parse the patch using jsdiff
-                  const patches = parsePatch(clipboardText);
-                  console.log("Parsed patches:", patches);
-                  
-                  if (patches && patches.length > 0) {
-                    // Apply the patch to the file content
-                    let patchedContent;
-                    try {
-                      // Apply the patch - this works like Unix patch
-                      patchedContent = applyPatch(fileContent, patches[0]);
-                      
-                      // Check if the patch was applied (applyPatch returns false if it fails)
-                      if (patchedContent === false) {
-                        console.log("Patch application failed");
-                        showNotificationIfEnabled(
-                          'Warning',
-                          'Could not apply the diff. The patch may not match the file content.',
-                          'yellow'
-                        );
-                        setSuggestedContent(fileContent);
-                      } else {
-                        console.log("Patch applied successfully");
-                        setSuggestedContent(patchedContent);
-                        showNotificationIfEnabled(
-                          'Success',
-                          'Diff applied successfully',
-                          'green'
-                        );
-                      }
-                    } catch (patchError) {
-                      console.error("Error applying patch:", patchError);
-                      showNotificationIfEnabled(
-                        'Error',
-                        `Failed to apply patch: ${patchError.message}`,
-                        'red'
-                      );
-                      setSuggestedContent(fileContent);
-                    }
-                  } else {
-                    console.log("No patches found in the diff");
-                    showNotificationIfEnabled(
-                      'Warning',
-                      'No applicable changes found in the diff',
-                      'yellow'
-                    );
-                    setSuggestedContent(fileContent);
-                  }
-                } catch (parseError) {
-                  console.error("Error parsing patch:", parseError);
-                  showNotificationIfEnabled(
-                    'Error',
-                    `Failed to parse the diff: ${parseError.message}`,
-                    'red'
-                  );
-                  setSuggestedContent(fileContent);
-                }
-                
-                setLoading(false);
-              })
-              .catch(error => {
-                console.error("Error loading file:", error);
+                console.log("Patch applied successfully with -p0");
+                setSuggestedContent(result as string);
+                showNotificationIfEnabled(
+                  'Success',
+                  'Diff applied successfully with alternative patch level',
+                  'green'
+                );
+              } catch (retryError) {
+                // Both attempts failed
+                console.error("Error applying patch (retry):", retryError);
                 showNotificationIfEnabled(
                   'Error',
-                  `Could not load the file: ${error.message}`,
+                  `Failed to apply patch: ${retryError}`,
                   'red'
                 );
-                setLoading(false);
-              });
+                setSuggestedContent(fileContent);
+              }
+            }
           } else {
             console.log("No file path found in the diff");
             showNotificationIfEnabled(
@@ -216,17 +194,15 @@ const VSCodeIntegrationPanel: React.FC = () => {
               'Could not extract file path from the diff',
               'red'
             );
-            setLoading(false);
           }
         } else {
-            console.error("Error processing clipboard content:", error);
+          console.log("Not a unified diff format");
           showNotificationIfEnabled(
             'Error',
-            `Error processing clipboard content: ${error.message}`,
-            'red'
+            'The clipboard content is not a valid unified diff',
+            'yellow'
           );
-          setLoading(false);
-        }      
+        }
       } catch (error) {
         console.error("Error processing clipboard content:", error);
         showNotificationIfEnabled(
@@ -234,6 +210,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
           `Error processing clipboard content: ${error.message}`,
           'red'
         );
+      } finally {
         setLoading(false);
       }
     } catch (error) {

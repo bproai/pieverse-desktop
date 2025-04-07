@@ -37,6 +37,7 @@
     "fs:allow-create",
     "fs:allow-mkdir",
     "fs:allow-write-text-file",
-    "dialog:allow-confirm"
+    "dialog:allow-confirm",
+     "shell:allow-execute"
   ]
 }

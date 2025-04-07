@@ -123,6 +123,7 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
 - Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
 
 ### 📄 Document Renderer
+- Seamless clipboard integration using Tauri's native clipboard manager for improved user experience.
 - Visualize and edit HTML and Markdown content with built-in support for multiple formats.
 - Features include:
   - **HTML Rendering:** View HTML with proper styling and layout.
@@ -555,6 +556,8 @@ For detailed guidelines, refer to our [CONTRIBUTING.md](./docs/CONTRIBUTING.md).
   Added VS Code integration for terminal access, diagnostics viewing, and seamless code interaction.
 - **v0.5.1:**
   Fixed tab navigation in Document Renderer and added multiple content copying options (Source, Text, Rich Text, and Markdown).  
+- **v0.5.2:**
+  Improved clipboard handling by replacing browser API with Tauri's native clipboard manager for immediate response without permission prompts.
 
 See the full [Changelog](./docs/CHANGELOG.md) for a complete history.
 

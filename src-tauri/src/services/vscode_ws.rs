@@ -3,12 +3,16 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use tauri::{AppHandle, Emitter, Listener};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::{BroadcastStream, TcpListenerStream};
 use tokio_tungstenite::WebSocketStream;
+use tempfile::NamedTempFile;
 
 // Make sure everything is Send + Sync
 type SendableTx = Arc<Mutex<Option<broadcast::Sender<String>>>>;
@@ -623,4 +627,71 @@ async fn process_messages(
     }
 
     println!("WebSocket connection closed with VS Code: {}", addr);
+}
+
+#[tauri::command]
+pub fn apply_unix_patch(
+    file_path: &str,
+    diff_content: &str,
+    strip_level: i32,
+) -> Result<String, String> {
+    // Validate that the original file exists
+    if !Path::new(file_path).exists() {
+        return Err(format!("File not found: {}", file_path));
+    }
+
+    // Create a temporary file to store the diff
+    let mut diff_file = match NamedTempFile::new() {
+        Ok(file) => file,
+        Err(e) => return Err(format!("Failed to create temporary file: {}", e)),
+    };
+
+    // Write the diff content to the temp file
+    {
+        use std::io::Write;
+        let mut file = diff_file.as_file_mut();
+        
+        // Write the content to the file
+        if let Err(e) = file.write_all(diff_content.as_bytes()) {
+            return Err(format!("Failed to write diff to temporary file: {}", e));
+        }
+    }
+
+    // Get the path to the temporary diff file
+    let diff_path = diff_file.path().to_string_lossy().to_string();
+
+    // Create a temporary file for the patched output
+    let output_file = match NamedTempFile::new() {
+        Ok(file) => file,
+        Err(e) => return Err(format!("Failed to create temporary output file: {}", e)),
+    };
+
+    let output_path = output_file.path().to_string_lossy().to_string();
+
+    // Apply the patch and output to the temporary file
+    let patch_result = Command::new("patch")
+        .arg("-p").arg(strip_level.to_string())
+        .arg("-i").arg(&diff_path)
+        .arg("-o").arg(&output_path) // Output to temp file
+        .arg("-f") // Force (ignore whitespace)
+        .arg("--no-backup-if-mismatch")
+        .arg(file_path)
+        .output();
+
+    // Check if patch was successful
+    match patch_result {
+        Ok(output) if output.status.success() => {
+            // Read the patched content from the output file
+            match fs::read_to_string(&output_path) {
+                Ok(patched_content) => Ok(patched_content),
+                Err(e) => Err(format!("Failed to read patched content: {}", e)),
+            }
+        },
+        Ok(output) => {
+            // Patch failed, return error with stderr
+            let error_msg = String::from_utf8_lossy(&output.stderr).to_string();
+            Err(format!("Patch failed: {}", error_msg))
+        },
+        Err(e) => Err(format!("Failed to execute patch command: {}", e)),
+    }
 }

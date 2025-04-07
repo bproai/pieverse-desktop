@@ -61,7 +61,7 @@ use services::project_structure::{
 use services::references::{load_references, save_references};
 use services::vscode_ws::{
     get_vscode_ws_status, send_chat_to_vscode, send_code_diff_to_vscode, send_open_file_to_vscode,
-    start_vscode_ws_server, stop_vscode_ws_server, VSCodeWebSocketState,
+    start_vscode_ws_server, stop_vscode_ws_server, VSCodeWebSocketState,apply_unix_patch,
 };
 
 use services::file_service::{
@@ -307,7 +307,7 @@ pub fn run() {
             // WebView DevTools command
             open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
     inject_console_logger, execute_javascript, is_console_logger_injected,
-    receive_console_log, console_logger_ready,
+    receive_console_log, console_logger_ready,apply_unix_patch,
 
         ])
         .run(tauri::generate_context!())
