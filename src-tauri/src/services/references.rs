@@ -110,3 +110,24 @@ pub async fn save_references(
     let references_service = ReferencesService::new(app_handle);
     references_service.save_references(references)
 }
+
+// Tauri command to export references to a JSON file
+#[tauri::command]
+pub async fn export_references_to_json(
+    app_handle: tauri::AppHandle,
+    file_path: String,
+) -> Result<(), String> {
+    let references_service = ReferencesService::new(app_handle);
+    let references = references_service.load_references()?;
+    
+    let json = serde_json::to_string_pretty(&references)
+        .map_err(|e| format!("Failed to serialize references: {}", e))?;
+
+    let mut file = std::fs::File::create(file_path)
+        .map_err(|e| format!("Failed to create export file: {}", e))?;
+
+    std::io::Write::write_all(&mut file, json.as_bytes())
+        .map_err(|e| format!("Failed to write references to export file: {}", e))?;
+
+    Ok(())
+}

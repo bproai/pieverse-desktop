@@ -1257,7 +1257,6 @@ const VSCodeIntegrationPanel: React.FC = () => {
                         Send Diff
                       </Button>
                       
-                      {/* Add the new button here */}
                       <Button
                         variant="outline"
                         color="cyan"
@@ -1267,6 +1266,41 @@ const VSCodeIntegrationPanel: React.FC = () => {
                         title="Parse AI suggestion from clipboard and populate 'Suggested change' form"
                       >
                         Parse AI Suggestion from clipboard
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        color="blue"
+                        onClick={async () => {
+                          try {
+                            const clipboardText = await readText();
+                            if (clipboardText) {
+                              setSuggestedContent(clipboardText);
+                              showNotificationIfEnabled(
+                                'Success',
+                                'Clipboard content pasted',
+                                'green'
+                              );
+                            } else {
+                              showNotificationIfEnabled(
+                                'Error',
+                                'Clipboard is empty',
+                                'red'
+                              );
+                            }
+                          } catch (error) {
+                            console.error('Failed to read clipboard:', error);
+                            showNotificationIfEnabled(
+                              'Clipboard Access Error',
+                              `Unable to read clipboard: ${error}`,
+                              'red'
+                            );
+                          }
+                        }}
+                        leftSection={<Clipboard size={14} />}
+                        title="Paste clipboard content directly without processing"
+                      >
+                        Paste Clipboard
                       </Button>
                   </Group>
                   

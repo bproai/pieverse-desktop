@@ -58,7 +58,7 @@ use services::project_structure::{
     check_drag_drop_dir_exists, create_copies_for_files, generate_structure_text,
     get_project_structure, is_valid_path, open_drag_drop_dir,
 };
-use services::references::{load_references, save_references};
+use services::references::{load_references, save_references, export_references_to_json};
 use services::vscode_ws::{
     get_vscode_ws_status, send_chat_to_vscode, send_code_diff_to_vscode, send_open_file_to_vscode,
     start_vscode_ws_server, stop_vscode_ws_server, VSCodeWebSocketState,apply_unix_patch,
@@ -255,6 +255,7 @@ pub fn run() {
             open_drag_drop_dir,
             load_references,
             save_references,
+            export_references_to_json,
             start_vscode_ws_server,
             stop_vscode_ws_server,
             get_vscode_ws_status,

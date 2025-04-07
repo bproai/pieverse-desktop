@@ -13,10 +13,10 @@ import {
   Tabs,
   Image
 } from '@mantine/core';
-import { Search, Plus, Trash, ExternalLink, Edit, Save, X, FileText, Image as ImageIcon, Link, Code, FileQuestion } from 'lucide-react';
+import { Search, Plus, Trash, ExternalLink, Edit, Save, X, FileText, Image as ImageIcon, Link, Code, FileQuestion, Download } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { core } from '@tauri-apps/api';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, save} from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 // Define types for reference items
@@ -121,6 +121,42 @@ const ReferencesPanel: React.FC = () => {
       notifications.show({
         title: 'Error',
         message: 'Failed to save references',
+        color: 'red',
+      });
+    }
+  };
+  
+  const exportReferencesToJson = async () => {
+    try {
+      // Open save dialog to get the file path
+      const filePath = await save({
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }],
+        defaultPath: 'references_export.json'
+      });
+      
+      // If the user cancelled the dialog, filePath will be null
+      if (!filePath) {
+        return;
+      }
+      
+      // Call the Tauri command to export references
+      await core.invoke('export_references_to_json', { 
+        filePath 
+      });
+      
+      notifications.show({
+        title: 'Success',
+        message: 'References exported successfully',
+        color: 'green',
+      });
+    } catch (error) {
+      console.error('Failed to export references:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to export references',
         color: 'red',
       });
     }
@@ -278,15 +314,24 @@ const ReferencesPanel: React.FC = () => {
     <div className="space-y-4">
       <Group justify="space-between">
         <Text size="xl" fw={700}>Knowledge Base References</Text>
-        <Button 
-          leftSection={<Plus size={16} />} 
-          onClick={() => {
-            setIsAddingNew(true);
-            setEditingId(null);
-          }}
-        >
-          Add Reference
-        </Button>
+        <Group>
+          <Button 
+            leftSection={<Download size={16} />} 
+            variant="outline"
+            onClick={exportReferencesToJson}
+          >
+            Export JSON
+          </Button>
+          <Button 
+            leftSection={<Plus size={16} />} 
+            onClick={() => {
+              setIsAddingNew(true);
+              setEditingId(null);
+            }}
+          >
+            Add Reference
+          </Button>
+        </Group>
       </Group>
       
       <Group>
