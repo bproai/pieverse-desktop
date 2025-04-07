@@ -30,6 +30,7 @@ import VSCodeTerminalPanel from './VSCodeTerminalPanel';
 import Editor, { loader } from '@monaco-editor/react';
 import { Clipboard } from 'lucide-react'; // Add to your existing lucide-react imports
 import { applyPatch, parsePatch, createPatch } from 'diff';
+import { readText } from '@tauri-apps/plugin-clipboard-manager';
 
 loader.config({
   paths: {
@@ -92,10 +93,13 @@ const VSCodeIntegrationPanel: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState<boolean>(true);
 
 
-  const handleParseSuggestion = () => {
+  const handleParseSuggestion = async () => {
     setLoading(true);
     
-    navigator.clipboard.readText().then(clipboardText => {
+    try {
+      // Use Tauri's clipboard-manager plugin instead of browser API
+      const clipboardText = await readText();
+      
       if (!clipboardText) {
         showNotificationIfEnabled(
           'Error',
@@ -215,103 +219,14 @@ const VSCodeIntegrationPanel: React.FC = () => {
             setLoading(false);
           }
         } else {
-          // Fall back to the original AI suggestion parsing
-          const parsedDiff = parseAiSuggestion(clipboardText);
-          console.log("Parsed as AI suggestion:", parsedDiff);
-          
-          if (parsedDiff && parsedDiff.filePath) {
-            setOriginalFile(parsedDiff.filePath);
-            
-            // Load the original file
-            findAndLoadFile(parsedDiff.filePath)
-              .then(fileContent => {
-                if (!fileContent) {
-                  showNotificationIfEnabled(
-                    'Error',
-                    'Could not load the original file',
-                    'red'
-                  );
-                  setLoading(false);
-                  return;
-                }
-                
-                console.log("File loaded successfully, length:", fileContent.length);
-                
-                try {
-                  // For From/To format, use jsdiff to create and apply a patch
-                  if (parsedDiff.changes && parsedDiff.changes.length > 0) {
-                    let modifiedContent = fileContent;
-                    
-                    for (const change of parsedDiff.changes) {
-                      // Generate a proper unified diff
-                      const patchText = createPatch(
-                        parsedDiff.filePath || 'file',
-                        modifiedContent,
-                        modifiedContent.replace(change.fromCode, change.toCode),
-                        'Original',
-                        'Modified'
-                      );
-                      
-                      console.log("Created patch:", patchText);
-                      
-                      // Apply the patch
-                      const patches = parsePatch(patchText);
-                      const patchedContent = applyPatch(modifiedContent, patches[0]);
-                      
-                      if (patchedContent !== false) {
-                        modifiedContent = patchedContent;
-                        console.log("Applied change successfully");
-                      } else {
-                        console.log("Failed to apply change");
-                      }
-                    }
-                    
-                    setSuggestedContent(modifiedContent);
-                    showNotificationIfEnabled(
-                      'Success',
-                      'Applied suggested changes to the file',
-                      'green'
-                    );
-                  } else {
-                    // No changes to apply
-                    setSuggestedContent(fileContent);
-                    showNotificationIfEnabled(
-                      'Warning',
-                      'No changes found in the suggestion',
-                      'yellow'
-                    );
-                  }
-                } catch (error) {
-                  console.error("Error applying changes:", error);
-                  setSuggestedContent(fileContent);
-                  showNotificationIfEnabled(
-                    'Error',
-                    `Failed to apply changes: ${error.message}`,
-                    'red'
-                  );
-                }
-                
-                setLoading(false);
-              })
-              .catch(error => {
-                console.error("Error loading file:", error);
-                showNotificationIfEnabled(
-                  'Error',
-                  `Could not load the file: ${error.message}`,
-                  'red'
-                );
-                setLoading(false);
-              });
-          } else {
-            console.log("No parseable content found");
-            showNotificationIfEnabled(
-              'Warning',
-              'Could not detect any code changes in clipboard',
-              'yellow'
-            );
-            setLoading(false);
-          }
-        }
+            console.error("Error processing clipboard content:", error);
+          showNotificationIfEnabled(
+            'Error',
+            `Error processing clipboard content: ${error.message}`,
+            'red'
+          );
+          setLoading(false);
+        }      
       } catch (error) {
         console.error("Error processing clipboard content:", error);
         showNotificationIfEnabled(
@@ -321,16 +236,16 @@ const VSCodeIntegrationPanel: React.FC = () => {
         );
         setLoading(false);
       }
-    }).catch(error => {
+    } catch (error) {
       console.error('Failed to read clipboard:', error);
       showNotificationIfEnabled(
         'Clipboard Access Error',
-        `Unable to read clipboard: ${error}. Your browser may have denied permission.`,
+        `Unable to read clipboard: ${error}`,
         'red'
       );
       
       setLoading(false);
-    });
+    }
   };
 
   
@@ -1087,9 +1002,9 @@ const VSCodeIntegrationPanel: React.FC = () => {
                         onClick={handleParseSuggestion}
                         loading={loading}
                         leftSection={<Clipboard size={14} />}
-                        title="Parse AI suggestion from clipboard and populate form (Ctrl+Shift+V)"
+                        title="Parse AI suggestion from clipboard and populate 'Suggested change' form"
                       >
-                        Parse AI Suggestion
+                        Parse AI Suggestion from clipboard
                       </Button>
                   </Group>
                   
