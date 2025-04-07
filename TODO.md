@@ -126,6 +126,17 @@ Modern software development increasingly relies on LLM assistance, but as our ex
   - [ ] Implement historical response archive with metadata and version tracking
   - [ ] Create analysis dashboard for tracking LLM knowledge drift and improvements
 
+- [ ] **Explore Edge AI Low-Code Development Platform:**
+  - [ ] Evaluate feasibility of rebuilding edge AI development capabilities within PieVerse
+  - [ ] Design LLM-assisted visual programming interface for edge AI model creation
+  - [ ] Develop component library for common edge AI tasks (image classification, object detection, etc.)
+  - [ ] Create model optimization pipeline for resource-constrained edge devices
+  - [ ] Implement automated testing framework for edge AI model validation
+  - [ ] Build deployment tools for various edge hardware (microcontrollers, SBCs, mobile)
+  - [ ] Design collaborative workflow for domain experts to train models without coding
+  - [ ] Integrate with existing Digital Twin framework for personalized edge AI assistance
+  - [ ] Research privacy-preserving techniques for on-device AI model training
+
 - [ ] **DeprecationBuster Feature Development:**
   - [ ] Research and define the criteria for identifying deprecated code patterns and legacy API calls.
   - [ ] Develop a static analysis module to scan the codebase for deprecated features.
