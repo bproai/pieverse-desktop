@@ -362,6 +362,7 @@ Use variables like this:
       setRules(updatedRules);
       saveRules(updatedRules);
       setEditingId(null);
+      setIsAddingNew(false);
     }
   };
   
