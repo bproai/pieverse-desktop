@@ -28,9 +28,8 @@ import VSCodeChat from './VSCodeChat';
 import VSCodeDiagnosticsPanel from './VSCodeDiagnosticsPanel';
 import VSCodeTerminalPanel from './VSCodeTerminalPanel';
 import Editor, { loader } from '@monaco-editor/react';
-import { parseAiSuggestion } from './aiDiffParser';
 import { Clipboard } from 'lucide-react'; // Add to your existing lucide-react imports
-
+import { applyPatch, parsePatch, createPatch } from 'diff';
 
 loader.config({
   paths: {
@@ -107,108 +106,219 @@ const VSCodeIntegrationPanel: React.FC = () => {
         return;
       }
       
-      const parsedDiff = parseAiSuggestion(clipboardText);
+      console.log("Starting to parse clipboard text");
       
-      if (parsedDiff) {
-        // First, set what we already know
-        if (parsedDiff.description) {
-          setDescription(parsedDiff.description);
-        }
-        
-        // If we found a file path, try to load the original file
-        if (parsedDiff.filePath) {
-          setOriginalFile(parsedDiff.filePath);
+      try {
+        // Try to directly use the unified diff with jsdiff
+        if (clipboardText.match(/^---\s+a\/.*\n\+\+\+\s+b\/.*(\n@@.*@@.*)+/m)) {
+          console.log("Detected unified diff format, using jsdiff parser");
           
-          // Try to find and load the file content
-          findAndLoadFile(parsedDiff.filePath)
-            .then(fileContent => {
-              if (fileContent && parsedDiff.fromCode && parsedDiff.toCode) {
-                // Use the normalized approach to find the code block
-                const normalizedFileContent = normalizeCode(fileContent);
-                const normalizedFromCode = normalizeCode(parsedDiff.fromCode);
-                
-                if (normalizedFileContent.includes(normalizedFromCode)) {
-                  // Get the normalized position
-                  const normalizedStartIndex = normalizedFileContent.indexOf(normalizedFromCode);
-                  
-                  // Find the actual start of the code block in the original file
-                  // Look for the start of a statement (use, fn, struct, etc.)
-                  let actualStartIndex = findActualCodeStart(fileContent, normalizedFileContent, normalizedStartIndex);
-                  
-                  // Find the actual end of the statement (looking for appropriate end marker)
-                  let actualEndIndex = findActualCodeEnd(fileContent, actualStartIndex);
-                  
-                  // Replace the entire code block
-                  const updatedContent = 
-                    fileContent.substring(0, actualStartIndex) + '\n'+
-                    parsedDiff.toCode + 
-                    fileContent.substring(actualEndIndex);
-                  
-                  setSuggestedContent(updatedContent);
-                  
+          // Extract file path from the +++ line
+          const filePathMatch = clipboardText.match(/\+\+\+\s+b\/([^\n]+)/);
+          const filePath = filePathMatch ? filePathMatch[1].trim() : undefined;
+          
+          if (filePath) {
+            console.log("Found file path:", filePath);
+            setOriginalFile(filePath);
+            
+            // Load the original file
+            findAndLoadFile(filePath)
+              .then(fileContent => {
+                if (!fileContent) {
                   showNotificationIfEnabled(
-                    'AI Suggestion Applied',
-                    'Found and replaced the code block. Click "Send Diff" to view in VS Code.',
-                    'green'
+                    'Error',
+                    'Could not load the original file',
+                    'red'
                   );
-                } else {
-                  // Couldn't find the code block
-                  setSuggestedContent(parsedDiff.toCode);
+                  setLoading(false);
+                  return;
+                }
+                
+                console.log("File loaded successfully, length:", fileContent.length);
+                
+                try {
+                  // Parse the patch using jsdiff
+                  const patches = parsePatch(clipboardText);
+                  console.log("Parsed patches:", patches);
                   
+                  if (patches && patches.length > 0) {
+                    // Apply the patch to the file content
+                    let patchedContent;
+                    try {
+                      // Apply the patch - this works like Unix patch
+                      patchedContent = applyPatch(fileContent, patches[0]);
+                      
+                      // Check if the patch was applied (applyPatch returns false if it fails)
+                      if (patchedContent === false) {
+                        console.log("Patch application failed");
+                        showNotificationIfEnabled(
+                          'Warning',
+                          'Could not apply the diff. The patch may not match the file content.',
+                          'yellow'
+                        );
+                        setSuggestedContent(fileContent);
+                      } else {
+                        console.log("Patch applied successfully");
+                        setSuggestedContent(patchedContent);
+                        showNotificationIfEnabled(
+                          'Success',
+                          'Diff applied successfully',
+                          'green'
+                        );
+                      }
+                    } catch (patchError) {
+                      console.error("Error applying patch:", patchError);
+                      showNotificationIfEnabled(
+                        'Error',
+                        `Failed to apply patch: ${patchError.message}`,
+                        'red'
+                      );
+                      setSuggestedContent(fileContent);
+                    }
+                  } else {
+                    console.log("No patches found in the diff");
+                    showNotificationIfEnabled(
+                      'Warning',
+                      'No applicable changes found in the diff',
+                      'yellow'
+                    );
+                    setSuggestedContent(fileContent);
+                  }
+                } catch (parseError) {
+                  console.error("Error parsing patch:", parseError);
                   showNotificationIfEnabled(
-                    'Warning',
-                    'Could not find the code block to replace. Using suggested code only.',
-                    'yellow'
+                    'Error',
+                    `Failed to parse the diff: ${parseError.message}`,
+                    'red'
+                  );
+                  setSuggestedContent(fileContent);
+                }
+                
+                setLoading(false);
+              })
+              .catch(error => {
+                console.error("Error loading file:", error);
+                showNotificationIfEnabled(
+                  'Error',
+                  `Could not load the file: ${error.message}`,
+                  'red'
+                );
+                setLoading(false);
+              });
+          } else {
+            console.log("No file path found in the diff");
+            showNotificationIfEnabled(
+              'Error',
+              'Could not extract file path from the diff',
+              'red'
+            );
+            setLoading(false);
+          }
+        } else {
+          // Fall back to the original AI suggestion parsing
+          const parsedDiff = parseAiSuggestion(clipboardText);
+          console.log("Parsed as AI suggestion:", parsedDiff);
+          
+          if (parsedDiff && parsedDiff.filePath) {
+            setOriginalFile(parsedDiff.filePath);
+            
+            // Load the original file
+            findAndLoadFile(parsedDiff.filePath)
+              .then(fileContent => {
+                if (!fileContent) {
+                  showNotificationIfEnabled(
+                    'Error',
+                    'Could not load the original file',
+                    'red'
+                  );
+                  setLoading(false);
+                  return;
+                }
+                
+                console.log("File loaded successfully, length:", fileContent.length);
+                
+                try {
+                  // For From/To format, use jsdiff to create and apply a patch
+                  if (parsedDiff.changes && parsedDiff.changes.length > 0) {
+                    let modifiedContent = fileContent;
+                    
+                    for (const change of parsedDiff.changes) {
+                      // Generate a proper unified diff
+                      const patchText = createPatch(
+                        parsedDiff.filePath || 'file',
+                        modifiedContent,
+                        modifiedContent.replace(change.fromCode, change.toCode),
+                        'Original',
+                        'Modified'
+                      );
+                      
+                      console.log("Created patch:", patchText);
+                      
+                      // Apply the patch
+                      const patches = parsePatch(patchText);
+                      const patchedContent = applyPatch(modifiedContent, patches[0]);
+                      
+                      if (patchedContent !== false) {
+                        modifiedContent = patchedContent;
+                        console.log("Applied change successfully");
+                      } else {
+                        console.log("Failed to apply change");
+                      }
+                    }
+                    
+                    setSuggestedContent(modifiedContent);
+                    showNotificationIfEnabled(
+                      'Success',
+                      'Applied suggested changes to the file',
+                      'green'
+                    );
+                  } else {
+                    // No changes to apply
+                    setSuggestedContent(fileContent);
+                    showNotificationIfEnabled(
+                      'Warning',
+                      'No changes found in the suggestion',
+                      'yellow'
+                    );
+                  }
+                } catch (error) {
+                  console.error("Error applying changes:", error);
+                  setSuggestedContent(fileContent);
+                  showNotificationIfEnabled(
+                    'Error',
+                    `Failed to apply changes: ${error.message}`,
+                    'red'
                   );
                 }
-              } else {
-                // Either fileContent, fromCode or toCode is missing
-                setSuggestedContent(parsedDiff.toCode || fileContent || '');
                 
+                setLoading(false);
+              })
+              .catch(error => {
+                console.error("Error loading file:", error);
                 showNotificationIfEnabled(
-                  'File Loaded',
-                  'Original file loaded, but could not apply changes automatically.',
-                  'blue'
+                  'Error',
+                  `Could not load the file: ${error.message}`,
+                  'red'
                 );
-              }
-            })
-            .catch(err => {
-              console.error('Error loading file:', err);
-              // Fall back to the parsed "to" code
-              if (parsedDiff.toCode) {
-                setSuggestedContent(parsedDiff.toCode);
-              }
-              
-              showNotificationIfEnabled(
-                'File Load Error',
-                `Could not load original file: ${err}. Using parsed content instead.`,
-                'yellow'
-              );
-            })
-            .finally(() => {
-              setLoading(false);
-            });
-        } else {
-          // No file path, just use the parsed content
-          if (parsedDiff.toCode) {
-            setSuggestedContent(parsedDiff.toCode);
+                setLoading(false);
+              });
+          } else {
+            console.log("No parseable content found");
+            showNotificationIfEnabled(
+              'Warning',
+              'Could not detect any code changes in clipboard',
+              'yellow'
+            );
+            setLoading(false);
           }
-          
-          showNotificationIfEnabled(
-            'AI Suggestion Parsed',
-            'Suggestion has been parsed but no file path was detected. Using parsed content only.',
-            'blue'
-          );
-          
-          setLoading(false);
         }
-      } else {
+      } catch (error) {
+        console.error("Error processing clipboard content:", error);
         showNotificationIfEnabled(
-          'Parsing Failed',
-          'Could not detect an AI code suggestion pattern in clipboard.',
-          'yellow'
+          'Error',
+          `Error processing clipboard content: ${error.message}`,
+          'red'
         );
-        
         setLoading(false);
       }
     }).catch(error => {
@@ -222,6 +332,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
       setLoading(false);
     });
   };
+
   
   // Function to normalize code by removing whitespace and comments
   const normalizeCode = (code: string): string => {

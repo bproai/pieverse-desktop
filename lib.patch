@@ -1,0 +1,20 @@
+--- a/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -98,6 +98,6 @@
+ use services::webview_devtools::{
+     open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
+-    inject_console_logger, execute_javascript, is_console_logger_injected,
++    inject_console_logger, execute_javascript, execute_javascript_return, is_console_logger_injected,
+     receive_console_log, console_logger_ready, WebViewDevToolsState,
+ };
+ 
+@@ -306,7 +306,7 @@
+             s3_get_file_count,
+             // WebView DevTools command
+             open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
+-    inject_console_logger, execute_javascript, is_console_logger_injected,
++    inject_console_logger, execute_javascript, execute_javascript_return, is_console_logger_injected,
+     receive_console_log, console_logger_ready,
+ 
+         ])
+
