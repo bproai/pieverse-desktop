@@ -31,6 +31,8 @@ import Editor, { loader } from '@monaco-editor/react';
 import { Clipboard } from 'lucide-react'; // Add to your existing lucide-react imports
 import { applyPatch, parsePatch, createPatch } from 'diff';
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
+import { isUnifiedDiff, parseAiSuggestion, extractFilePathFromDiff, convertUnifiedDiffToAiDiff } from './diffParser';
+
 
 loader.config({
   paths: {
@@ -112,106 +114,389 @@ const VSCodeIntegrationPanel: React.FC = () => {
       
       console.log("Starting to parse clipboard text");
       
-      try {
-        // Check if it's a unified diff
-        if (clipboardText.match(/^---\s+a\/.*\n\+\+\+\s+b\/.*(\n@@.*@@.*)+/m)) {
-          console.log("Detected unified diff format, using Unix patch");
+      // First, check if it's a text-pattern AI suggestion
+      const parsedAiSuggestion = parseAiSuggestion(clipboardText);
+      
+      if (parsedAiSuggestion) {
+        console.log("Detected text-based AI suggestion format with", parsedAiSuggestion.fromCode.length, "code blocks");
+        
+        // Set description if available
+        if (parsedAiSuggestion.description) {
+          setDescription(parsedAiSuggestion.description);
+        }
+        
+        // If we have a file path, try to load and patch the file
+        if (parsedAiSuggestion.filePath) {
+          setOriginalFile(parsedAiSuggestion.filePath);
           
-          // Extract file path from the +++ line
-          const filePathMatch = clipboardText.match(/\+\+\+\s+b\/([^\n]+)/);
-          const filePath = filePathMatch ? filePathMatch[1].trim() : undefined;
-          
-          if (filePath) {
-            console.log("Found file path:", filePath);
-            setOriginalFile(filePath);
-            
-            // Load the original file
-            const fileContent = await findAndLoadFile(filePath);
-            if (!fileContent) {
-              showNotificationIfEnabled(
-                'Error',
-                'Could not load the original file',
-                'red'
-              );
-              setLoading(false);
-              return;
-            }
-            
-            console.log("File loaded successfully, length:", fileContent.length);
-            
-            try {
-              // Apply the patch using our backend command
-              // We use -p1 by default which is standard for git-generated patches
-              const patchLevel = 1;
-              const result = await core.invoke('apply_unix_patch', { 
-                filePath,
-                diffContent: clipboardText,
-                stripLevel: patchLevel
-              });
-              
-              // If we got here, patch was successful
-              console.log("Patch applied successfully");
-              setSuggestedContent(result as string);
-              showNotificationIfEnabled(
-                'Success',
-                'Diff applied successfully',
-                'green'
-              );
-            } catch (patchError) {
-              console.error("Error applying patch:", patchError);
-              
-              // If the patch failed with -p1, try with -p0
-              try {
-                console.log("Trying alternative patch level -p0");
-                const result = await core.invoke('apply_unix_patch', { 
-                  filePath,
-                  diffContent: clipboardText,
-                  stripLevel: 0
-                });
-                
-                console.log("Patch applied successfully with -p0");
-                setSuggestedContent(result as string);
-                showNotificationIfEnabled(
-                  'Success',
-                  'Diff applied successfully with alternative patch level',
-                  'green'
-                );
-              } catch (retryError) {
-                // Both attempts failed
-                console.error("Error applying patch (retry):", retryError);
-                showNotificationIfEnabled(
-                  'Error',
-                  `Failed to apply patch: ${retryError}`,
-                  'red'
-                );
-                setSuggestedContent(fileContent);
-              }
-            }
-          } else {
-            console.log("No file path found in the diff");
+          // Load the original file
+          const fileContent = await findAndLoadFile(parsedAiSuggestion.filePath);
+          if (!fileContent) {
             showNotificationIfEnabled(
               'Error',
-              'Could not extract file path from the diff',
+              'Could not load the original file',
               'red'
+            );
+            // Still set the suggested content to the "to" code from the first hunk
+            if (parsedAiSuggestion.toCode.length > 0) {
+              setSuggestedContent(parsedAiSuggestion.toCode[0]);
+            }
+            setLoading(false);
+            return;
+          }
+          
+          console.log("File loaded successfully, length:", fileContent.length);
+          
+          // Apply each hunk in order
+          let modifiedContent = fileContent;
+          let successCount = 0;
+          
+          for (let i = 0; i < parsedAiSuggestion.fromCode.length; i++) {
+            const fromCode = parsedAiSuggestion.fromCode[i];
+            const toCode = parsedAiSuggestion.toCode[i];
+            
+            console.log(`Processing hunk ${i+1} of ${parsedAiSuggestion.fromCode.length}`);
+            console.log(`From code: ${fromCode.substring(0, 50)}...`);
+            
+            // First try exact matching
+            let foundMatch = false;
+            if (modifiedContent.includes(fromCode)) {
+              console.log(`Found exact match for hunk ${i+1}`);
+              // Simple string replacement for exact matches
+              modifiedContent = modifiedContent.replace(fromCode, toCode);
+              foundMatch = true;
+              successCount++;
+            } 
+            // If exact match fails, try normalized matching
+            else {
+              console.log("No exact match, trying normalized matching");
+              
+              // More lenient normalized matching that ignores whitespace and comments
+              const normalizedContent = normalizeCode(modifiedContent);
+              const normalizedFromCode = normalizeCode(fromCode);
+              
+              if (normalizedContent.includes(normalizedFromCode)) {
+                console.log(`Found normalized match for hunk ${i+1}`);
+                const normalizedStartIndex = normalizedContent.indexOf(normalizedFromCode);
+                
+                // Find the actual start and end in the modified content
+                const actualStartIndex = findActualCodeStart(modifiedContent, normalizedContent, normalizedStartIndex);
+                const actualEndIndex = findActualCodeEnd(modifiedContent, actualStartIndex);
+                
+                // Check if we found reasonable boundaries
+                if (actualEndIndex > actualStartIndex) {
+                  const originalSegment = modifiedContent.substring(actualStartIndex, actualEndIndex);
+                  console.log(`Original segment (${originalSegment.length} chars): ${originalSegment.substring(0, 50)}...`);
+                  
+                  // Replace the code block
+                  modifiedContent = 
+                    modifiedContent.substring(0, actualStartIndex) + 
+                    toCode + 
+                    modifiedContent.substring(actualEndIndex);
+                  
+                  foundMatch = true;
+                  successCount++;
+                } else {
+                  console.log(`Invalid code boundaries detected: start=${actualStartIndex}, end=${actualEndIndex}`);
+                }
+              }
+            }
+            
+            // If still no match, try a more aggressive matching strategy
+            if (!foundMatch) {
+              console.log(`Attempting fuzzy match for hunk ${i+1}`);
+              
+              // Split into lines for more flexible matching
+              const contentLines = modifiedContent.split('\n');
+              const fromLines = fromCode.trim().split('\n');
+              
+              // Search for the first line of the "from" block
+              const firstFromLine = fromLines[0].trim();
+              let matchStartLine = -1;
+              
+              for (let lineIdx = 0; lineIdx < contentLines.length; lineIdx++) {
+                if (contentLines[lineIdx].trim() === firstFromLine) {
+                  // Found potential match start
+                  let matchFound = true;
+                  
+                  // Try to match subsequent lines
+                  for (let j = 1; j < fromLines.length; j++) {
+                    if (lineIdx + j >= contentLines.length || 
+                        contentLines[lineIdx + j].trim() !== fromLines[j].trim()) {
+                      matchFound = false;
+                      break;
+                    }
+                  }
+                  
+                  if (matchFound) {
+                    matchStartLine = lineIdx;
+                    break;
+                  }
+                }
+              }
+              
+              if (matchStartLine >= 0) {
+                console.log(`Found fuzzy match at line ${matchStartLine}`);
+                
+                // Replace the matched lines with the "to" lines
+                const toLines = toCode.trim().split('\n');
+                const beforeLines = contentLines.slice(0, matchStartLine);
+                const afterLines = contentLines.slice(matchStartLine + fromLines.length);
+                
+                modifiedContent = [...beforeLines, ...toLines, ...afterLines].join('\n');
+                
+                successCount++;
+              } else {
+                console.log(`Could not find match for hunk ${i+1}`);
+              }
+            }
+          }
+          
+          // Set the final result
+          setSuggestedContent(modifiedContent);
+          
+          // Show appropriate notification based on success
+          if (successCount === parsedAiSuggestion.fromCode.length) {
+            showNotificationIfEnabled(
+              'Success',
+              `All ${successCount} code blocks found and replaced successfully`,
+              'green'
+            );
+          } else if (successCount > 0) {
+            showNotificationIfEnabled(
+              'Partial Success',
+              `Applied ${successCount} of ${parsedAiSuggestion.fromCode.length} code blocks`,
+              'blue'
+            );
+          } else {
+            showNotificationIfEnabled(
+              'Warning',
+              'Could not find any matching code blocks in file',
+              'yellow'
             );
           }
         } else {
-          console.log("Not a unified diff format");
+          // No file path, just use the "to" code from the first hunk
+          console.log("No file path in AI suggestion");
+          if (parsedAiSuggestion.toCode.length > 0) {
+            setSuggestedContent(parsedAiSuggestion.toCode.join('\n\n'));
+          }
+          
           showNotificationIfEnabled(
-            'Error',
-            'The clipboard content is not a valid unified diff',
-            'yellow'
+            'Info',
+            'No file path detected. Using suggested code only.',
+            'blue'
           );
         }
-      } catch (error) {
-        console.error("Error processing clipboard content:", error);
+      } 
+      // If not a text pattern, check if it's a unified diff
+      else if (isUnifiedDiff(clipboardText)) {
+        // This part remains the same as your original implementation
+        console.log("Detected unified diff format, using Unix patch");
+        
+        // Extract file path from the diff
+        const filePath = extractFilePathFromDiff(clipboardText);
+        
+        if (filePath) {
+          console.log("Found file path:", filePath);
+          setOriginalFile(filePath);
+          
+          // Load the original file
+          const fileContent = await findAndLoadFile(filePath);
+          if (!fileContent) {
+            showNotificationIfEnabled(
+              'Error',
+              'Could not load the original file',
+              'red'
+            );
+            setLoading(false);
+            return;
+          }
+          
+          console.log("File loaded successfully, length:", fileContent.length);
+          
+          try {
+            // Try to apply the patch using our backend command
+            const patchLevel = 1;
+            const result = await core.invoke('apply_unix_patch', { 
+              filePath,
+              diffContent: clipboardText,
+              stripLevel: patchLevel
+            });
+            
+            // If we got here, patch was successful
+            console.log("Patch applied successfully");
+            setSuggestedContent(result as string);
+            showNotificationIfEnabled(
+              'Success',
+              'Diff applied successfully',
+              'green'
+            );
+          } catch (patchError) {
+            console.error("Error applying patch:", patchError);
+            
+            // If the patch failed with -p1, try with -p0
+            try {
+              console.log("Trying alternative patch level -p0");
+              const result = await core.invoke('apply_unix_patch', { 
+                filePath,
+                diffContent: clipboardText,
+                stripLevel: 0
+              });
+              
+              console.log("Patch applied successfully with -p0");
+              setSuggestedContent(result as string);
+              showNotificationIfEnabled(
+                'Success',
+                'Diff applied successfully with alternative patch level',
+                'green'
+              );
+            } catch (retryError) {
+              // Both patch attempts failed
+              console.error("Error applying patch (retry):", retryError);
+              
+              // Since unified diff failed, try to convert it to a text-matching format
+              console.log("Attempting to convert unified diff to text-matching format");
+              
+              // Convert unified diff to text-matching format
+              const convertedDiff = convertUnifiedDiffToAiDiff(clipboardText, filePath);
+              
+              if (convertedDiff && convertedDiff.fromCode.length > 0 && convertedDiff.toCode.length > 0) {
+                // Apply each hunk using the same robust algorithm as above
+                let modifiedContent = fileContent;
+                let successCount = 0;
+                
+                for (let i = 0; i < convertedDiff.fromCode.length; i++) {
+                  const fromCode = convertedDiff.fromCode[i];
+                  const toCode = convertedDiff.toCode[i];
+                  
+                  // First try exact matching
+                  let foundMatch = false;
+                  if (modifiedContent.includes(fromCode)) {
+                    // Simple string replacement for exact matches
+                    modifiedContent = modifiedContent.replace(fromCode, toCode);
+                    foundMatch = true;
+                    successCount++;
+                  } 
+                  // If exact match fails, try normalized matching
+                  else {
+                    // Normalized matching that ignores whitespace and comments
+                    const normalizedContent = normalizeCode(modifiedContent);
+                    const normalizedFromCode = normalizeCode(fromCode);
+                    
+                    if (normalizedContent.includes(normalizedFromCode)) {
+                      const normalizedStartIndex = normalizedContent.indexOf(normalizedFromCode);
+                      
+                      // Find the actual start and end in the modified content
+                      const actualStartIndex = findActualCodeStart(modifiedContent, normalizedContent, normalizedStartIndex);
+                      const actualEndIndex = findActualCodeEnd(modifiedContent, actualStartIndex);
+                      
+                      // Check if we found reasonable boundaries
+                      if (actualEndIndex > actualStartIndex) {
+                        // Replace the code block
+                        modifiedContent = 
+                          modifiedContent.substring(0, actualStartIndex) + 
+                          toCode + 
+                          modifiedContent.substring(actualEndIndex);
+                        
+                        foundMatch = true;
+                        successCount++;
+                      }
+                    }
+                  }
+                  
+                  // If still no match, try line-by-line matching
+                  if (!foundMatch) {
+                    // Split into lines for more flexible matching
+                    const contentLines = modifiedContent.split('\n');
+                    const fromLines = fromCode.trim().split('\n');
+                    
+                    // Search for the first line of the "from" block
+                    const firstFromLine = fromLines[0].trim();
+                    let matchStartLine = -1;
+                    
+                    for (let lineIdx = 0; lineIdx < contentLines.length; lineIdx++) {
+                      if (contentLines[lineIdx].trim() === firstFromLine) {
+                        // Found potential match start
+                        let matchFound = true;
+                        
+                        // Try to match subsequent lines
+                        for (let j = 1; j < fromLines.length; j++) {
+                          if (lineIdx + j >= contentLines.length || 
+                              contentLines[lineIdx + j].trim() !== fromLines[j].trim()) {
+                            matchFound = false;
+                            break;
+                          }
+                        }
+                        
+                        if (matchFound) {
+                          matchStartLine = lineIdx;
+                          break;
+                        }
+                      }
+                    }
+                    
+                    if (matchStartLine >= 0) {
+                      // Replace the matched lines with the "to" lines
+                      const toLines = toCode.trim().split('\n');
+                      const beforeLines = contentLines.slice(0, matchStartLine);
+                      const afterLines = contentLines.slice(matchStartLine + fromLines.length);
+                      
+                      modifiedContent = [...beforeLines, ...toLines, ...afterLines].join('\n');
+                      
+                      successCount++;
+                    }
+                  }
+                }
+                
+                // Set the final result
+                setSuggestedContent(modifiedContent);
+                
+                // Show appropriate notification based on success
+                if (successCount === convertedDiff.fromCode.length) {
+                  showNotificationIfEnabled(
+                    'Success',
+                    `Unified diff converted and all ${successCount} hunks applied using text matching`,
+                    'green'
+                  );
+                } else if (successCount > 0) {
+                  showNotificationIfEnabled(
+                    'Partial Success',
+                    `Unified diff converted and ${successCount} of ${convertedDiff.fromCode.length} hunks applied`,
+                    'blue'
+                  );
+                } else {
+                  showNotificationIfEnabled(
+                    'Error',
+                    'Could not find any matching code blocks after converting diff',
+                    'red'
+                  );
+                }
+              } else {
+                setSuggestedContent(fileContent);
+                showNotificationIfEnabled(
+                  'Error',
+                  'Failed to extract code blocks from unified diff',
+                  'red'
+                );
+              }
+            }
+          }
+        } else {
+          console.log("No file path found in the diff");
+          showNotificationIfEnabled(
+            'Error',
+            'Could not extract file path from the diff',
+            'red'
+          );
+        }
+      } else {
+        console.log("Clipboard content is not in a recognized format");
         showNotificationIfEnabled(
           'Error',
-          `Error processing clipboard content: ${error.message}`,
-          'red'
+          'The clipboard content is not in a recognized format (neither text-match nor unified diff)',
+          'yellow'
         );
-      } finally {
-        setLoading(false);
       }
     } catch (error) {
       console.error('Failed to read clipboard:', error);
@@ -220,7 +505,7 @@ const VSCodeIntegrationPanel: React.FC = () => {
         `Unable to read clipboard: ${error}`,
         'red'
       );
-      
+    } finally {
       setLoading(false);
     }
   };
