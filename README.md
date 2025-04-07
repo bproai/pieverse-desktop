@@ -192,6 +192,17 @@ Beyond a simple digital assistant, the Complete Digital Twin serves as an evolvi
   - **Context-aware help:** Get targeted coding assistance based on your active files
   - **Development playbooks:** Access customized coding strategies for your specific projects
 - Custom terminal implementation provides a full shell experience while maintaining output capture capability
+- **Unified Diff Handling**: 
+  - Process and apply unified diffs directly from clipboard
+  - Intelligently detect file paths within diffs
+  - Patch files with appropriate strip levels (p0/p1)
+  - Preview changes before applying them
+  - Handles both development and production environments
+  - Support for viewing the patched content in the integrated editor
+  - Robust error handling with detailed diagnostics
+  - Keyboard shortcut support (Ctrl+Shift+V or Cmd+Shift+V)
+  - Cross-platform compatibility for patch operations
+  - JSON payload debugging for troubleshooting
 
 ### 🧠 AI/Human Collaborative Learning
 
