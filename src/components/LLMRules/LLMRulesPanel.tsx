@@ -57,11 +57,13 @@ interface LLMRule {
   content: string;
   tags: string[];
   variables: LLMRuleVariable[];
-  dateCreated: string;
-  dateModified: string;
-  isSystem: boolean;
+  date_created: string;
+  date_modified: string;
+  is_system: boolean;
   color: string;
 }
+
+
 
 // LLM Models data
 const llmModels = [
@@ -95,14 +97,14 @@ const LLMRulesPanel: React.FC = () => {
   const [showPreview, setShowPreview] = useState(false);
   
   // New rule form state
-  const [newRule, setNewRule] = useState<Omit<LLMRule, 'id' | 'dateCreated' | 'dateModified'>>({
+  const [newRule, setNewRule] = useState<Omit<LLMRule, 'id' | 'date_created' | 'date_modified'>>({
     name: '',
     description: '',
     model: 'Any Model',
     content: '',
     tags: [],
     variables: [],
-    isSystem: false,
+    is_system: false,
     color: colorOptions[0]
   });
   
@@ -127,174 +129,13 @@ const LLMRulesPanel: React.FC = () => {
   
   const loadRules = async () => {
     try {
-      // In a real implementation, this would call a Tauri command
-      // For now, we'll use mock data
-      const mockRules: LLMRule[] = [
-        {
-          id: '1',
-          name: 'Expert Coding Assistant',
-          description: 'Instructions for an LLM to behave as a coding expert',
-          model: 'any-model',
-          content: `You are an expert software developer specializing in modern web technologies.
-Follow these guidelines:
-- Provide clean, efficient, and well-commented code
-- Explain your approach before diving into code
-- Offer multiple solutions when appropriate
-- Highlight potential issues or edge cases
-- Be concise but thorough
-- When providing code examples, focus on production-ready patterns
-
-Remember to consider performance, security, and maintainability in all your suggestions.
-If the user's request is unclear, ask clarifying questions before providing a solution.
-
-Use variables like this:
-- Preferred language: {{preferredLanguage}}
-- Project type: {{projectType}}
-- Experience level: {{experienceLevel}}`,
-          tags: ['coding', 'programming', 'software development'],
-          variables: [
-            {
-              name: 'preferredLanguage',
-              description: 'The programming language the user prefers',
-              defaultValue: 'JavaScript',
-              type: 'select',
-              options: ['JavaScript', 'TypeScript', 'Python', 'Rust', 'Go', 'Java', 'C#']
-            },
-            {
-              name: 'projectType',
-              description: 'The type of project the user is working on',
-              defaultValue: 'Web Application',
-              type: 'text'
-            },
-            {
-              name: 'experienceLevel',
-              description: 'The user\'s experience level',
-              defaultValue: 'Intermediate',
-              type: 'select',
-              options: ['Beginner', 'Intermediate', 'Advanced', 'Expert']
-            }
-          ],
-          dateCreated: '2023-11-20T08:30:00Z',
-          dateModified: '2024-02-15T14:45:00Z',
-          isSystem: true,
-          color: '#228BE6'
-        },
-        {
-          id: '2',
-          name: 'Creative Writing Coach',
-          description: 'Instructions for an LLM to act as a writing coach',
-          model: 'claude-3.7-sonnet',
-          content: `You are a supportive and insightful creative writing coach.
-Your goal is to help writers improve their craft while maintaining their unique voice.
-
-Follow these guidelines:
-- Provide constructive feedback that balances positives with areas for improvement
-- Focus on storytelling elements: plot, character development, setting, dialogue, pacing
-- Suggest concrete examples when possible
-- Adapt your approach based on {{genre}} and {{targetAudience}}
-- Consider the writer's {{experienceLevel}} when offering advice
-- Be encouraging but honest
-
-When reviewing work, consider both technical aspects and creative expression.
-If asked for specific exercises or prompts, tailor them to help the writer develop their skills.
-
-Remember: your goal is to help the writer tell THEIR story better, not to rewrite it as your own.`,
-          tags: ['writing', 'creativity', 'coaching'],
-          variables: [
-            {
-              name: 'genre',
-              description: 'The genre of writing',
-              defaultValue: 'Fiction',
-              type: 'select',
-              options: ['Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Romance', 'Literary', 'Non-fiction', 'Poetry']
-            },
-            {
-              name: 'targetAudience',
-              description: 'The target audience for the writing',
-              defaultValue: 'Adult',
-              type: 'select',
-              options: ['Children', 'Young Adult', 'Adult', 'Academic', 'Professional']
-            },
-            {
-              name: 'experienceLevel',
-              description: 'The writer\'s experience level',
-              defaultValue: 'Intermediate',
-              type: 'select',
-              options: ['Beginner', 'Intermediate', 'Advanced']
-            }
-          ],
-          dateCreated: '2023-12-05T10:15:00Z',
-          dateModified: '2024-03-01T09:30:00Z',
-          isSystem: false,
-          color: '#40C057'
-        },
-        {
-          id: '3',
-          name: 'Tauri 2.0 Developer',
-          description: 'Instructs LLMs to use correct Tauri 2.0 APIs and patterns',
-          model: 'any-model',
-          content: `You are assisting with a React + Tauri 2.0 application. Be aware of the following important differences between Tauri 1.0 and 2.0:
-
-1. API IMPORTS AND INVOCATION:
-   - Tauri 1.0: \`import { invoke } from '@tauri-apps/api/tauri';\`
-   - Tauri 2.0: \`import { core } from '@tauri-apps/api';\` and use \`core.invoke()\`
-
-2. DIALOG API:
-   - Tauri 1.0: Uses \`@tauri-apps/api/dialog\`
-   - Tauri 2.0: Uses \`@tauri-apps/plugin-dialog\`
-
-3. FILESYSTEM ACCESS:
-   - Tauri 1.0: Direct path resolution methods
-   - Tauri 2.0: Uses \`app_handle.path().app_data_dir()\` pattern
-
-4. WINDOW MANAGEMENT:
-   - Tauri 1.0: Different window creation API
-   - Tauri 2.0: Updated window management patterns
-
-5. PLUGIN SYSTEMS:
-   - Tauri 2.0 has a new plugin registration system
-
-Always refer to the latest Tauri 2.0 documentation at https://v2.tauri.app/ when providing code examples. Do not use outdated Tauri 1.0 patterns or APIs in your responses.
-
-When encountering code using Tauri 1.0 patterns, explicitly point out the needed changes for Tauri 2.0 compatibility, focusing especially on properly importing and using \`core.invoke()\` instead of \`invoke()\`.
-
-When suggesting code modifications, make only necessary changes while preserving existing code structure and comments. Prefer small, incremental changes that will appear as minimal diffs rather than large code block replacements.
-
-Use variables like this:
-- Project focus: {{projectFocus}}
-- Additional considerations: {{additionalNotes}}`,
-          tags: ['tauri', 'react', 'coding', 'compatibility'],
-          variables: [
-            {
-              name: 'projectFocus',
-              description: 'The specific area of Tauri development',
-              defaultValue: 'Full-stack integration',
-              type: 'select',
-              options: ['Frontend integration', 'Backend services', 'Full-stack integration', 'Plugin development']
-            },
-            {
-              name: 'additionalNotes',
-              description: 'Any additional considerations for the project',
-              defaultValue: 'Focus on cross-platform compatibility',
-              type: 'text'
-            }
-          ],
-          dateCreated: new Date().toISOString(),
-          dateModified: new Date().toISOString(),
-          isSystem: true,
-          color: '#4C6EF5'
-        }
-      ];
-      
-      setRules(mockRules);
-      
-      // In the real implementation:
-      // const storedRules = await core.invoke('load_llm_rules');
-      // setRules(JSON.parse(storedRules));
+      // Call the Tauri command to load rules
+      const loadedRules = await core.invoke('load_llm_rules');
+      setRules(loadedRules as LLMRule[]);
       
       // Select the first rule by default if available
-      if (mockRules.length > 0 && !selectedRuleId) {
-        setSelectedRuleId(mockRules[0].id);
+      if (loadedRules && (loadedRules as LLMRule[]).length > 0 && !selectedRuleId) {
+        setSelectedRuleId((loadedRules as LLMRule[])[0].id);
       }
     } catch (error) {
       console.error('Failed to load LLM rules:', error);
@@ -308,9 +149,9 @@ Use variables like this:
   
   const saveRules = async (updatedRules: LLMRule[]) => {
     try {
-      // In a real implementation, save to storage via Tauri
-      // await core.invoke('save_llm_rules', { rules: JSON.stringify(updatedRules) });
-      console.log('Rules saved:', updatedRules);
+      // Call the Tauri command to save rules
+      await core.invoke('save_llm_rules', { rules: updatedRules });
+      console.log('Rules saved successfully');
     } catch (error) {
       console.error('Failed to save rules:', error);
       notifications.show({
@@ -334,8 +175,8 @@ Use variables like this:
     const newItem: LLMRule = {
       ...newRule,
       id: Date.now().toString(),
-      dateCreated: new Date().toISOString(),
-      dateModified: new Date().toISOString(),
+      date_created: new Date().toISOString(),
+      date_modified: new Date().toISOString(),
     };
     
     const updatedRules = [...rules, newItem];
@@ -355,8 +196,8 @@ Use variables like this:
       updatedRules[index] = {
         ...newRule,
         id,
-        dateCreated: rules[index].dateCreated,
-        dateModified: new Date().toISOString(),
+        date_created: rules[index].date_created,
+        date_modified: new Date().toISOString(),
       } as LLMRule;
       
       setRules(updatedRules);
@@ -384,9 +225,9 @@ Use variables like this:
         ...ruleToDuplicate,
         id: Date.now().toString(),
         name: `${ruleToDuplicate.name} (Copy)`,
-        dateCreated: new Date().toISOString(),
-        dateModified: new Date().toISOString(),
-        isSystem: false, // Always false for duplicated rules
+        date_created: new Date().toISOString(),
+        date_modified: new Date().toISOString(),
+        is_system: false, // Always false for duplicated rules
       };
       
       const updatedRules = [...rules, duplicatedRule];
@@ -409,7 +250,7 @@ Use variables like this:
         content: rule.content,
         tags: [...rule.tags],
         variables: [...rule.variables],
-        isSystem: rule.isSystem,
+        is_system: rule.is_system,
         color: rule.color
       });
       
@@ -487,7 +328,7 @@ Use variables like this:
       content: '',
       tags: [],
       variables: [],
-      isSystem: false,
+      is_system: false,
       color: colorOptions[0]
     });
     setNewVariable({
@@ -535,23 +376,29 @@ Use variables like this:
       });
   };
   
-  const exportRules = () => {
+  const exportRules = async () => {
     try {
-      const dataStr = JSON.stringify(rules, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      // Use Tauri's dialog plugin to show a save dialog
+      const { save } = await import('@tauri-apps/plugin-dialog');
       
-      const exportFileDefaultName = `llm_rules_export_${new Date().toISOString().slice(0, 10)}.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-      
-      notifications.show({
-        title: 'Success',
-        message: 'Rules exported successfully',
-        color: 'green',
+      const filePath = await save({
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }],
+        defaultPath: `llm_rules_export_${new Date().toISOString().slice(0, 10)}.json`
       });
+      
+      if (filePath) {
+        // Use Tauri command to export rules to the selected path
+        await core.invoke('export_llm_rules', { path: filePath });
+        
+        notifications.show({
+          title: 'Success',
+          message: 'Rules exported successfully',
+          color: 'green',
+        });
+      }
     } catch (error) {
       console.error('Failed to export rules:', error);
       notifications.show({
@@ -600,6 +447,60 @@ Use variables like this:
     
     return matchesSearch && matchesModel;
   });
+
+  const importRules = async () => {
+    try {
+      // Use Tauri's dialog plugin to show an open dialog
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      
+      const filePath = await open({
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }],
+        multiple: false
+      });
+      
+      if (filePath) {
+        try {
+          // Use Tauri command to import rules
+          await core.invoke('import_llm_rules', { path: filePath });
+          
+          // Reload rules to display the imported ones
+          await loadRules();
+          
+          notifications.show({
+            title: 'Success',
+            message: 'Rules imported successfully',
+            color: 'green',
+          });
+        } catch (error) {
+          console.error('Import error details:', error);
+          let errorMessage = 'Failed to import rules';
+          
+          // Try to extract more detailed error message if available
+          if (typeof error === 'string') {
+            errorMessage = error;
+          } else if (error && typeof error.message === 'string') {
+            errorMessage = error.message;
+          }
+          
+          notifications.show({
+            title: 'Error',
+            message: errorMessage,
+            color: 'red',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to open file dialog:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to open file selection dialog',
+        color: 'red',
+      });
+    }
+  };
   
   const selectedRule = selectedRuleId 
     ? rules.find(rule => rule.id === selectedRuleId) 
@@ -667,7 +568,7 @@ Use variables like this:
                       <ColorSwatch color={rule.color} size={16} mr={8} />
                       <Text weight={500}>{rule.name}</Text>
                     </div>
-                    {rule.isSystem && (
+                    {rule.is_system && (
                       <Badge size="xs" color="blue">System</Badge>
                     )}
                   </Group>
@@ -677,7 +578,7 @@ Use variables like this:
                   <Group position="apart" mt="xs">
                     <Badge size="xs">{rule.model}</Badge>
                     <Text size="xs" color="dimmed">
-                      {new Date(rule.dateModified).toLocaleDateString()}
+                      {new Date(rule.date_modified).toLocaleDateString()}
                     </Text>
                   </Group>
                 </Card>
@@ -697,13 +598,7 @@ Use variables like this:
           <Button 
             variant="outline" 
             leftSection={<Upload size={16} />}
-            onClick={() => {
-              notifications.show({
-                title: 'Info',
-                message: 'Import functionality will be implemented in a future update.',
-                color: 'blue',
-              });
-            }}
+            onClick={importRules}
           >
             Import Rules
           </Button>
@@ -934,8 +829,8 @@ Use variables like this:
                   
                   <Switch
                     label="System Rule (cannot be deleted by users)"
-                    checked={newRule.isSystem}
-                    onChange={(event) => setNewRule({...newRule, isSystem: event.currentTarget.checked})}
+                    checked={newRule.is_system}
+                    onChange={(event) => setNewRule({...newRule, is_system: event.currentTarget.checked})}
                   />
                 </Tabs.Panel>
               </Tabs>
@@ -966,7 +861,7 @@ Use variables like this:
                     <Group align="center">
                       <ColorSwatch color={selectedRule.color} size={16} />
                       <Text size="xl" weight={700}>{selectedRule.name}</Text>
-                      {selectedRule.isSystem && (
+                      {selectedRule.is_system && (
                         <Badge color="blue">System</Badge>
                       )}
                     </Group>
@@ -988,7 +883,7 @@ Use variables like this:
                     >
                       Duplicate
                     </Button>
-                    {!selectedRule.isSystem && (
+                    {!selectedRule.is_system && (
                       <Button 
                         variant="outline" 
                         color="red"
@@ -1012,10 +907,10 @@ Use variables like this:
                 
                 <Group position="apart" mt="xs">
                   <Text size="xs" color="dimmed">
-                    Created: {new Date(selectedRule.dateCreated).toLocaleString()}
+                    Created: {new Date(selectedRule.date_created).toLocaleString()}
                   </Text>
                   <Text size="xs" color="dimmed">
-                    Last modified: {new Date(selectedRule.dateModified).toLocaleString()}
+                    Last modified: {new Date(selectedRule.date_modified).toLocaleString()}
                   </Text>
                 </Group>
               </Card>

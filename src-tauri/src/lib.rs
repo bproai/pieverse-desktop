@@ -101,6 +101,9 @@ use services::webview_devtools::{
     receive_console_log, console_logger_ready, WebViewDevToolsState,
 };
 
+use services::llm_rules::{
+    load_llm_rules, save_llm_rules, export_llm_rules, import_llm_rules,
+};
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -309,6 +312,11 @@ pub fn run() {
             open_webview_devtools, close_webview_devtools, is_webview_devtools_open,
     inject_console_logger, execute_javascript, is_console_logger_injected,
     receive_console_log, console_logger_ready,apply_unix_patch,
+
+            load_llm_rules,
+            save_llm_rules,
+            export_llm_rules,
+            import_llm_rules,
 
         ])
         .run(tauri::generate_context!())

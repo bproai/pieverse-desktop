@@ -266,3 +266,71 @@ pub async fn save_llm_rules(
     let rules_service = LLMRulesService::new(app_handle);
     rules_service.save_rules(rules)
 }
+
+
+#[tauri::command]
+pub async fn export_llm_rules(
+    app_handle: tauri::AppHandle,
+    path: String,
+) -> Result<(), String> {
+    let rules_service = LLMRulesService::new(app_handle.clone());
+    
+    // Load the rules
+    let rules = rules_service.load_rules()?;
+    
+    // Convert to JSON with pretty formatting
+    let json = serde_json::to_string_pretty(&rules)
+        .map_err(|e| format!("Failed to serialize rules: {}", e))?;
+    
+    // Write to the specified path
+    std::fs::write(&path, json).map_err(|e| format!("Failed to write export file: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn import_llm_rules(
+    app_handle: tauri::AppHandle,
+    path: String,
+) -> Result<(), String> {
+    println!("Attempting to import rules from: {}", path);
+    
+    // Read rules from the file
+    let content = match std::fs::read_to_string(&path) {
+        Ok(content) => {
+            println!("Successfully read file content");
+            content
+        },
+        Err(e) => {
+            let error_msg = format!("Failed to read import file: {}", e);
+            println!("{}", error_msg);
+            return Err(error_msg);
+        }
+    };
+    
+    // Parse the rules - Add explicit type parameter here
+    let imported_rules: Vec<LLMRule> = match serde_json::from_str::<Vec<LLMRule>>(&content) {
+        Ok(rules) => {
+            println!("Successfully parsed {} rules", rules.len());
+            rules
+        },
+        Err(e) => {
+            let error_msg = format!("Failed to parse imported rules: {}", e);
+            println!("{}", error_msg);
+            return Err(error_msg);
+        }
+    };
+    
+    // Create service and save the imported rules
+    let rules_service = LLMRulesService::new(app_handle);
+    match rules_service.save_rules(imported_rules) {
+        Ok(_) => {
+            println!("Import completed successfully");
+            Ok(())
+        },
+        Err(e) => {
+            println!("Error saving imported rules: {}", e);
+            Err(e)
+        }
+    }
+}
