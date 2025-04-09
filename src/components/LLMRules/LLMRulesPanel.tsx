@@ -44,7 +44,7 @@ import { core } from '@tauri-apps/api';
 interface LLMRuleVariable {
   name: string;
   description: string;
-  defaultValue: string;
+  default_value: string;
   type: 'text' | 'number' | 'boolean' | 'select';
   options?: string[]; // For select type
 }
@@ -112,7 +112,7 @@ const LLMRulesPanel: React.FC = () => {
   const [newVariable, setNewVariable] = useState<LLMRuleVariable>({
     name: '',
     description: '',
-    defaultValue: '',
+    default_value: '',
     type: 'text'
   });
   
@@ -250,7 +250,8 @@ const LLMRulesPanel: React.FC = () => {
         content: rule.content,
         tags: [...rule.tags],
         variables: [...rule.variables],
-        is_system: rule.is_system,
+        // is_system: rule.is_system,
+        is_system: false,
         color: rule.color
       });
       
@@ -308,7 +309,7 @@ const LLMRulesPanel: React.FC = () => {
     setNewVariable({
       name: '',
       description: '',
-      defaultValue: '',
+      default_value: '',
       type: 'text'
     });
   };
@@ -318,6 +319,45 @@ const LLMRulesPanel: React.FC = () => {
       ...newRule,
       variables: newRule.variables.filter(v => v.name !== name)
     });
+  };
+  
+  const [editingVariable, setEditingVariable] = useState<string | null>(null);
+  
+  const startEditingVariable = (variable: LLMRuleVariable) => {
+    setNewVariable({...variable});
+    setEditingVariable(variable.name);
+  };
+  
+  const updateVariable = () => {
+    if (!editingVariable) return;
+    
+    const updatedVariables = newRule.variables.map(v => 
+      v.name === editingVariable ? {...newVariable} : v
+    );
+    
+    setNewRule({
+      ...newRule,
+      variables: updatedVariables
+    });
+    
+    // Reset variable form
+    setNewVariable({
+      name: '',
+      description: '',
+      default_value: '',
+      type: 'text'
+    });
+    setEditingVariable(null);
+  };
+  
+  const cancelEditingVariable = () => {
+    setNewVariable({
+      name: '',
+      description: '',
+      default_value: '',
+      type: 'text'
+    });
+    setEditingVariable(null);
   };
   
   const resetRuleForm = () => {
@@ -334,7 +374,7 @@ const LLMRulesPanel: React.FC = () => {
     setNewVariable({
       name: '',
       description: '',
-      defaultValue: '',
+      default_value: '',
       type: 'text'
     });
   };
@@ -429,7 +469,7 @@ const LLMRulesPanel: React.FC = () => {
         // Initialize preview variables with default values
         const variables: Record<string, string> = {};
         selectedRule.variables.forEach(v => {
-          variables[v.name] = v.defaultValue;
+          variables[v.name] = v.default_value;
         });
         setPreviewVariables(variables);
       }
@@ -731,8 +771,8 @@ const LLMRulesPanel: React.FC = () => {
                       <TextInput
                         label="Default Value"
                         placeholder="Default value"
-                        value={newVariable.defaultValue}
-                        onChange={(e) => setNewVariable({...newVariable, defaultValue: e.target.value})}
+                        value={newVariable.default_value}
+                        onChange={(e) => setNewVariable({...newVariable, default_value: e.target.value})}
                       />
                     </div>
                     
@@ -750,9 +790,28 @@ const LLMRulesPanel: React.FC = () => {
                       </div>
                     )}
                     
-                    <Button onClick={addVariable} leftSection={<Plus size={16} />}>
-                      Add Variable
-                    </Button>
+                    <Group>
+                      {editingVariable ? (
+                        <>
+                          <Button 
+                            onClick={updateVariable} 
+                            leftSection={<Save size={16} />}
+                          >
+                            Update Variable
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={cancelEditingVariable}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button onClick={addVariable} leftSection={<Plus size={16} />}>
+                          Add Variable
+                        </Button>
+                      )}
+                    </Group>
                   </Paper>
                   
                   <Text weight={500} mb="xs">Variables</Text>
@@ -772,7 +831,7 @@ const LLMRulesPanel: React.FC = () => {
                                 {variable.description || 'No description'}
                               </Text>
                               <Text size="xs">
-                                Default: {variable.defaultValue || 'None'}
+                                Default: {variable.default_value || 'None'}
                               </Text>
                               {variable.type === 'select' && variable.options && (
                                 <Text size="xs">
@@ -780,9 +839,14 @@ const LLMRulesPanel: React.FC = () => {
                                 </Text>
                               )}
                             </div>
-                            <ActionIcon color="red" onClick={() => removeVariable(variable.name)}>
-                              <Trash size={16} />
-                            </ActionIcon>
+                            <Group spacing={8}>
+                              <ActionIcon color="blue" onClick={() => startEditingVariable(variable)}>
+                                <Edit size={16} />
+                              </ActionIcon>
+                              <ActionIcon color="red" onClick={() => removeVariable(variable.name)}>
+                                <Trash size={16} />
+                              </ActionIcon>
+                            </Group>
                           </Group>
                         </Paper>
                       ))}
@@ -883,7 +947,7 @@ const LLMRulesPanel: React.FC = () => {
                     >
                       Duplicate
                     </Button>
-                    {!selectedRule.is_system && (
+                    {/*!selectedRule.is_system && */(
                       <Button 
                         variant="outline" 
                         color="red"
@@ -1012,7 +1076,7 @@ const LLMRulesPanel: React.FC = () => {
                                 <ActionIcon 
                                   onClick={() => setPreviewVariables({
                                     ...previewVariables,
-                                    [variable.name]: variable.defaultValue
+                                    [variable.name]: variable.default_value
                                   })}
                                 >
                                   <RefreshCw size={16} />
@@ -1022,10 +1086,10 @@ const LLMRulesPanel: React.FC = () => {
                             
                             {variable.type === 'select' && variable.options ? (
                               <Select
-                                value={previewVariables[variable.name] || variable.defaultValue}
+                                value={previewVariables[variable.name] || variable.default_value}
                                 onChange={(value) => setPreviewVariables({
                                   ...previewVariables,
-                                  [variable.name]: value || variable.defaultValue
+                                  [variable.name]: value || variable.default_value
                                 })}
                                 data={variable.options.map(option => ({
                                   value: option,
