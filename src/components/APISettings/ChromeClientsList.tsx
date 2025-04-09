@@ -65,7 +65,7 @@ export function ChromeClientsList() {
     <Card className="w-full" shadow="sm" padding="lg">
       <Stack>
         <Group justify="space-between">
-          <Text size="lg" weight={500}>Connected Chrome Clients</Text>
+          <Text size="lg" weight={500}>Connected ChatGPT or Claude Web Clients in Chrome</Text>
           <Group>
             <Badge color={clients.length > 0 ? 'green' : 'gray'} variant="filled">
               {clients.length} {clients.length === 1 ? 'Client' : 'Clients'}
