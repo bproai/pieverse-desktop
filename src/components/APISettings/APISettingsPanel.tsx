@@ -1,7 +1,7 @@
 // src/components/APISettings/APISettingsPanel.tsx
 import { useState, useEffect } from 'react';
 import { Card, Text, Group, TextInput, Button, Badge, Stack, Select, ActionIcon } from '@mantine/core';
-import { Settings, Power, PowerOff, Radio, RefreshCw } from 'lucide-react';
+import { Settings, Power, PowerOff, Radio, RefreshCw, Mic, MicOff } from 'lucide-react';
 import { core } from '@tauri-apps/api';
 import WebSocketService, { ClientInfo } from '../../services/WebSocketService';
 import { listen } from '@tauri-apps/api/event';
@@ -44,6 +44,60 @@ interface PlatformSelectItemProps {
   [key: string]: any;
 }
 
+// Add TypeScript definitions for SpeechRecognition
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+  error: any;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  grammars: any;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onsoundstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onspeechend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onspeechstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
 
 export function APISettingsPanel() {
   const [httpStatus, setHttpStatus] = useState('stopped');
@@ -64,6 +118,8 @@ export function APISettingsPanel() {
   const [sendingTest, setSendingTest] = useState(false);
   const [targetType, setTargetType] = useState<'broadcast' | 'platform' | 'client'>('broadcast');
   const [targetId, setTargetId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | null>(null);
 
   const [newChatStatus, setNewChatStatus] = useState<NewChatStatus>({ loading: false, result: null });
 
@@ -193,6 +249,47 @@ export function APISettingsPanel() {
     return () => {
       clearInterval(intervalId);
     };
+  }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    // Check if browser supports SpeechRecognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+        
+        if (event.results[0].isFinal) {
+          setTestPrompt(transcript);
+        }
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        
+        notifications.show({
+          title: 'Speech Recognition Error',
+          message: `Error: ${event.error}. Please try again.`,
+          color: 'red'
+        });
+      };
+      
+      setSpeechRecognition(recognition);
+    }
   }, []);
 
   
@@ -449,6 +546,36 @@ export function APISettingsPanel() {
       console.error('Failed to refresh clients:', error);
     }
   };
+  
+  const toggleSpeechRecognition = () => {
+    if (!speechRecognition) {
+      notifications.show({
+        title: 'Speech Recognition Not Available',
+        message: 'Your browser does not support speech recognition.',
+        color: 'red'
+      });
+      return;
+    }
+    
+    if (isListening) {
+      speechRecognition.stop();
+      setIsListening(false);
+    } else {
+      setIsListening(true);
+      try {
+        speechRecognition.start();
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        setIsListening(false);
+        
+        notifications.show({
+          title: 'Speech Recognition Error',
+          message: `Failed to start speech recognition: ${String(error)}`,
+          color: 'red'
+        });
+      }
+    }
+  };
 
   // Helper functions for targeting options
   const getPlatformOptions = () => {
@@ -651,6 +778,15 @@ export function APISettingsPanel() {
             value={testPrompt}
             onChange={(e) => setTestPrompt(e.currentTarget.value)}
             style={{ flexGrow: 1 }}
+            rightSection={
+              <ActionIcon 
+                color={isListening ? "red" : "blue"} 
+                onClick={toggleSpeechRecognition}
+                title={isListening ? "Stop listening" : "Start voice input"}
+              >
+                {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+              </ActionIcon>
+            }
           />
           <Button
             mt={25} // Align with the input
@@ -677,6 +813,15 @@ export function APISettingsPanel() {
               placeholder="Enter a test prompt here"
               value={testPrompt}
               onChange={(e) => setTestPrompt(e.currentTarget.value)}
+              rightSection={
+                <ActionIcon 
+                  color={isListening ? "red" : "blue"} 
+                  onClick={toggleSpeechRecognition}
+                  title={isListening ? "Stop listening" : "Start voice input"}
+                >
+                  {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+                </ActionIcon>
+              }
             />
             
             <Group grow>
