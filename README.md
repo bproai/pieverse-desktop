@@ -28,13 +28,6 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 
 ## 🚀 Features
 
-### 🔄 User Modeling & Adaptive Intelligence
-- **Comprehensive Behavioral Analysis:** Tracks interaction patterns, creative tendencies, and decision-making styles to build an accurate user model.
-- **Growth Analysis:** Identifies knowledge gaps and learning opportunities based on observed strengths and challenges.
-- **Mood-Responsive Interactions:** Adapts conversation style, suggestions, and interface based on detected emotional states.
-- **External Data Integration:** Connects with productivity tools, health trackers, and other services to enrich the twin's understanding of your daily activities and physical state.
-- **Personalized Content Ecosystem:** Creates a continuously evolving content recommendation system that grows more accurate with each interaction.
-
 ### 🤖 AI Assistant Avatar
 - Friendly, anime-style avatar with advanced speech recognition and natural language processing.
 - Multiple AI engine options:
