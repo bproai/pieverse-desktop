@@ -87,7 +87,7 @@ function App() {
                   Prompt Builder
                 </Tabs.Tab>
                 <Tabs.Tab value="htmlrenderer" leftSection={<FileText size={16} />}>
-                  Document Renderer
+                  Conversation Archive
                 </Tabs.Tab>
 
                 <Tabs.Tab value="s3lite" leftSection={<Image size={16} />}>

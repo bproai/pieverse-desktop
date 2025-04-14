@@ -771,7 +771,7 @@ export function APISettingsPanel() {
           )}          
         </Stack>
         
-        <Group mt="md">
+        {/* <Group mt="md">
           <TextInput
             label="Test Prompt"
             placeholder="Enter a test prompt here"
@@ -796,7 +796,7 @@ export function APISettingsPanel() {
           >
             Send to Extension
           </Button>
-        </Group>
+        </Group> */}
       </Card>
 
       {/* Add client list component when server is running */}
