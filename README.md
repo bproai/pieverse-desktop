@@ -45,7 +45,7 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
 - Support for multiple MCP server types through a unified configuration interface
 - Built-in templates for various MCP server configurations (filesystem, brave-search, memory, etc.)
 
-### 📊 Interactive AI Playbook
+### 📊 Interactive AI Playbook (TBD)
 - Serves as a comprehensive knowledge repository and strategic guide
 - Functions as an "operating manual" for both personal and professional challenges
 - Provides customized templates, frameworks, and strategies based on your past decisions
@@ -67,7 +67,7 @@ management, seamless integrations with VS Code, and the Chrome extension for ses
 - Interactive environment for brainstorming, drafting, and refining creative projects.
 - Adaptive tools and inspiring prompts to foster "meta creation" and "meta invention."
 
-### 📝 AI Prompt Management
+### 📝 Prompt Management
 - Create, edit, and organize prompts across diverse use cases.
 - Bulk import/export, version control, and advanced filtering.
 - Seamless integration with both cloud and local storage options.
@@ -95,7 +95,7 @@ management, seamless integrations with VS Code, and the Chrome extension for ses
 - Real-time financial data visualization with Google Trends integration.
 - Advanced algorithms for spike detection, customizable dashboards, and machine learning–based forecasting.
 
-### 📄 Document Renderer
+### 📄 Conversation Archive (Chat History Database and Document Renderer)
 - Seamless clipboard integration using Tauri's native clipboard manager for improved user experience.
 - Visualize and edit HTML and Markdown content with built-in support for multiple formats.
 - Features include:
@@ -177,7 +177,7 @@ management, seamless integrations with VS Code, and the Chrome extension for ses
   - Cross-platform compatibility for patch operations
   - JSON payload debugging for troubleshooting
 
-### 🧠 AI/Human Collaborative Learning
+### 🧠 AI/Human Collaborative Learning (TBD)
 
 PieVerse Desktop embraces a philosophy of collaborative learning between humans and AI. As we venture together into uncharted territories of AI development and "vibe coding," our platform is designed to make the most of these valuable learning moments:
 
@@ -193,22 +193,6 @@ PieVerse Desktop embraces a philosophy of collaborative learning between humans 
 
 This approach transforms PieVerse from a static tool into a dynamic learning partner, where the boundaries between teaching and learning blur as both human and AI contribute their unique perspectives.
 
-### Bio-Inspired Growth and Regulation
-
-Building on the idea of an evolving digital twin, PieVerse Desktop also draws inspiration from biological systems to drive its own growth and adaptation.
-
-In our vision, PieVerse Desktop operates like a living organism. Beyond the concept of horizontal gene transfer—where the system scouts and integrates useful code segments—our app features dynamic regulatory pathways akin to biological up- and downregulation. Each core module functions as a specialized organ, and together, they form interconnected tissues that maintain overall system health. Just as living organisms use biochemical signals to regulate growth and function, PieVerse will incorporate mechanisms to adjust and optimize its behavior based on user interactions and external data inputs. This bio-inspired framework is designed to drive continuous adaptation and self-improvement, ensuring that the app evolves alongside your needs.
-
-### Continuous Improvement & Feature Bounty Marketplace
-
-In our vision for PieVerse, continuous improvement is driven by community engagement. We aim to create an ecosystem where users can directly shape the app's evolution by posting feature requests with attached bounties. Other users can contribute additional funds to these bounties to elevate their priority, fostering a market-driven development process. **Optionally, this marketplace may integrate blockchain smart contracts to manage feature bounties in a transparent and trustless manner, ensuring that all transactions are secure and verifiable.**
-
-
-- **Feature Requests & Bounties:** Users can post the features they need along with an attached bounty, essentially issuing a development contract.
-- **Bidding for Priority:** Other users can contribute additional funds to a bounty, elevating its priority and signaling community demand.
-- **Competitive Proposals:** Multiple feature requests can coexist and compete, ensuring that the most in-demand ideas drive the app’s evolution.
-
-This approach not only incentivizes developers to focus on high-priority tasks but also mimics a natural selection process—where the app evolves organically based on collective user input.
 
 ## Chrome Extension Debugging Setup
 
