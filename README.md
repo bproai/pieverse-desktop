@@ -33,7 +33,7 @@ PieVerse Desktop is more than just a toolkit—it's your personal AI companion a
   - **GPT-4o mini:** Utilizes Whisper for STT, GPT-4o mini for text generation, and native TTS.
   - **GPT-4o Realtime:** Enables true voice-to-voice conversation via WebRTC.
   - **GPT-4o Realtime Mini:** Cost-effective, real-time conversational model.
-- Digital double functionality for representation in meetings, social settings, and more.
+- (TBD) Digital double functionality for representation in meetings, social settings, and more.
 - Support for different UI workflows and record/playback capabilities for non-realtime modes.
 
 ### 🧮 MCP Server Integration
