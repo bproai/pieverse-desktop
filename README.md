@@ -1,5 +1,8 @@
 # PieVerse Desktop
 
+![image](https://github.com/user-attachments/assets/26cadce0-cc25-44f2-aa65-7da1fce91ab3)
+
+
 <div align="center">
   <img src="./src/assets/logo.svg" alt="PieVerse Logo" width="120" />
   <h3>Your Personal AI Assistant & Creative Workspace</h3>
