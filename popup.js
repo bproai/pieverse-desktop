@@ -522,32 +522,31 @@ function loadSettings() {
   
   // Load WebSocket settings
   chrome.storage.sync.get(['wsUrl'], function(result) {
-    if (result.wsUrl) {
-      wsUrl = result.wsUrl;
-      console.log('Loaded WebSocket URL from settings:', wsUrl);
-      
-      // Update WebSocket UI elements
-      const wsHostInput = document.getElementById('wsHost');
-      const wsPortInput = document.getElementById('wsPort');
-      
-      if (wsHostInput && wsPortInput) {
-        try {
-          // Parse WebSocket URL (add http:// to make URL constructor work)
-          const url = new URL(wsUrl.replace('ws://', 'http://'));
-          wsHostInput.value = url.hostname;
-          wsPortInput.value = url.port || '3031';
-          
-          // Update preview elements
-          const previewWsHost = document.getElementById('previewWsHost');
-          const previewWsPort = document.getElementById('previewWsPort');
-          
-          if (previewWsHost) previewWsHost.textContent = url.hostname;
-          if (previewWsPort) previewWsPort.textContent = url.port || '3031';
-        } catch (error) {
-          console.error('Error parsing stored WebSocket URL:', error);
-        }
+    wsUrl = result.wsUrl || wsUrl;
+    console.log('Loaded WebSocket URL from settings:', wsUrl);
+    
+    // Update WebSocket UI elements
+    const wsHostInput = document.getElementById('wsHost');
+    const wsPortInput = document.getElementById('wsPort');
+    
+    if (wsHostInput && wsPortInput) {
+      try {
+        // Parse WebSocket URL (add http:// to make URL constructor work)
+        const url = new URL(wsUrl.replace('ws://', 'http://'));
+        wsHostInput.value = url.hostname;
+        wsPortInput.value = url.port || '3031';
+        
+        // Update preview elements
+        const previewWsHost = document.getElementById('previewWsHost');
+        const previewWsPort = document.getElementById('previewWsPort');
+        
+        if (previewWsHost) previewWsHost.textContent = url.hostname;
+        if (previewWsPort) previewWsPort.textContent = url.port || '3031';
+      } catch (error) {
+        console.error('Error parsing stored WebSocket URL:', error);
       }
     }
+    
   });
 }
 

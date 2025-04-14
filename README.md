@@ -14,6 +14,7 @@ A powerful Chrome extension that enhances your AI interactions with ChatGPT and 
 - Categorized prompt library
 - Quick keyboard access (Ctrl/Cmd + Shift + P)
 - Seamless prompt insertion into AI chat interfaces
+- Content extraction without clipboard access
 
 ## Installation
 
@@ -52,10 +53,11 @@ A powerful Chrome extension that enhances your AI interactions with ChatGPT and 
 ### Project Structure
 ```
 ├── manifest.json          # Extension configuration
-├── content.js            # Content script for AI platform interaction
-├── popup.html           # Extension popup interface
-├── popup.js            # Popup interaction logic
-└── icons/              # Extension icons
+├── background.js          # Background service worker script
+├── content.js             # Content script for AI platform interaction
+├── popup.html             # Extension popup interface
+├── popup.js               # Popup interaction logic
+└── icons/                 # Extension icons
 ```
 
 ### Platform Support
@@ -64,11 +66,13 @@ The extension automatically detects and adapts to different AI platforms through
 - chatgpt.com
 - claude.ai
 
-### Security
+### Security & Privacy
 - Uses Chrome's manifest V3
 - Minimal permissions required:
   - storage
   - activeTab
+  - scripting
+- Content is extracted directly from page elements without clipboard access
 - Host permissions limited to supported AI platforms
 
 ## Coming Soon

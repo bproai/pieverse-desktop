@@ -6,6 +6,7 @@ let answerCache = [];
 let uploadInProgress = false;
 const UPLOAD_INTERVAL = 30000; // Upload every 30 seconds
 const MAX_CACHE_SIZE = 100;
+const AUTH_TOKEN = "K9FnT7X3pL2QzA8mB6vD1yG5sH4jR0cE";
 
 let wsConnection = null;
 let wsReconnectTimer = null;
@@ -159,7 +160,8 @@ async function uploadCachedData() {
       model: a.model,
       timestamp: a.timestamp,
       turn_number: a.turn_number,
-      metadata: a.metadata
+      metadata: a.metadata,
+      url: a.url
     }));
     
     // CHANGE 3: Filter out potentially problematic data
@@ -376,19 +378,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (request.action === "clickCopyButton") {
+  if (request.action === "extractContent") {
     // Get the tab ID from the sender
     const tabId = sender.tab.id;
     
-    console.log("Received clickCopyButton request");
+    console.log("Received content extraction request");
     
     // Execute a script in the tab to click the copy button
     chrome.scripting.executeScript({
       target: { tabId: tabId },
-      function: clickCopyButton
+      function: extractContentDirectly
     })
     .then(results => {
-      console.log("Copy button click script executed:", results);
+      console.log("ExtractContent script executed:", results);
       
       if (results && results[0] && results[0].result && results[0].result.success) {
         // If copy was successful and we got the content directly
@@ -408,6 +410,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ 
             success: true, 
             contentExtracted: true,
+            extractedContent: extractedContent,
             contentLength: extractedContent.length
           });
         } else {
@@ -568,138 +571,201 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function clickSubmitButton(platform) {
   console.log(`Attempting to click submit button for ${platform}`);
   
+  // Set flag to indicate this is an extension-triggered click
+  window.isExtensionTriggeredSend = true;
+  
   if (platform === 'chatgpt') {
-    // ChatGPT - Keep the existing implementation that works
+    // ChatGPT implementation
     const button = document.querySelector('button[data-testid="send-button"]');
     if (button && !button.disabled) {
       console.log("Found and clicking ChatGPT send button");
       button.click();
+      // Add timeout to ensure event handling completes before resetting flag
+      setTimeout(() => {
+        window.isExtensionTriggeredSend = false;
+      }, 100);
       return true;
     } else {
       console.log("ChatGPT button not found or is disabled");
+      window.isExtensionTriggeredSend = false; // Reset flag if no button found
       return false;
     }
   } 
   else if (platform === 'claude') {
-    // Claude - Based on the HTML snippet provided
-    const claudeButton = document.querySelector('button[aria-label="Send Message"]');
+    // Claude implementation
+    const claudeButton = document.querySelector('button[aria-label="Send message" i]');
     if (claudeButton && !claudeButton.disabled) {
       console.log("Found and clicking Claude send button");
       claudeButton.click();
+      // Add timeout to ensure event handling completes before resetting flag
+      setTimeout(() => {
+        window.isExtensionTriggeredSend = false;
+      }, 100);
       return true;
     } else {
       console.log("Claude button not found or is disabled");
+      window.isExtensionTriggeredSend = false; // Reset flag if no button found
       return false;
     }
   }
   
+  window.isExtensionTriggeredSend = false; // Reset flag if platform not supported
   return false;
 }
 
 // Function that will be injected into the page to click the copy button
-function clickCopyButton() {
-  console.log(`Attempting to click copy button`);
+function extractContentDirectly() {
+  console.log(`Attempting to extract content`);
   
-  // Platform detection based on hostname, same as in the clickSubmitButton function
+  // Platform detection based on hostname
   const hostname = window.location.hostname;
   const isClaude = hostname.includes('claude.ai');
   const isChatGPT = hostname.includes('chat.openai.com') || hostname.includes('chatgpt.com');
   
-  if (isClaude) {
-    // Claude-specific implementation
-    console.log("Working with Claude, looking for Claude copy button");
-    
-    // Find all copy buttons in Claude's interface - they have a data-testid="action-bar-copy"
-    const claudeCopyButtons = document.querySelectorAll('button[data-testid="action-bar-copy"]');
-    
-    if (claudeCopyButtons.length === 0) {
-      console.log("No Claude copy buttons found");
-      return {success: false, error: "No Claude copy buttons found"};
-    }
-    
-    // Get the last/most recent copy button
-    const lastCopyButton = claudeCopyButtons[claudeCopyButtons.length - 1];
-    
-    if (lastCopyButton && !lastCopyButton.disabled) {
-      console.log("Found Claude copy button");
+  // Helper function to wait for content to fully render
+  function waitForComplete(element, maxAttempts = 5) {
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const initialContent = element.outerHTML;
+      let lastContent = initialContent;
       
-      // First, find the message container that contains this button
-      const messageContainer = lastCopyButton.closest('div[data-is-streaming="false"]');
-      let messageContent = "";
-      
-      if (messageContainer) {
-        // Find the message content within this container
-        const claudeMessage = messageContainer.querySelector('.font-claude-message');
-        if (claudeMessage) {
-          const contentDiv = claudeMessage.querySelector('div > div.grid.gap-2\\.5');
-          if (contentDiv) {
-            // Get all paragraphs, lists, and other formatted content
-            messageContent = contentDiv.innerHTML;
-          } else {
-            messageContent = claudeMessage.innerText || claudeMessage.textContent;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        const currentContent = element.outerHTML;
+        
+        // Check if content has changed
+        if (currentContent === lastContent) {
+          // If content hasn't changed for this interval, it might be stable
+          if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.log(`Content stabilized after ${attempts} attempts`);
+            resolve(currentContent);
           }
+        } else {
+          // Content changed, update last content and reset counter
+          console.log("Content still changing, continuing to wait...");
+          lastContent = currentContent;
+          // Don't fully reset, but give more time
+          attempts = Math.max(attempts - 1, 0);
         }
-        console.log("Extracted Claude content length:", messageContent.length);
-      }
+      }, 200);  // Check every 200ms
+    });
+  }
+  
+  if (isClaude) {
+    // Claude-specific implementation for article extraction
+    console.log(`Extracting article content from Claude`);
+    
+    // Get all assistant message containers
+    const assistantContainers = document.querySelectorAll('div[data-is-streaming="false"]');
+
+    if (assistantContainers.length === 0) {
+      console.log("No Claude assistant containers found");
+      return {success: false, error: "No Claude assistant containers found"};
+    }
+
+   // Get the last/most recent assistant container
+   const lastAssistantContainer = assistantContainers[assistantContainers.length - 1];
+
+   if (lastAssistantContainer) {
+    return waitForComplete(lastAssistantContainer, 8).then(finalContent => {
+      // Check again for article after waiting  
+      let articleElement = lastAssistantContainer.querySelector('div[data-is-streaming]');
+      articleElement = lastAssistantContainer.querySelector('.font-claude-message') || articleElement;
       
-      // Try to click the button, but catch any errors
-      try {
-        lastCopyButton.click();
-      } catch (error) {
-        console.warn("Claude copy button click failed, but continuing:", error);
+      if (articleElement) {
+        // Found an article element - use its complete HTML (outer HTML)
+        const articleContent = articleElement.outerHTML;
+        console.log("Extracted full Claude article content length:", articleContent.length);
+        
+        return {
+          success: true,
+          content: articleContent,
+          messageId: `claude_assistant_${new Date().getTime()}`
+        };
+      } else {
+        // No article found - wrap the entire assistant container in article tags
+        const wrappedContent = `<article>${lastAssistantContainer.innerHTML}</article>`;
+        console.log("No article found - wrapped assistant content length:", wrappedContent.length);
+        
+        return {
+          success: true,
+          content: wrappedContent,
+          messageId: `claude_assistant_${new Date().getTime()}`
+        };
       }
-      
-      return {
-        success: true,
-        content: messageContent,
-        messageId: `claude_assistant_${new Date().getTime()}`
-      };
-    } else {
+    });
+  } else {
       console.log("Claude copy button not found or is disabled");
       return {success: false, error: "Claude copy button not found or disabled"};
     }
   } 
+  
   else if (isChatGPT) {
+
     // Original ChatGPT implementation - unchanged
-    const copyButtons = document.querySelectorAll('button[aria-label="Copy"]');
+    // const copyButtons = document.querySelectorAll('button[aria-label="Copy"]');
+
+    // if (copyButtons.length === 0) {
+    //   console.log("No copy buttons found");
+    //   return {success: false, error: "No copy buttons found"};
+    // }
+
+    // Find all the articles in the page (ChatGPT responses are in article elements)
+    const articles = document.querySelectorAll('article');
     
-    if (copyButtons.length === 0) {
-      console.log("No copy buttons found");
-      return {success: false, error: "No copy buttons found"};
+    if (articles.length === 0) {
+      console.log("No ChatGPT articles found");
+      return {success: false, error: "No ChatGPT articles found"};
     }
     
-    // Get the last/most recent copy button (likely for the latest response)
-    const lastCopyButton = copyButtons[copyButtons.length - 1];
+    // Get the last/most recent article (likely the latest response)
+    const lastArticle = articles[articles.length - 1];
     
-    if (lastCopyButton && !lastCopyButton.disabled) {
-      console.log("Found and clicking copy button");
-      
-      // First, get the text content from the message element
-      const messageElement = lastCopyButton.closest('article');
-      let messageContent = "";
-      
-      if (messageElement) {
-        // Try to find the actual content within the article
-        const contentElement = messageElement.querySelector('.markdown');
-        if (contentElement) {
-          messageContent = contentElement.outerHTML || contentElement.innerText;
+    if (lastArticle) {
+      // Wait for content to stabilize before extracting
+      return waitForComplete(lastArticle, 10).then(finalContent => {
+        // Look also for any streaming animations to complete
+        const streamingElements = lastArticle.querySelectorAll('.streaming-animation, ._animate_4f9by_25');
+        if (streamingElements.length > 0) {
+          console.log(`Found ${streamingElements.length} potentially streaming elements, waiting longer...`);
+          // Additional wait for streaming elements
+          return new Promise(resolve => setTimeout(() => resolve(lastArticle.outerHTML), 500));
         } else {
-          messageContent = messageElement.innerText || messageElement.textContent;
+          return finalContent;
         }
-        console.log("Extracted content length:", messageContent.length);
-      }
-      
-      // Click the button
-      lastCopyButton.click();
-      
-      return {
-        success: true, 
-        content: messageContent,
-        messageId: messageElement ? messageElement.getAttribute('data-message-id') : null
-      };
+      }).then(articleContent => {
+        console.log("Extracted full ChatGPT article content length:", articleContent.length);
+        
+        // Get the message ID from the article if available
+        const messageId = lastArticle.getAttribute('data-message-id') || `chatgpt_assistant_${new Date().getTime()}`;
+        
+        // Also check to make sure key elements like tables are fully rendered
+        const hasTables = lastArticle.querySelectorAll('table').length > 0;
+        if (hasTables) {
+          console.log("Article contains tables, ensuring they're fully rendered");
+          // Force a layout/reflow to ensure tables are properly rendered
+          lastArticle.querySelectorAll('table').forEach(table => {
+            table.getBoundingClientRect();
+          });
+          // Get the content again after forcing layout
+          const updatedContent = lastArticle.outerHTML;
+          return {
+            success: true, 
+            content: updatedContent,
+            messageId: messageId
+          };
+        }
+        
+        return {
+          success: true, 
+          content: articleContent,
+          messageId: messageId
+        };
+      });
     } else {
-      console.log("Copy button not found or is disabled");
-      return {success: false, error: "Copy button not found or disabled"};
+      console.log("ChatGPT article is empty");
+      return {success: false, error: "ChatGPT article is empty"};
     }
   } 
   else {
@@ -867,22 +933,31 @@ function connectToWebSocket(wsUrl) {
       try {
         const message = JSON.parse(event.data);
         
+        // Validate the message token
+        if (message.token !== AUTH_TOKEN) {
+          console.error('Authentication failed: invalid or missing token');
+          return;
+        }
+        
+        // Remove token before processing the message
+        const { token, ...messageData } = message;
+        
         // Extract routing information
-        const targetType = message.targetType || 'broadcast'; // 'broadcast', 'platform', 'client'
-        const targetId = message.targetId; // tabId or platform name
+        const targetType = messageData.targetType || 'broadcast'; // 'broadcast', 'platform', 'client'
+        const targetId = messageData.targetId; // tabId or platform name
         
         // Handle insertPrompt message
-        if (message.type === 'insertPrompt') {
-          routeMessageToContent(message, targetType, targetId);
+        if (messageData.type === 'insertPrompt') {
+          routeMessageToContent(messageData, targetType, targetId);
         } 
         // Add new handler for creating a new chat
-        else if (message.type === 'newChat') {
+        else if (messageData.type === 'newChat') {
           // Handle new chat request
-          handleNewChatRequest(message, targetType, targetId);
+          handleNewChatRequest(messageData, targetType, targetId);
         }        
         // Add other message types as needed
         else {
-          console.log(`Unknown message type: ${message.type}`);
+          console.log(`Unknown message type: ${messageData.type}`);
         }
       } catch (error) {
         console.error('Error processing WebSocket message:', error);
@@ -919,7 +994,15 @@ function scheduleReconnect(wsUrl) {
 // Function to send message to WebSocket
 function sendWebSocketMessage(message) {
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-    const messageString = typeof message === 'string' ? message : JSON.stringify(message);
+    // Add the auth token to the message
+    const messageWithToken = typeof message === 'string'
+      ? { type: 'string_message', content: message, token: AUTH_TOKEN }
+      : { ...message, token: AUTH_TOKEN };
+    
+    const messageString = typeof message === 'string' 
+      ? JSON.stringify(messageWithToken) // Convert string messages to objects with token
+      : JSON.stringify(messageWithToken);
+      
     wsConnection.send(messageString);
     return true;
   }

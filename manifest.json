@@ -8,8 +8,7 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
-    "clipboardRead"
+    "scripting"
   ],
   
   "host_permissions": [
