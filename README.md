@@ -1,6 +1,8 @@
 # PieVerse Desktop
 
 ![image](https://github.com/user-attachments/assets/26cadce0-cc25-44f2-aa65-7da1fce91ab3)
+![image](https://github.com/user-attachments/assets/2ecfd4a9-3c7d-4fc4-a959-35ac1b429b9d)
+
 
 
 <div align="center">
